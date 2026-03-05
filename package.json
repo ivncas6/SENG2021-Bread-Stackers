@@ -1,0 +1,9 @@
+{
+    "scripts": {
+    },
+    "dependencies": {
+    },
+    "devDependencies": {
+        "yaml": "^2.7.1"
+    }
+}
