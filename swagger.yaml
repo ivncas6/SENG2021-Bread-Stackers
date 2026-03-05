@@ -1,0 +1,67 @@
+swagger: "2.0"
+info:
+  title: change title
+  description: |
+    write desc for API
+  version: 1.0.0
+ 
+schemes:
+  - http
+
+tags:
+  - name: "Example Tag"
+    description: description on tag
+
+components:
+  ExampleComponent:
+    ExampleString:
+      type: string
+      example: "I am a string"
+    ExampleNum:
+      type: integer
+      example: 2378
+
+  path:
+    exampleId:
+      in: path
+      name: exampleId
+      required: true
+      schema:
+        $ref: '#/components/ExampleComponent/exampleId'
+    exampleError:
+      in: path
+      name: exampleError
+      required: false
+      schema:
+        $ref: '#/components/ExampleComponent/exampleError'
+    exampleSuccess:
+      in: path
+      name: exampleSuccess
+      required: true
+      schema:
+        $ref: '#/components/ExampleComponent/exampleSuccess'
+
+paths:
+
+  /v1/examplePath/auth/register:
+    post:
+      summary: Register a new admin user
+      description: Takes in information about a new admin user and registers them in the system. This route is not relevant to guests who want to play a particular quiz, but is used for the creation of accounts of people who manage quizzes.
+      tags:
+        # - "By Topic: Access Management"
+        - "Example Tag"
+      parameters:
+        - $ref: '#/components/ExampleComponent/ExampleNum'
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/components/path/exampleSuccess'
+        400:
+          description: |
+            If any of the following are true:
+            - Error Condition #1 met
+            - Error Condition #2 met
+            - Error Condition #3 met
+          schema:
+            $ref: '#/components/path/exampleError'
