@@ -6,40 +6,37 @@ info:
   version: 1.0.0
  
 schemes:
-  - http
+  - https
 
 tags:
   - name: "Example Tag"
     description: description on tag
 
 components:
-  ExampleComponent:
-    ExampleString:
-      type: string
-      example: "I am a string"
-    ExampleNum:
-      type: integer
-      example: 2378
-
-  path:
-    exampleId:
-      in: path
-      name: exampleId
-      required: true
-      schema:
-        $ref: '#/components/ExampleComponent/exampleId'
-    exampleError:
-      in: path
-      name: exampleError
-      required: false
-      schema:
-        $ref: '#/components/ExampleComponent/exampleError'
-    exampleSuccess:
-      in: path
-      name: exampleSuccess
-      required: true
-      schema:
-        $ref: '#/components/ExampleComponent/exampleSuccess'
+  user:
+    type: object
+    properties:
+      userId: 
+        type: integer
+        example: 333
+      username:
+        type: string
+        example: someone
+      email: 
+        type: string
+        example: hello@gmail.com
+      password:
+        type: string
+        example: password22
+  error:
+    type: object
+    properties:
+      errorCode:
+        type: integer
+        example: 400
+      errorMsg:
+        type: string
+        example: ID not found
 
 paths:
 
@@ -48,15 +45,21 @@ paths:
       summary: Register a new admin user
       description: Takes in information about a new admin user and registers them in the system. This route is not relevant to guests who want to play a particular quiz, but is used for the creation of accounts of people who manage quizzes.
       tags:
-        # - "By Topic: Access Management"
         - "Example Tag"
       parameters:
-        - $ref: '#/components/ExampleComponent/ExampleNum'
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/components/user'
       responses:
         200:
           description: OK
           schema:
-            $ref: '#/components/path/exampleSuccess'
+            type: object
+            properties:
+              userId:
+                $ref: '#/components/user/properties/userId'
         400:
           description: |
             If any of the following are true:
@@ -64,4 +67,4 @@ paths:
             - Error Condition #2 met
             - Error Condition #3 met
           schema:
-            $ref: '#/components/path/exampleError'
+            $ref: '#/components/error'
