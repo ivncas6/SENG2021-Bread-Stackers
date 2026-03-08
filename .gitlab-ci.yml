@@ -1,7 +1,7 @@
 # This file is used for continuous integration
 
 # add an image below later if needed
-# image: node
+image: node:20-alpine
 
 stages:
   # tests concurrently with lint and unit tests
