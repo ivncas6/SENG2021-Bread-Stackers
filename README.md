@@ -6,6 +6,11 @@
 - linting only works for ts and js files. It also has no output at the moment, this needs to be tested
 - entire configuration is mostly just ran from installs, we need to check whether they will work as a whole and add custom configs if necessary
 
+## Quick commands to put later
+- npm i: install all necessary dependencies
+- npm run lint: do linting, should only output when there's errors
+- npm test: activates jest to test files
+
 
 # Templated Options below
 
