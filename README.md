@@ -2,7 +2,10 @@
 
 ## TODO:
 - Need to add instructions for adding '.env' and an API key from AWS
-- Need setup instructions like npm install 
+- Need setup instructions like npm install
+- linting only works for ts and js files. It also has no output at the moment, this needs to be tested
+- entire configuration is mostly just ran from installs, we need to check whether they will work as a whole and add custom configs if necessary
+
 
 # Templated Options below
 
