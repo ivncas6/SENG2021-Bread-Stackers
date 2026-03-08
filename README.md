@@ -1,6 +1,10 @@
 # SENG2021 Bread Stackers
 
+## TODO:
+- Need to add instructions for adding '.env' and an API key from AWS
+- Need setup instructions like npm install 
 
+# Templated Options below
 
 ## Getting started
 

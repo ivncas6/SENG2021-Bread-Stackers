@@ -1,7 +1,12 @@
 {
-    "scripts": {},
+    "scripts": {
+        "test": "jest",
+        "lint": "eslint '**/*.{ts,js}'",
+        "lint-fix": "eslint --fix '**/*.{ts,js}'"
+    },
     "devDependencies": {
         "@eslint/js": "^10.0.1",
+        "@types/jest": "^30.0.0",
         "eslint": "^10.0.3",
         "globals": "^17.4.0",
         "jest": "^30.2.0",
