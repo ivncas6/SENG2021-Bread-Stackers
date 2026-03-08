@@ -1,6 +1,7 @@
 # This file is used for continuous integration
 
-image: node
+# add an image below later if needed
+# image: node
 
 stages:
   # tests concurrently with lint and unit tests
