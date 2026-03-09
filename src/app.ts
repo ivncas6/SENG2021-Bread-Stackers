@@ -1,0 +1,1 @@
+/* This is the application layer or alternate version of 'server.ts'. It will be responsible for the interaction between the user and the heavier backend logic. This file is counted as 'main' in package.json so be careful with any outside edits like renaming the file */

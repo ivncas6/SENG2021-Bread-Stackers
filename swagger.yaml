@@ -1,0 +1,70 @@
+swagger: "2.0"
+info:
+  title: change title
+  description: |
+    write desc for API
+  version: 1.0.0
+ 
+schemes:
+  - https
+
+tags:
+  - name: "Example Tag"
+    description: description on tag
+
+components:
+  user:
+    type: object
+    properties:
+      userId: 
+        type: integer
+        example: 333
+      username:
+        type: string
+        example: someone
+      email: 
+        type: string
+        example: hello@gmail.com
+      password:
+        type: string
+        example: password22
+  error:
+    type: object
+    properties:
+      errorCode:
+        type: integer
+        example: 400
+      errorMsg:
+        type: string
+        example: ID not found
+
+paths:
+
+  /v1/examplePath/auth/register:
+    post:
+      summary: Register a new admin user
+      description: Takes in information about a new admin user and registers them in the system. This route is not relevant to guests who want to play a particular quiz, but is used for the creation of accounts of people who manage quizzes.
+      tags:
+        - "Example Tag"
+      parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/components/user'
+      responses:
+        200:
+          description: OK
+          schema:
+            type: object
+            properties:
+              userId:
+                $ref: '#/components/user/properties/userId'
+        400:
+          description: |
+            If any of the following are true:
+            - Error Condition #1 met
+            - Error Condition #2 met
+            - Error Condition #3 met
+          schema:
+            $ref: '#/components/error'
