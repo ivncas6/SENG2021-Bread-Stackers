@@ -1,2 +1,5 @@
 # Stores API keys
 .env
+
+# coverage reports
+coverage
