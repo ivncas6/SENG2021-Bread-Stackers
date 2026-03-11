@@ -30,8 +30,8 @@ testing:
     - merge_requests
   script:
     - echo "Running unit tests..."
+    - npm test
     # TODO
-
 
 # Deploys everything in the main branch to serverless endpoint
 deploying:
