@@ -6,8 +6,8 @@ export interface Data {
 }
 
 const data: Data = {
-    users: [],
-    orders: []
+  users: [],
+  orders: []
 };
 
 export const getData = () : Data => data;

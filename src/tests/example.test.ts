@@ -6,7 +6,7 @@ import { sayHello } from '../example.ts';
 
 test('dummy test', () => {
   const msg = sayHello();
-  expect(msg).toStrictEqual("Hello, Breadstackers!");
+  expect(msg).toStrictEqual('Hello, Breadstackers!');
 });
 
 

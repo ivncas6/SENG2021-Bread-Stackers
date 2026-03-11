@@ -24,7 +24,7 @@ const config = {
   collectCoverageFrom: ['src/**/*.{ts,js}', '!src/tests/**'],
 
   // The directory where Jest should output its coverage files
-  coverageDirectory: "coverage",
+  coverageDirectory: 'coverage',
 
   // An array of regexp pattern strings used to skip coverage collection
   // coveragePathIgnorePatterns: [
@@ -44,10 +44,11 @@ const config = {
 
   // An object that configures minimum threshold enforcement for coverage results
   coverageThreshold: {
-  global: {
-    lines: 85,
+    global: {
+      branches: 85,
+      lines: 85,
+    },
   },
-},
 
   // A path to a custom dependency extractor
   // dependencyExtractor: undefined,
