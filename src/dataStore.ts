@@ -1,8 +1,8 @@
 import { Order, Users } from './interfaces';
 
 export interface Data {
-    users: Users[];
-    orders: Order[];
+  users: Users[];
+  orders: Order[];
 }
 
 const data: Data = {
