@@ -5,7 +5,7 @@ export interface Data {
     orders: Order[];
 }
 
-let data: Data = {
+const data: Data = {
     users: [],
     orders: []
 };
