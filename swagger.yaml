@@ -49,12 +49,12 @@ definitions:
       errorMsg:
         type: string
         example: "Error Message goes here"
-  userId:
+  session:
     type: object
     properties:
-      userId: 
+      session: 
         type: string
-        example: user123
+        example: "23457"
   
   userLogIn:
     type: object
@@ -250,7 +250,7 @@ paths:
           description: "**SUCCESS**"
 
           schema:
-            $ref: '#/definitions/userId'
+            $ref: '#/definitions/session'
         400:
           description: |
             **INVALID INPUT**
@@ -278,7 +278,7 @@ paths:
         200:
           description: "**SUCCESS**"
           schema:
-            $ref: '#/definitions/userId'
+            $ref: '#/definitions/session'
         400:
           description: |
             **INVALID USER DETAILS**
@@ -338,7 +338,7 @@ paths:
       description: Logs the user out of the system
       parameters:
         - in: header
-          name: userId
+          name: session
           required: true
           type: string
       responses:
