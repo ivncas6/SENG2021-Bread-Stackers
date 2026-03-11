@@ -1,34 +1,37 @@
 swagger: "2.0"
 info:
-  title: change title
-  description: |
-    write desc for API
+  title: Order Creation Service
+  description: Important operations required to manage order creation data effectively by letting the user to create, retrieve, list, update and cancel (delete) orders when needed.
   version: 1.0.0
- 
+
 schemes:
   - https
 
 tags:
-  - name: "Example Tag"
-    description: description on tag
+  - name: PHASE 1
+  - name: Users
+    description: Deals with all the user related operations which includes user register, login, update and logout
+  - name: Orders
+    description: Deals with all the order related operations which includes creating, viewing, listing, updating and cancelling any order
+  - name: Other
 
-components:
-  user:
+definitions:
+  userRegister:
     type: object
     properties:
-      userId: 
-        type: integer
-        example: 333
-      username:
+      firstName:
         type: string
-        example: someone
-      email: 
+        example: Anna
+      lastName: 
         type: string
-        example: hello@gmail.com
-      password:
+        example: Smith
+      email:
         type: string
-        example: password22
-  error:
+        example: anna123@gmail.com
+      password: 
+        type: string
+        example: h3llow0rld
+  error400:
     type: object
     properties:
       errorCode:
@@ -36,35 +39,487 @@ components:
         example: 400
       errorMsg:
         type: string
-        example: ID not found
+        example: "Error Message goes here"
+  error401:
+    type: object
+    properties:
+      errorCode:
+        type: integer
+        example: 401
+      errorMsg:
+        type: string
+        example: "Error Message goes here"
+  userId:
+    type: object
+    properties:
+      userId: 
+        type: string
+        example: user123
+  
+  userLogIn:
+    type: object
+    properties:
+      email:
+        type: string
+        example: anna123@gmail.com
+      password: 
+        type: string
+        example: h3llow0rld
+  
+  emptyObj:
+    type: object
+    properties: {}
+  
+  userUpdate:
+    type: object
+    properties:
+      email:
+        type: string
+        example: anna123@gmail.com
+      firstName:
+        type: string
+        example: Brianna
+      lastName:
+        type: string
+        example: Lee
+  
+  orderId:
+    type: object
+    properties:
+      orderId:
+        type: string
+        example: or1939
+  
+  orderItem: 
+    type: object
+    properties:
+      name: 
+        type: string
+        example: Chocolate Bar
+      description:
+        type: string
+        example: Milk Chocolate
+      unitPrice:
+        type: number
+        example: 10
+      quantity:
+        type: number
+        example: 1
+  
+  orderCreate:
+    type: object
+    properties:
+      currency:
+        type: string
+        example: AUD
+      deliveryAddress:
+        type: string
+        example: 123 Street Name, Kensington
+      totalAmount:
+        type: number
+        example: 140
+      user:
+        type: object
+        properties:
+          name:
+            type: string
+            example: Anna Smith
+          telephone:
+            type: number
+            example: 0412345678
+          email: 
+            type: string
+            example: anna123@gmail.com
+      reqDeliveryPeriod:
+        type: object
+        properties: 
+          startDateTime: 
+            type: number
+            example: 1773100800000
+          endDateTime:
+            type: number
+            example: 1773619200000
+      itemList:
+        type: array
+        items:
+            $ref: '#/definitions/orderItem'
+  
+  orderView:
+    type: object
+    properties:
+      orderId:
+        type: string
+        example: or123
+      status:
+        type: string
+        example: PROCESSING
+      orderDateTime:
+        type: number
+        example: 1773100800000
+      currency:
+        type: string
+        example: AUD
+      deliveryAddress:
+        type: string
+        example: 123 Street Name, Kensington
+      party:
+        type: object
+        properties: 
+          name:
+            type: string
+            example: Anna Smith
+          telephone:
+            type: string
+            example: 0412345678
+          email: 
+            type: string
+            example: anna123@gmail.com
+      reqDeliveryPeriod:
+        type: object
+        properties: 
+          startDateTime: 
+            type: number
+            example: 1773100800000
+          endDateTime:
+            type: number
+            example: 1773619200000
+      itemList:
+        type: array
+        items:
+            $ref: '#/definitions/orderItem'
+  
+  orderCancel:
+    type: object
+    properties:
+      reason:
+        type: string
+        example: Change of Mind
+
+  orderUpdate:
+    type: object
+    properties:
+      deliveryAddress:
+        type: string
+        example: 123 Street Name, Kensington
+      reqDeliveryPeriod:
+        type: object
+        properties: 
+          startDateTime: 
+            type: number
+            example: 1773100800000
+          endDateTime:
+            type: number
+            example: 1773619200000
+      status: 
+        type: string
+        example: PROCESSING
+  
+  orderList:
+    type: object
+    properties:
+      orders:
+        type: array
+        items:
+          type: object
+          properties:
+            orderId:
+              type: string
+              example: or123
+            orderDateTime:
+              type: number
+              example: 1773100800000
+            status:
+              type: string
+              example: COMPLETED
 
 paths:
-
-  /v1/examplePath/auth/register:
+  /v0/user/register:
     post:
-      summary: Register a new admin user
-      description: Takes in information about a new admin user and registers them in the system. This route is not relevant to guests who want to play a particular quiz, but is used for the creation of accounts of people who manage quizzes.
       tags:
-        - "Example Tag"
+        - Users
+      summary: Register a new user 
+      description: Takes required details from the user to register them to the system
       parameters:
         - in: body
           name: body
           required: true
           schema:
-            $ref: '#/components/user'
+            $ref: '#/definitions/userRegister'
       responses:
         200:
-          description: OK
+          description: "**SUCCESS**"
+
           schema:
-            type: object
-            properties:
-              userId:
-                $ref: '#/components/user/properties/userId'
+            $ref: '#/definitions/userId'
         400:
           description: |
-            If any of the following are true:
-            - Error Condition #1 met
-            - Error Condition #2 met
-            - Error Condition #3 met
+            **INVALID INPUT**
+            Can be any of the following:
+            - INVALID_FIRST_NAME
+            - INVALID_LAST_NAME
+            - INVALID_EMAIL
+            - INVALID_PASSWORD_FORMAT
           schema:
-            $ref: '#/components/error'
+            $ref: '#/definitions/error400'
+
+  /v0/user/login:
+    post:
+      tags:
+        - Users
+      summary: Login an existing user
+      description: Takes required details from the user to log them into the system
+      parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/userLogIn'
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/userId'
+        400:
+          description: |
+            **INVALID USER DETAILS**
+            Can be any of the following:
+            - INVALID_EMAIL
+            - INCORRECT_PASSWORD
+          schema:
+            $ref: '#/definitions/error400'
+        401:
+          description: "**UNAUTHORISED**"
+          schema: 
+            $ref: '#/definitions/error401'
+  
+  /v0/user/details:
+    put:
+      tags:
+        - Users
+      summary: Update user details
+      description: Takes details from the user and updates it in the system
+      parameters:
+        - in: header
+          name: userId
+          required: true
+          type: string
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/userUpdate'
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/emptyObj'
+        400:
+          description: |
+            "**INVALID INPUT**"
+            Can be any of the following:
+            - INVALID_FIRST_NAME
+            - INVALID_LAST_NAME
+            - INVALID_EMAIL
+            - INVALID_PASSWORD_FORMAT
+          schema:
+            $ref: '#/definitions/error400'
+        401:
+          description: |
+            "**UNAUTHORISED**"
+            Provided userId does not correspond to a valid user.
+          schema: 
+            $ref: '#/definitions/error401'
+  
+  /v0/user/logout:
+    post:
+      tags:
+        - Users
+      summary: Logs out an existing user
+      description: Logs the user out of the system
+      parameters:
+        - in: header
+          name: userId
+          required: true
+          type: string
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/emptyObj'
+        401:
+          description: |
+            "**UNAUTHORISED**"
+            Provided userId does not correspond to a valid user.
+          schema: 
+            $ref: '#/definitions/error401'
+  
+  /v0/order:
+    post:
+      tags:
+        - Orders
+      summary: Creates an Order
+      description: Creates an order by taking details from user 
+      parameters:
+        - in: header
+          name: userId
+          required: true
+          type: string
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/orderCreate'
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/orderId'
+        400:
+          description: |
+            "**INVALID INPUT**"
+            Can be any of the following:
+              - INVALID_EMAIL
+              - INVALID_MOBILE_NO
+              - INVALID_ITEM
+          schema:
+            $ref: '#/definitions/error400'
+        401:
+          description: |
+            "**UNAUTHORISED**"
+            Provided userId does not correspond to a valid user.
+          schema: 
+            $ref: '#/definitions/error401'
+
+  /v0/order/{orderId}:
+    get:
+      tags:
+        - Orders
+      summary: View order information 
+      description: View the information of the order with the given orderId
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          type: string
+        - in: header
+          name: userId
+          required: true
+          type: string
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/orderView'
+        400:
+          description: "**INVALID INPUT**"
+          schema:
+            $ref: '#/definitions/error400'
+        401:
+          description: |
+            "**UNAUTHORISED**"
+            Order is not placed by the user.
+          schema: 
+            $ref: '#/definitions/error401'
+
+    delete:
+      tags:
+        - Orders
+      summary: Cancel an order 
+      description: Cancel the order with the given orderId
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          type: string
+        - in: header
+          name: userId
+          required: true
+          type: string
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/orderCancel'
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/emptyObj'
+        400:
+          description: "**INVALID INPUT**"
+          schema:
+            $ref: '#/definitions/error400'
+        401:
+          description: |
+            "**UNAUTHORISED**"
+          schema: 
+            $ref: '#/definitions/error401'
+    put:
+      tags:
+        - Orders
+      summary: Update an order 
+      description: Update the order with the given orderId
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          type: string
+        - in: header
+          name: userId
+          required: true
+          type: string
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/orderUpdate'
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/emptyObj'
+        400:
+          description: "**INVALID INPUT**"
+          schema:
+            $ref: '#/definitions/error400'
+        401:
+          description: "**UNAUTHORISED**"
+          schema: 
+            $ref: '#/definitions/error401'
+
+  /v0/order/list:
+    get:
+      tags:
+        - Orders
+      summary: Get the list of all orders
+      description: Display the list with information about multiple orders.
+      parameters:
+        - in: header
+          name: userId
+          required: true
+          type: string
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/orderList'
+        400:
+          description: "**INVALID INPUT**"
+          schema:
+            $ref: '#/definitions/error400'
+        401:
+          description: "**UNAUTHORISED**"
+          schema: 
+            $ref: '#/definitions/error401'
+  
+  /v0/clear:
+    delete:
+      tags:
+        - Other
+      summary: "Clears all the orders."
+      description: Deletes all the orders that are currently in the data store
+      responses:
+        200:
+          description:  "**Successfully removed all orders**"
+          schema:
+              $ref: '#/definitions/emptyObj' 
