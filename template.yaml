@@ -8,17 +8,40 @@ Transform:
 # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resources-section-structure.html
 Resources:
 
+  BreadStackersApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      Auth:
+        ApiKeyRequired: true
+        UsagePlan:
+          CreateUsagePlan: PER_API
+          UsagePlanName: BreadStackersPlan
+          # Usage limits - change if needed
+          Throttle: 
+            # 10 reqs/s
+            RateLimit: 10
+            # 20 reqs at once
+            BurstLimit: 20
+          Quota:
+            # 1000 reqs/day
+            Limit: 1000
+            Period: DAY
+
   placeHolderFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: src/handlers/placeholder.handlers
+      Handler: src/handlers/placeholder.dummyHandler
       Events:
         Api:
           Type: Api
           Properties:
+            RestApiId: !Ref BreadStackersApi
             Path: /api/health
             Method: GET
 
+
+  
 # Add handlers here whenever you create a new Lambda, see the template below. Make sure y'all remove the '{}' too:
 
 # createOrderFunction:
@@ -35,7 +58,7 @@ Resources:
 Outputs:
   WebEndpoint:
     Description: API Gateway endpoint URL for Prod stage
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/Prod/"
+    Value: !Sub "https://${BreadStackersApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/Prod/"
 
 
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
