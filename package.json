@@ -1,6 +1,6 @@
 {
     "name": "seng2021-bread-stackers",
-    "description": "SENG2021 Bread Stackers - UBL Digital Trade Document API",
+    "description": "To make it easy for you to get started with GitLab, here's a list of recommended next steps.",
     "version": "1.0.0",
     "private": true,
     "main": "app.ts",
@@ -38,21 +38,6 @@
         "typescript-eslint": "^8.56.1",
         "yaml": "^2.7.1"
     },
-    "name": "seng2021-bread-stackers",
-    "version": "1.0.0",
-    "description": "To make it easy for you to get started with GitLab, here's a list of recommended next steps.",
-    "main": "app.ts",
-    "directories": {
-        "test": "tests"
-    },
-    "repository": {
-        "type": "git",
-        "url": "git@gitlab.cse.unsw.edu.au:z5479134/SENG2021-bread-stackers.git"
-    },
-    "keywords": [],
-    "author": "",
-    "license": "ISC",
-    "type": "commonjs",
     "dependencies": {
         "uuid": "^13.0.0",
         "validator": "^13.15.26"
