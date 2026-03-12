@@ -6,7 +6,7 @@ import { InvalidDeliveryAddr,
   InvalidRequestPeriod,
   InvalidInput,
   UnauthorisedError } from '../throwError';
-import { listOrders } from '../orderList';
+//import { listOrders } from '../orderList';
 import { updateOrder } from '../updateOrder';
 
 
@@ -63,9 +63,7 @@ export const createOrderHandler = async (
   }
 };
 
-
-
-
+// Update Order
 export const updateOrderHandler = async (event: APIGatewayProxyEvent) => {
   try {
     const body = JSON.parse(event.body ?? '{}');
