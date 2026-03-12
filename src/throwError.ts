@@ -80,3 +80,10 @@ export class InvalidItemQuantity extends Error {
   }
 }
 
+// for invalid item number
+export class InvalidInput extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'INVALID_INPUT';
+  }
+}

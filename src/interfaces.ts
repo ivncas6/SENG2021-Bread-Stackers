@@ -16,14 +16,15 @@ export interface Users extends UserInfo {
 }
 
 export interface Order {
-    orderId?: string;
-    currency: string;
-    totalAmount: number;
-    userId: number;
-    user: User;
-    deliveryAddress: string;
-    reqDeliveryPeriod: ReqDeliveryPeriod;
-    items: Item[];
+  orderId?: string;
+  orderDate: number,
+  currency: string;
+  totalAmount: number;
+  userId: number;
+  user: User;
+  deliveryAddress: string;
+  reqDeliveryPeriod: ReqDeliveryPeriod;
+  items: Item[];
 }
 
 
