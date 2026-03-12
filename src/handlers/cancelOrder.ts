@@ -1,20 +1,15 @@
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import { cancelOrder } from '../order';
 import { InvalidInput, UnauthorisedError } from '../throwError';
+import { OrderId } from '../interfaces';
 
 export const cancelOrderHandler = async (
   event: APIGatewayProxyEvent
 ) => {
   try {
-    const orderId = event.pathParameters?.orderId;
+    // assumes order has to be there as it's included in the route path
+    const orderId = event.pathParameters!.orderId!;
     const body = JSON.parse(event.body ?? '{}');
-
-    if (!orderId) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: 'Missing orderId' }),
-      };
-    }
 
     const result = cancelOrder(orderId, body.reason);
 
