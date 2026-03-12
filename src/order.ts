@@ -64,3 +64,20 @@ export function createOrder(currency: string, session: string,
 
   return { orderId: orderId };
 }
+
+export function cancelOrder(orderId: string, reason: string) {
+
+  const data = getData();
+  const foundOrder = data.orders.find(order => order.orderId === orderId);
+
+  /* no sessionId so no check for http 401 error. error checking 
+  may also be different since our arch is serverless */
+
+  // error check
+  if (foundOrder == null) {
+    throw new InvalidInput('error: Invalid orderId');
+  }
+
+  data.orders.splice(data.orders.indexOf(foundOrder), 1);
+  return { orderId: orderId, reason: reason };
+}

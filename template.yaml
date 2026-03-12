@@ -40,6 +40,17 @@ Resources:
             Path: /api/health
             Method: GET
 
+  cancelOrderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/cancelOrder.cancelOrderHandler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BreadStackersApi
+            Path: /v0/order/{orderId}
+            Method: DELETE
 
   
 # Add handlers here whenever you create a new Lambda, see the template below. Make sure y'all remove the '{}' too:
