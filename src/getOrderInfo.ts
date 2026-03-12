@@ -1,6 +1,6 @@
-import { getData } from "./dataStore";
-import { ErrorObject, OrderInfo } from "./interfaces";
-import { InvalidOrderId, UnauthorisedError } from "./throwError";
+import { getData } from './dataStore';
+import { ErrorObject, OrderInfo } from './interfaces';
+import { InvalidOrderId, UnauthorisedError } from './throwError';
 
 export function getOrderInfo(
   session: string,
