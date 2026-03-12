@@ -4,8 +4,8 @@ import {
   InvalidEmail,
   InvalidFirstName,
   InvalidLastName,
-} from '.././throwError';
-import crypto from 'crypto';
+} from './throwError';
+import * as crypto from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import validator from 'validator';
 

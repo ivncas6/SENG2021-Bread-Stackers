@@ -5,7 +5,7 @@ import {
   InvalidLogin,
   InvalidPassword,
   UnauthorisedError
-} from '.././throwError';
+} from './throwError';
 import { invalidnameFirst, invalidnameLast, getHashOf, checkPassword, 
   createNewSession, invalidemailcheck,
 } from './userHelper';
