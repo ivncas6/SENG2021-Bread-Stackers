@@ -21,10 +21,15 @@ const config = {
   collectCoverage: true,
 
   // An array of glob patterns indicating a set of files for which coverage information should be collected
-  collectCoverageFrom: ['src/**/*.{ts,js}', '!src/tests/**'],
+  collectCoverageFrom: [
+    'src/**/*.ts', 
+    '!src/tests/**',
+    // remove comment if interfaces impedes coverage
+    //'!src/interfaces.ts' 
+  ],
 
   // The directory where Jest should output its coverage files
-  coverageDirectory: "coverage",
+  coverageDirectory: 'coverage',
 
   // An array of regexp pattern strings used to skip coverage collection
   // coveragePathIgnorePatterns: [
@@ -44,10 +49,11 @@ const config = {
 
   // An object that configures minimum threshold enforcement for coverage results
   coverageThreshold: {
-  global: {
-    lines: 85,
+    global: {
+      branches: 85,
+      lines: 85,
+    },
   },
-},
 
   // A path to a custom dependency extractor
   // dependencyExtractor: undefined,
@@ -180,7 +186,9 @@ const config = {
   // testRunner: "jest-circus/runner",
 
   // A map from regular expressions to paths to transformers
-  // transform: undefined,
+  transform: {
+    '^.+\\.ts$': 'ts-jest',
+  },
 
   // An array of regexp pattern strings that are matched against all source file paths, matched files will skip transformation
   // transformIgnorePatterns: [

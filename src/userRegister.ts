@@ -6,11 +6,13 @@ import {
   InvalidPassword,
   UnauthorisedError
 } from '.././throwError';
-import { invalidnameFirst, invalidnameLast, getHashOf, checkPassword, createNewSession, invalidemailcheck,
- } from './userHelper';
+import { invalidnameFirst, invalidnameLast, getHashOf, checkPassword, 
+  createNewSession, invalidemailcheck,
+} from './userHelper';
 import validator from 'validator';
 
-export function userRegister(nameFirst: string, nameLast: string, email: string, password: string): SessionId | ErrorObject {
+export function userRegister(nameFirst: string, nameLast: string, email: string, 
+  password: string): SessionId | ErrorObject {
   const data = getData();
 
   // Check if the user has already registered an email
@@ -83,7 +85,7 @@ export function adminUserDetailsUpdate (session: string, email: string,
   invalidnameLast(nameLast);
 
   if (!user) {
-    throw new UnauthorisedError("User does not exist");
+    throw new UnauthorisedError('User does not exist');
   }
 
   user.email = email;

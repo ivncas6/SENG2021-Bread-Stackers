@@ -28,36 +28,36 @@ export interface Order {
 
 
 export interface OrderInfo {
-    orderId: string;
-    status: string;
-    orderDateTime: number;
-    currency: string;
-    deliveryAddress: string;
-    userDetails: User;
-    reqDeliveryPeriod: ReqDeliveryPeriod;
-    items: Item[];
+  orderId: string;
+  status: string;
+  orderDateTime: number;
+  currency: string;
+  deliveryAddress: string;
+  userDetails: User;
+  reqDeliveryPeriod: ReqDeliveryPeriod;
+  items: Item[];
 }
 
 export interface User {
-    name: string,
-    telephone: number;
-    email: string;
+  name: string,
+  telephone: number;
+  email: string;
 }
 
 export interface ReqDeliveryPeriod {
-    startDateTime: number;
-    endDateTime: number;
+  startDateTime: number;
+  endDateTime: number;
 }
 
 export interface Item {
-    name: string;
-    description: string;
-    unitPrice: number;
-    quantity: number;
+  name: string;
+  description: string;
+  unitPrice: number;
+  quantity: number;
 }
 
 export interface OrderId {
-    orderId: string;
+  orderId: string;
 }
 
 export interface UserId {
@@ -72,7 +72,7 @@ export interface ErrorObject {
 }
 
 export interface createOrderReturn {
-    orderId: string, 
+  orderId: string, 
 }
 
 export interface SessionId {
