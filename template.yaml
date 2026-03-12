@@ -21,16 +21,28 @@ Resources:
 
 # Add handlers here whenever you create a new Lambda, see the template below. Make sure y'all remove the '{}' too:
 
-createOrderFunction:
-  Type: AWS::Serverless::Function
-  Properties:
-    Handler: src/handlers/createOrder.createOrderHandler
-    Events:
-      Api:
-        Type: Api
-        Properties:
-          Path: /api/orders
-          Method: POST
+  createOrderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/placeholder.createOrderHandler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /v0/order
+            Method: POST
+  
+  getOrderInfoFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/orderInfo.getOrderInfoHandler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /v0/order/{orderId}
+            Method: GET
+
 
 Outputs:
   WebEndpoint:
