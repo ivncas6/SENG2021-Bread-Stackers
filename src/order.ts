@@ -56,7 +56,8 @@ export function createOrder(currency: string, session: string,
     user: user,
     deliveryAddress: deliveryAddress,
     reqDeliveryPeriod: reqDeliveryPeriod,
-    items: items
+    items: items,
+    status: 'OPEN'
   };
 
   data.orders.push(order);

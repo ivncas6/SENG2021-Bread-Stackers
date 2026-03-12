@@ -1,8 +1,14 @@
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import { createOrder } from '../order';
 import { Item, ReqDeliveryPeriod, User } from '../interfaces';
-import { InvalidInput, UnauthorisedError } from '../throwError';
+import { InvalidDeliveryAddr,
+  InvalidOrderId,
+  InvalidRequestPeriod,
+  InvalidInput,
+  UnauthorisedError } from '../throwError';
 import { listOrders } from '../orderList';
+import { updateOrder } from '../updateOrder';
+
 
 export const dummyHandler = async () => ({
   statusCode: 200,
@@ -54,5 +60,64 @@ export const createOrderHandler = async (
         body: JSON.stringify({ error: err.message })
       };
     }
+  }
+};
+
+
+
+
+export const updateOrderHandler = async (event: APIGatewayProxyEvent) => {
+  try {
+    const body = JSON.parse(event.body ?? '{}');
+
+    // Fetch the order ID
+    const orderId = event.pathParameters?.orderId;
+    if (!orderId) {
+      throw new InvalidOrderId('Order ID is missing from path');
+    }
+
+    // Fetch session 
+    const session = event.headers?.userId || event.headers?.session; 
+    if (!session) {
+      throw new UnauthorisedError('User authorization header missing');
+    }
+
+    // Extract data from body
+    const { deliveryAddress, reqDeliveryPeriod, status } = body;
+
+    // Call updateOrder function
+    const result = updateOrder(
+      session,
+      orderId,
+      deliveryAddress,
+      reqDeliveryPeriod,
+      status
+    );
+    // Sucess returns 200
+    return {
+      statusCode: 200,
+      body: JSON.stringify(result),
+    };
+  // Unathorised access must return 401
+  } catch (err: unknown) {
+    if (err instanceof UnauthorisedError) {
+      return {
+        statusCode: 401,
+        body: JSON.stringify({ errorCode: 401, errorMsg: err.message })
+      };
+    }
+    // Validation errors must return 400
+    if (
+      err instanceof InvalidOrderId || 
+      err instanceof InvalidDeliveryAddr || 
+      err instanceof InvalidRequestPeriod ||
+      err instanceof InvalidInput
+    ) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ errorCode: 400, errorMsg: err.message })
+      };
+    }
+
   }
 };
