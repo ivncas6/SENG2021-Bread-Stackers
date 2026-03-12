@@ -1,4 +1,4 @@
-import { cancelOrder, createOrder } from '../order'
+import { cancelOrder, createOrder } from '../order';
 import { userRegister } from '../userRegister';
 import { getData } from '../dataStore';
 import { createOrderReturn, SessionId } from '../interfaces';
@@ -27,7 +27,7 @@ test('cancel a single order', () => {
       unitPrice: 6,
       quantity: 100
     }
-  ]
+  ];
   const userDetails = {
     name: 'John Smith',
     telephone: 123456789,

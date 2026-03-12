@@ -6,7 +6,7 @@ export const cancelOrderHandler = async (
   event: APIGatewayProxyEvent
 ) => {
   try {
-    // assumes order has to be there as it's included in the route path
+    // assumes order has to be there as it's included in the route path - DBC
     const orderId = event.pathParameters!.orderId!;
     const body = JSON.parse(event.body ?? '{}');
 
