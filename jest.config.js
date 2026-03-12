@@ -3,6 +3,8 @@
  * https://jestjs.io/docs/configuration
  */
 
+// check if you need to add mocks at some point and edit the configs below
+
 /** @type {import('jest').Config} */
 const config = {
   // All imported modules in your tests should be mocked automatically
