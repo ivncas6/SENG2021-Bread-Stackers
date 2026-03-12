@@ -300,7 +300,7 @@ paths:
       description: Takes details from the user and updates it in the system
       parameters:
         - in: header
-          name: userId
+          name: session
           required: true
           type: string
         - in: body

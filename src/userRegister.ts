@@ -6,7 +6,7 @@ import {
   InvalidPassword,
   UnauthorisedError
 } from '.././throwError';
-import { invalidnameFirst, invalidnameLast, getHashOf, checkPassword, createNewSession,
+import { invalidnameFirst, invalidnameLast, getHashOf, checkPassword, createNewSession, invalidemailcheck,
  } from './userHelper';
 import validator from 'validator';
 
@@ -67,6 +67,31 @@ export function adminAuthLogin (email: string, password: string): SessionId | Er
   return createNewSession(user.userId);
 }
 
+// Given the userId and set of user properties update the properties of the logged in adminUser
+export function adminUserDetailsUpdate (session: string, email: string,
+  nameFirst: string, nameLast: string): EmptyObject | ErrorObject {
+  const data = getData();
+  const ses = data.sessions.find(s => s.session === session);
+  if (!ses) {
+    throw new UnauthorisedError('Not a valid session');
+  }
+  const userId = ses.userId;
+  const user = data.users.find((u) => u.userId === userId);
+
+  invalidemailcheck(ses.session, email);
+  invalidnameFirst(nameFirst);
+  invalidnameLast(nameLast);
+
+  if (!user) {
+    throw new UnauthorisedError("User does not exist");
+  }
+
+  user.email = email;
+  user.nameFirst = nameFirst;
+  user.nameLast = nameLast;
+
+  return { };
+}
 
 export function logoutSession(sessionId: string): EmptyObject | ErrorObject {
   const data = getData();
