@@ -79,5 +79,5 @@ export function cancelOrder(orderId: string, reason: string) {
   }
 
   data.orders.splice(data.orders.indexOf(foundOrder), 1);
-  return { orderId: orderId, reason: reason };
+  return {};
 }

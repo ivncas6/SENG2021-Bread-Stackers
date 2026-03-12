@@ -38,7 +38,7 @@ test('cancel a single order', () => {
     '308 Negra Arroyo Lane', delPeriod, items) as createOrderReturn;
 
   const res = cancelOrder(order.orderId, 'reason here');
-  expect(res).toStrictEqual({ orderId: order.orderId, reason: 'reason here' });
+  expect(res).toStrictEqual({});
 
   const data = getData();
   const userFind = data.orders.find(ord => ord.orderId === order.orderId);
