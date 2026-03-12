@@ -1,4 +1,4 @@
-import { dummyHandler } from '../handlers/placeholder'
+import { dummyHandler } from '../handlers/placeholder';
 
 test('dummy test for coverage for placeholder handler', async () => {
   const res = await dummyHandler();
