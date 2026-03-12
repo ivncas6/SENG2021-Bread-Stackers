@@ -3,3 +3,10 @@
 
 # coverage reports
 coverage
+
+# package.json handles dependencies
+node_modules
+
+# AWS installations
+sam-install/
+.aws-sam/
