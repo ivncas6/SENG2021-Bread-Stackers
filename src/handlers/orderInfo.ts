@@ -9,14 +9,14 @@ export const getOrderInfoHandler = async (event: APIGatewayProxyEvent) => {
     if (!session) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: "provided session is not valid" }),
+        body: JSON.stringify({ error: 'provided session is not valid'})
       };
     }
     // check if the provided path contains an orderId
     if (!event.pathParameters) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: "OrderId is null." }),
+        body: JSON.stringify({ error: 'orderId is null.' })
       };
     }
     // get the orderId from the route path
@@ -24,7 +24,7 @@ export const getOrderInfoHandler = async (event: APIGatewayProxyEvent) => {
     if (!orderId) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: "orderId provided is not valid" }),
+        body: JSON.stringify({ error: 'orderId provided is not valid' })
       };
     }
 
@@ -39,13 +39,13 @@ export const getOrderInfoHandler = async (event: APIGatewayProxyEvent) => {
     if (e instanceof InvalidOrderId) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: e.message }),
+        body: JSON.stringify({ error: e.message })
       };
     }
     if (e instanceof UnauthorisedError) {
       return {
         statusCode: 401,
-        body: JSON.stringify({ error: e.message }),
+        body: JSON.stringify({ error: e.message })
       };
     }
   }
