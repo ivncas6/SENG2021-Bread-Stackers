@@ -1,6 +1,4 @@
-
-
-export const handler = async () => ({
-    statusCode: 200,
-    body: JSON.stringify({ status: 'OK' }),
+export const dummyHandler = async () => ({
+  statusCode: 200,
+  body: JSON.stringify({ status: 'OK' }),
 });

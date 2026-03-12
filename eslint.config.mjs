@@ -5,7 +5,13 @@ import { defineConfig } from "eslint/config";
 
 export default defineConfig([
   {
-    ignores: ["node_modules/", "coverage/", "*.config.*"],
+    ignores: [
+      "node_modules/",
+      "coverage/",
+      "*.config.*",
+      '.aws-sam/**',
+      'events/**',
+    ]
   },
   { 
     files: ["**/*.{js,mjs,cjs,ts,mts,cts}"],
