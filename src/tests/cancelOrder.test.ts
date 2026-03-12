@@ -1,4 +1,4 @@
-import { cancelOrder, createOrder } from '../order';
+import { cancelOrder, createOrder } from '../order'
 import { userRegister } from '../userRegister';
 import { getData } from '../dataStore';
 import { createOrderReturn, SessionId } from '../interfaces';
@@ -27,7 +27,7 @@ test('cancel a single order', () => {
       unitPrice: 6,
       quantity: 100
     }
-  ];
+  ]
   const userDetails = {
     name: 'John Smith',
     telephone: 123456789,
@@ -38,9 +38,10 @@ test('cancel a single order', () => {
     '308 Negra Arroyo Lane', delPeriod, items) as createOrderReturn;
 
   const res = cancelOrder(order.orderId, 'reason here');
-  expect(res).toStrictEqual({});
+  expect(res).toStrictEqual({ reason: 'reason here' });
 
   const data = getData();
   const userFind = data.orders.find(ord => ord.orderId === order.orderId);
   expect(userFind).toBeUndefined();
 });
+

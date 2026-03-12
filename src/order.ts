@@ -78,8 +78,9 @@ export function cancelOrder(orderId: string, reason: string) {
     throw new InvalidInput('error: Invalid orderId');
   }
 
-  // uses reason
 
   data.orders.splice(data.orders.indexOf(foundOrder), 1);
-  return {};
+
+  // uses reason
+  return { reason: reason };
 }
