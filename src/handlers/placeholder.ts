@@ -2,6 +2,7 @@ import { APIGatewayProxyEvent } from 'aws-lambda';
 import { createOrder } from '../order';
 import { Item, ReqDeliveryPeriod, User } from '../interfaces';
 import { InvalidInput, UnauthorisedError } from '../throwError';
+import { listOrders } from '../orderList';
 
 export const dummyHandler = async () => ({
   statusCode: 200,
