@@ -1,7 +1,12 @@
+export interface Session {
+    session: string,
+    userId: number
+}
+
 export interface UserInfo {
-  userId: string;
-  name: string;
-  email: string;
+    userId: number;
+    name: string;
+    email: string;
 }
 
 export interface Users extends UserInfo {
@@ -11,14 +16,14 @@ export interface Users extends UserInfo {
 }
 
 export interface Order {
-  orderId?: string;
-  currency: string;
-  totalAmount: number;
-  userId: string;
-  user: User;
-  deliveryAddress: string;
-  reqDeliveryPeriod: ReqDeliveryPeriod;
-  items: Item[];
+    orderId?: string;
+    currency: string;
+    totalAmount: number;
+    userId: number;
+    user: User;
+    deliveryAddress: string;
+    reqDeliveryPeriod: ReqDeliveryPeriod;
+    items: Item[];
 }
 
 
@@ -56,7 +61,7 @@ export interface OrderId {
 }
 
 export interface UserId {
-  userId: string;
+    userId: number;
 }
 
 export type EmptyObject = Record<string, never>;
@@ -69,3 +74,8 @@ export interface ErrorObject {
 export interface createOrderReturn {
   orderId: string, 
 }
+
+export interface SessionId {
+    session: string,
+}
+

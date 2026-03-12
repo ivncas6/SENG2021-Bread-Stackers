@@ -47,3 +47,36 @@ export class UnauthorisedError extends Error {
     this.name = 'UNAUTHORISED';
   }
 }
+
+// for invalid orderId
+export class InvalidOrderId extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'INVALID_ORDER_ID';
+  }
+}
+
+// for invalid delivery address
+export class InvalidDeliveryAddr extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'INVALID_DELIVERY_ADDRESS';
+  }
+}
+
+// for invalid delivery request period
+export class InvalidRequestPeriod extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'INVALID_REQUEST_PERIOD';
+  }
+}
+
+// for invalid item number
+export class InvalidItemQuantity extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'INVALID_ITEM_QUANTITY';
+  }
+}
+
