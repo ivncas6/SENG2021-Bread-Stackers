@@ -4,6 +4,7 @@ import { getData, clearData } from '../dataStore';
 import { createOrderReturn, SessionId } from '../interfaces';
 import { cancelOrderHandler } from '../handlers/cancelOrder';
 import { APIGatewayProxyEvent } from 'aws-lambda';
+import mockEvent from './mocks/cancelOrderMock.json';
 
 /*APIGatewayProxyEvent Structure:
   const event = {
@@ -81,14 +82,15 @@ test('Test endpoint for order cancellation', async () => {
   
   const order = createTemplateOrderAndUser();
   const finalReason = 'I have no reason';
-  const event = {
-    // must include body
-    body: JSON.stringify({ reason: finalReason}),
-    // must include pathParam
-    pathParameters: { orderId: order.orderId },
-    httpMethod: 'DELETE',
+  const event = { 
+    mockEvent,
+    pathParameters: {
+      // ... is a spread operator and takes everything in mock
+      ...mockEvent.pathParameters,
+      orderId: order.orderId,
+    },
+    body: JSON.stringify({ reason: finalReason })
   } as unknown as APIGatewayProxyEvent;
-
   // unknown needs to be included first
 
   // async nature of func -> await response to get a valid value
