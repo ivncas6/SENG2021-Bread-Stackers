@@ -5,6 +5,8 @@ import { createOrderReturn, SessionId } from '../interfaces';
 import { cancelOrderHandler } from '../handlers/cancelOrder';
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import mockEvent from './mocks/cancelOrderMock.json';
+import { read } from 'node:fs';
+import { InvalidInput } from '../throwError';
 
 /*APIGatewayProxyEvent Structure:
   const event = {
@@ -99,4 +101,31 @@ test('Test endpoint for order cancellation', async () => {
 
   expect(res.statusCode).toStrictEqual(200);
   expect(JSON.parse(res.body)).toStrictEqual({ reason: finalReason });
+});
+
+
+// test 400 error for invalid input
+test('Test endpoint for invalid orderId', async () => {
+  // create an order
+  const order = createTemplateOrderAndUser();
+  const finalReason = 'I have no reason';
+  const event = { 
+    mockEvent,
+    pathParameters: {
+      // ... is a spread operator and takes everything in mock
+      ...mockEvent.pathParameters,
+      orderId: 123,
+    },
+    body: JSON.stringify({ reason: finalReason })
+  } as unknown as APIGatewayProxyEvent;
+  // unknown needs to be included first
+
+  // async nature of func -> await response to get a valid value
+
+  const res = await cancelOrderHandler(event);
+
+  expect(res.statusCode).toStrictEqual(400);
+  const body = JSON.parse(res.body);
+  expect(body).toHaveProperty('error');
+  expect(typeof body.error).toBe('string');
 });
