@@ -5,8 +5,6 @@ import { createOrderReturn, SessionId } from '../interfaces';
 import { cancelOrderHandler } from '../handlers/cancelOrder';
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import mockEvent from './mocks/cancelOrderMock.json';
-import { read } from 'node:fs';
-import { InvalidInput } from '../throwError';
 
 /*APIGatewayProxyEvent Structure:
   const event = {
@@ -107,7 +105,7 @@ test('Test endpoint for order cancellation', async () => {
 // test 400 error for invalid input
 test('Test endpoint for invalid orderId', async () => {
   // create an order
-  const order = createTemplateOrderAndUser();
+  createTemplateOrderAndUser();
   const finalReason = 'I have no reason';
   const event = { 
     mockEvent,

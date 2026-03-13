@@ -5,11 +5,7 @@ import {
   InvalidFirstName,
   InvalidLastName,
 } from './throwError';
-<<<<<<< HEAD
 import * as crypto from 'crypto';
-=======
-import crypto from 'crypto';
->>>>>>> main
 import { v4 as uuidv4 } from 'uuid';
 import validator from 'validator';
 
