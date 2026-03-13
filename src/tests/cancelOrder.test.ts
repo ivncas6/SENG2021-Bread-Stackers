@@ -1,14 +1,34 @@
 import { cancelOrder, createOrder } from '../order';
 import { userRegister } from '../userRegister';
-import { getData } from '../dataStore';
+import { getData, clearData } from '../dataStore';
 import { createOrderReturn, SessionId } from '../interfaces';
+import { cancelOrderHandler } from '../handlers/cancelOrder';
+import { APIGatewayProxyEvent } from 'aws-lambda';
 
-// add something like this later
-// beforeEach(() => {
-//   clear();
-// });
+/*APIGatewayProxyEvent Structure:
+  const event = {
+    body: null,
+    pathParameters: null,
+    headers: null,
+    multiValueHeaders: null,
+    httpMethod: 'DELETE',
+    isBase64Encoded: false,
+    pathQueryStringParameters: null,
+    path: null,
+    queryStringParameters: null,
+    multiValueQueryStringParameters: null,
+    stageVariables: null,
+    requestContext: null,
+    resource: null
+  }
+*/
 
-test('cancel a single order', () => {
+beforeEach(() => {
+  clearData();
+});
+
+// requires create order to be working
+function createTemplateOrderAndUser() {
   const session = userRegister('John', 'Smith', 'johnsmith@gmail.com', 'password123') as SessionId;
   const delPeriod = {
     startDateTime: 123,
@@ -37,6 +57,15 @@ test('cancel a single order', () => {
   const order = createOrder('AUD', session.session, userDetails, 
     '308 Negra Arroyo Lane', delPeriod, items) as createOrderReturn;
 
+  return order;
+}
+
+
+// test backend logic
+test('cancel a single order', () => {
+
+  const order = createTemplateOrderAndUser();
+
   const res = cancelOrder(order.orderId, 'reason here');
   expect(res).toStrictEqual({ reason: 'reason here' });
 
@@ -45,3 +74,27 @@ test('cancel a single order', () => {
   expect(userFind).toBeUndefined();
 });
 
+
+// test AWS Handle
+test('Test endpoint for order cancellation', async () => {
+  // create an order
+  
+  const order = createTemplateOrderAndUser();
+  const finalReason = 'I have no reason';
+  const event = {
+    // must include body
+    body: JSON.stringify({ reason: finalReason}),
+    // must include pathParam
+    pathParameters: { orderId: order.orderId },
+    httpMethod: 'DELETE',
+  } as unknown as APIGatewayProxyEvent;
+
+  // unknown needs to be included first
+
+  // async nature of func -> await response to get a valid value
+
+  const res = await cancelOrderHandler(event);
+
+  expect(res.statusCode).toStrictEqual(200);
+  expect(JSON.parse(res.body)).toStrictEqual({ reason: finalReason });
+});

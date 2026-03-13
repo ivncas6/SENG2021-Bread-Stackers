@@ -10,7 +10,8 @@ export const cancelOrderHandler = async (
     const orderId = event.pathParameters!.orderId!;
     const body = JSON.parse(event.body ?? '{}');
 
-    const result = cancelOrder(orderId, body.reason);
+    // await to ensure the function finishes before it passes result
+    const result = await cancelOrder(orderId, body.reason);
 
     return {
       statusCode: 200,
@@ -29,6 +30,7 @@ export const cancelOrderHandler = async (
         body: JSON.stringify({ error: err.message }),
       };
     }
+    // unknown error
     return {
       statusCode: 500,
       body: JSON.stringify({ error: 'Internal server error' }),

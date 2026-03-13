@@ -6,10 +6,18 @@ export interface Data {
     sessions: Session[],
 }
 
-const data: Data = {
+let data: Data = {
   users: [],
   orders: [],
   sessions: [],
 };
+
+export function clearData() {
+  data = {
+    users: [],
+    orders: [],
+    sessions: [],
+  };
+}
 
 export const getData = () : Data => data;
