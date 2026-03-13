@@ -2,7 +2,7 @@ import { getOrderInfo } from '../order';
 import { clearData } from '../dataStore';
 import { createOrder } from '../order';
 import { userRegister } from '../userRegister';
-import { createOrderReturn, Order, OrderInfo, Session } from '../interfaces';
+import { OrderInfo, Session } from '../interfaces';
 import { InvalidOrderId, UnauthorisedError } from '../throwError';
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import { getOrderInfoHandler } from '../handlers/orderInfo';

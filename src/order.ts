@@ -92,18 +92,18 @@ export function getOrderInfo(session: string, orderId: string): OrderInfo | Erro
   const data = getData();
   const ses = data.sessions.find((s) => s.session === session);
   if (!ses) {
-    throw new UnauthorisedError("Not a valid session");
+    throw new UnauthorisedError('Not a valid session');
   }
   // find the order
   const order = data.orders.find((order) => order.orderId === orderId);
   if (!order) {
     throw new InvalidOrderId(
-      "Provided orderId doesnot correspond to any existing order",
+      'Provided orderId doesnot correspond to any existing order',
     );
   }
   if (order.userId !== ses.userId) {
     throw new InvalidOrderId(
-      "Order with the provided orderId does not belong to this user.",
+      'Order with the provided orderId does not belong to this user.',
     );
   }
   return {
