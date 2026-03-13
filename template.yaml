@@ -78,7 +78,54 @@ Resources:
             RestApiId: !Ref BreadStackersApi
             Path: /v0/order/{orderId}
             Method: GET
-
+  
+  userRegisterFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/userRegister.registerUserHandler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BreadStackersApi
+            Path: /v0/user/register
+            Method: POST
+  
+  userLoginFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/userLogin.userLoginHandler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BreadStackersApi
+            Path: /v0/user/login
+            Method: POST
+  
+  userDetailsUpdateFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/userDetails.updateUserDetailsHandler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BreadStackersApi
+            Path: /v0/user/details
+            Method: PUT
+  
+  userLogoutFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/userLogout.userLogoutHandler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BreadStackersApi
+            Path: /v0/user/logout
+            Method: POST
 
 Outputs:
   WebEndpoint:
