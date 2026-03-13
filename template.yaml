@@ -63,6 +63,7 @@ Resources:
         Api:
           Type: Api
           Properties:
+            RestApiId: !Ref BreadStackersApi
             Path: /v0/order
             Method: POST
   
@@ -74,6 +75,7 @@ Resources:
         Api:
           Type: Api
           Properties:
+            RestApiId: !Ref BreadStackersApi
             Path: /v0/order/{orderId}
             Method: GET
 
