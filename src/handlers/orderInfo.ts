@@ -1,5 +1,5 @@
 import { APIGatewayProxyEvent } from 'aws-lambda';
-import { getOrderInfo } from '../getOrderInfo';
+import { getOrderInfo } from '../order';
 import { InvalidOrderId, UnauthorisedError } from '../throwError';
 
 export const getOrderInfoHandler = async (event: APIGatewayProxyEvent) => {
@@ -48,5 +48,10 @@ export const getOrderInfoHandler = async (event: APIGatewayProxyEvent) => {
         body: JSON.stringify({ error: e.message })
       };
     }
+    // internal server error, server doesnot know how to handle the error
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: 'INTERNAL SERVER ERROR' }),
+    };
   }
 };

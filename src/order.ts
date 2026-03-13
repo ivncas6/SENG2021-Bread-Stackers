@@ -1,9 +1,11 @@
 import  { createOrderReturn, ErrorObject, Item, Order, 
+  OrderInfo, 
   ReqDeliveryPeriod, User } from './interfaces';
 import { v4 as uuidv4 } from 'uuid';
 import { getData } from './dataStore';
 import { createOrderUBLXML } from './generateUBL';
 import { InvalidDeliveryAddr, InvalidEmail, InvalidInput,
+  InvalidOrderId,
   InvalidRequestPeriod, UnauthorisedError } from './throwError';
 
 
@@ -84,4 +86,34 @@ export function cancelOrder(orderId: string, reason: string) {
 
   // uses reason
   return { reason: reason };
+}
+
+export function getOrderInfo(session: string, orderId: string): OrderInfo | ErrorObject {
+  const data = getData();
+  const ses = data.sessions.find((s) => s.session === session);
+  if (!ses) {
+    throw new UnauthorisedError("Not a valid session");
+  }
+  // find the order
+  const order = data.orders.find((order) => order.orderId === orderId);
+  if (!order) {
+    throw new InvalidOrderId(
+      "Provided orderId doesnot correspond to any existing order",
+    );
+  }
+  if (order.userId !== ses.userId) {
+    throw new InvalidOrderId(
+      "Order with the provided orderId does not belong to this user.",
+    );
+  }
+  return {
+    orderId: orderId,
+    orderDateTime: order.orderDate,
+    status: order.status,
+    currency: order.currency,
+    deliveryAddress: order.deliveryAddress,
+    userDetails: order.user,
+    reqDeliveryPeriod: order.reqDeliveryPeriod,
+    items: order.items,
+  };
 }
