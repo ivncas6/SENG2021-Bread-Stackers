@@ -1,53 +1,27 @@
-/**
- * For a detailed explanation regarding each configuration property, visit:
- * https://jestjs.io/docs/configuration
- */
-
 /** @type {import('jest').Config} */
 const config = {
-  // All imported modules in your tests should be mocked automatically
-  // automock: false,
+  // 1. Core Settings
+  preset: 'ts-jest',
+  testEnvironment: 'node',
 
-  // Stop running tests after `n` failures
-  // bail: 0,
+  // 2. THE FIX FOR UUID:
+  // This tells Jest to use the version of uuid that works with Node
+  moduleNameMapper: {
+    '^uuid$': 'uuid',
+  },
 
-  // The directory where Jest should store its cached dependency information
-  // cacheDirectory: "/tmp/jest_rs",
+  // 3. Transformation settings
+  transform: {
+    '^.+\\.ts$': 'ts-jest',
+  },
 
-  // Automatically clear mock calls, instances, contexts and results before every test
-  // clearMocks: false,
-
-  // Indicates whether the coverage information should be collected while executing the test
+  // 4. Your Coverage Settings (Kept from your original file)
   collectCoverage: true,
-
-  // An array of glob patterns indicating a set of files for which coverage information should be collected
   collectCoverageFrom: [
     'src/**/*.ts', 
     '!src/tests/**',
-    // remove comment if interfaces impedes coverage
-    //'!src/interfaces.ts' 
   ],
-
-  // The directory where Jest should output its coverage files
   coverageDirectory: 'coverage',
-
-  // An array of regexp pattern strings used to skip coverage collection
-  // coveragePathIgnorePatterns: [
-  //   "/node_modules/"
-  // ],
-
-  // Indicates which provider should be used to instrument code for coverage
-  // coverageProvider: "babel",
-
-  // A list of reporter names that Jest uses when writing coverage reports
-  // coverageReporters: [
-  //   "json",
-  //   "text",
-  //   "lcov",
-  //   "clover"
-  // ],
-
-  // An object that configures minimum threshold enforcement for coverage results
   coverageThreshold: {
     global: {
       branches: 85,

@@ -115,9 +115,6 @@ definitions:
       deliveryAddress:
         type: string
         example: 123 Street Name, Kensington
-      totalAmount:
-        type: number
-        example: 140
       user:
         type: object
         properties:
@@ -150,9 +147,6 @@ definitions:
       orderId:
         type: string
         example: or123
-      status:
-        type: string
-        example: PROCESSING
       orderDateTime:
         type: number
         example: 1773100800000
@@ -162,7 +156,7 @@ definitions:
       deliveryAddress:
         type: string
         example: 123 Street Name, Kensington
-      party:
+      user:
         type: object
         properties: 
           name:
@@ -210,9 +204,6 @@ definitions:
           endDateTime:
             type: number
             example: 1773619200000
-      status: 
-        type: string
-        example: PROCESSING
   
   orderList:
     type: object
@@ -361,7 +352,7 @@ paths:
       description: Creates an order by taking details from user 
       parameters:
         - in: header
-          name: userId
+          name: session
           required: true
           type: string
         - in: body
@@ -402,7 +393,7 @@ paths:
           required: true
           type: string
         - in: header
-          name: userId
+          name: session
           required: true
           type: string
       responses:
@@ -432,7 +423,7 @@ paths:
           required: true
           type: string
         - in: header
-          name: userId
+          name: session
           required: true
           type: string
         - in: body
@@ -465,7 +456,7 @@ paths:
           required: true
           type: string
         - in: header
-          name: userId
+          name: session
           required: true
           type: string
         - in: body
@@ -495,7 +486,7 @@ paths:
       description: Display the list with information about multiple orders.
       parameters:
         - in: header
-          name: userId
+          name: session
           required: true
           type: string
       responses:

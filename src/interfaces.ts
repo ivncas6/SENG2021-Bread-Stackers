@@ -25,6 +25,7 @@ export interface Order {
   deliveryAddress: string;
   reqDeliveryPeriod: ReqDeliveryPeriod;
   items: Item[];
+  status: string; 
 }
 
 
