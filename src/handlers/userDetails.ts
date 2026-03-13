@@ -24,7 +24,7 @@ export const updateUserDetailsHandler = async (
     const lastName = body.lastName;
 
     const res = userDetailsUpdate(
-        session, email, firstName, lastName
+      session, email, firstName, lastName
     );
 
     return {
@@ -43,7 +43,7 @@ export const updateUserDetailsHandler = async (
       };
     }
     if (e instanceof UnauthorisedError) {
-        return {
+      return {
         statusCode: 401,
         body: JSON.stringify({ error: e.message })
       };
