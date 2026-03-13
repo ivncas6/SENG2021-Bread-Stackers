@@ -1,6 +1,8 @@
-import { APIGatewayProxyEvent } from "aws-lambda";
-import { InvalidLastName, InvalidFirstName, InvalidEmail, InvalidPassword, UnauthorisedError } from "../throwError";
-import { userDetailsUpdate, userRegister } from "../userRegister";
+import { APIGatewayProxyEvent } from 'aws-lambda';
+import { InvalidLastName,
+  InvalidFirstName, InvalidEmail, UnauthorisedError
+} from '../throwError';
+import { userDetailsUpdate} from '../userRegister';
 
 export const updateUserDetailsHandler = async (
   event: APIGatewayProxyEvent
