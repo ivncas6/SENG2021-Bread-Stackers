@@ -1,5 +1,8 @@
 # SENG2021 Bread Stackers
 
+## SOFTWARE ARCHITECTURE DIAGRAM 
+![Container Diagram](images/C4.png)
+
 ## TODO:
 - Need to add instructions for adding '.env' and an API key from AWS
 - Need setup instructions like npm install
