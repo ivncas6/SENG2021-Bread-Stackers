@@ -1,0 +1,129 @@
+import { cancelOrder, createOrder } from '../order';
+import { userRegister } from '../userRegister';
+import { getData, clearData } from '../dataStore';
+import { createOrderReturn, SessionId } from '../interfaces';
+import { cancelOrderHandler } from '../handlers/cancelOrder';
+import { APIGatewayProxyEvent } from 'aws-lambda';
+import mockEvent from './mocks/cancelOrderMock.json';
+
+/*APIGatewayProxyEvent Structure:
+  const event = {
+    body: null,
+    pathParameters: null,
+    headers: null,
+    multiValueHeaders: null,
+    httpMethod: 'DELETE',
+    isBase64Encoded: false,
+    pathQueryStringParameters: null,
+    path: null,
+    queryStringParameters: null,
+    multiValueQueryStringParameters: null,
+    stageVariables: null,
+    requestContext: null,
+    resource: null
+  }
+*/
+
+beforeEach(() => {
+  clearData();
+});
+
+// requires create order to be working
+function createTemplateOrderAndUser() {
+  const session = userRegister('John', 'Smith', 'johnsmith@gmail.com', 'password123') as SessionId;
+  const delPeriod = {
+    startDateTime: 123,
+    endDateTime: 456,
+  };
+  const items = [
+    {
+      name: 'cabbage',
+      description: 'A leafy vegetable',
+      unitPrice: 12,
+      quantity: 50
+    },
+    {
+      name: 'tomato',
+      description: 'A red fruit',
+      unitPrice: 6,
+      quantity: 100
+    }
+  ];
+  const userDetails = {
+    name: 'John Smith',
+    telephone: 123456789,
+    email: 'johnsmith@gmail.com',
+  };
+
+  const order = createOrder('AUD', session.session, userDetails, 
+    '308 Negra Arroyo Lane', delPeriod, items) as createOrderReturn;
+
+  return order;
+}
+
+
+// test backend logic
+test('cancel a single order', () => {
+
+  const order = createTemplateOrderAndUser();
+
+  const res = cancelOrder(order.orderId, 'reason here');
+  expect(res).toStrictEqual({ reason: 'reason here' });
+
+  const data = getData();
+  const userFind = data.orders.find(ord => ord.orderId === order.orderId);
+  expect(userFind).toBeUndefined();
+});
+
+
+// test AWS Handle
+test('Test endpoint for order cancellation', async () => {
+  // create an order
+  
+  const order = createTemplateOrderAndUser();
+  const finalReason = 'I have no reason';
+  const event = { 
+    mockEvent,
+    pathParameters: {
+      // ... is a spread operator and takes everything in mock
+      ...mockEvent.pathParameters,
+      orderId: order.orderId,
+    },
+    body: JSON.stringify({ reason: finalReason })
+  } as unknown as APIGatewayProxyEvent;
+  // unknown needs to be included first
+
+  // async nature of func -> await response to get a valid value
+
+  const res = await cancelOrderHandler(event);
+
+  expect(res.statusCode).toStrictEqual(200);
+  expect(JSON.parse(res.body)).toStrictEqual({ reason: finalReason });
+});
+
+
+// test 400 error for invalid input
+test('Test endpoint for invalid orderId', async () => {
+  // create an order
+  createTemplateOrderAndUser();
+  const finalReason = 'I have no reason';
+  const event = { 
+    mockEvent,
+    pathParameters: {
+      // ... is a spread operator and takes everything in mock
+      ...mockEvent.pathParameters,
+      orderId: 123,
+    },
+    body: JSON.stringify({ reason: finalReason })
+  } as unknown as APIGatewayProxyEvent;
+  // unknown needs to be included first
+
+  // async nature of func -> await response to get a valid value
+
+  const res = await cancelOrderHandler(event);
+
+  expect(res.statusCode).toStrictEqual(400);
+  const body = JSON.parse(res.body);
+  expect(body).toHaveProperty('error');
+  expect(typeof body.error).toBe('string');
+});

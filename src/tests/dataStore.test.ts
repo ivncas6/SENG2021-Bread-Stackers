@@ -6,4 +6,4 @@ import { getData } from '../dataStore';
 test('dataStore dummy test', () => {
   const data = getData();
   expect(data).toHaveProperty('users');
-}); 
+});
