@@ -1,5 +1,5 @@
 import { APIGatewayProxyEvent } from 'aws-lambda';
-import { listOrders } from '../orderList';
+import { listOrders } from '../listOrder';
 import { InvalidInput, UnauthorisedError } from '../throwError';
 
 export const handler = async (event: APIGatewayProxyEvent) => {
