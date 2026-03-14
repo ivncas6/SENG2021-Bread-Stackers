@@ -1,6 +1,6 @@
-import  { createOrderReturn, ErrorObject, Item, Order, 
+import  { createOrderReturn, EmptyObject, ErrorObject, Item, Order, 
   OrderInfo, 
-  ReqDeliveryPeriod, User } from './interfaces';
+  ReqDeliveryPeriod, Session, User } from './interfaces';
 import { v4 as uuidv4 } from 'uuid';
 import { getData } from './dataStore';
 import { createOrderUBLXML } from './generateUBL';
@@ -129,4 +129,84 @@ export function getOrderInfo(session: string, orderId: string): OrderInfo | Erro
     reqDeliveryPeriod: order.reqDeliveryPeriod,
     items: order.items,
   };
+}
+
+export function listOrders(session: string): { orders: OrderInfo[] } {
+  const data = getData();
+
+  // validates the session, tells us who is making the request
+  const sessionEntry = data.sessions.find(s => s.session === session);
+  if (!sessionEntry) {
+    throw new UnauthorisedError('Invalid or expired session');
+  }
+
+  // filters and maps orders belonging to the logged-in user
+  const orders: OrderInfo[] = data.orders
+    .filter(order => order.userId === sessionEntry.userId)
+    .map(order => ({
+      orderId: order.orderId ?? '',
+      status: 'active',
+      orderDateTime: order.orderDate,
+      currency: order.currency,
+      deliveryAddress: order.deliveryAddress,
+      userDetails: order.user,
+      reqDeliveryPeriod: order.reqDeliveryPeriod,
+      items: order.items,
+    }));
+
+  return { orders };
+}
+
+/**
+ * Updates an existing order with the given orderId.
+ * @param {string} session 
+ * @param {string} orderId 
+ * @param {string} deliveryAddress 
+ * @param {ReqDeliveryPeriod} reqDeliveryPeriod 
+ * @param {string} status
+ * @returns {EmptyObject}
+ */
+
+export function updateOrder(
+  session: string,
+  orderId: string,
+  deliveryAddress: string,
+  reqDeliveryPeriod: ReqDeliveryPeriod,
+  status: string
+): EmptyObject {
+  const data = getData();
+
+  // Check the current session 
+  const sessionEntry = data.sessions.find((s: Session) => s.session === session);
+  if (!sessionEntry) {
+    throw new UnauthorisedError('Not a valid session');
+  }
+
+  // Check order exist 
+  const order = data.orders.find(o => o.orderId === orderId);
+  if (!order) {
+    throw new InvalidOrderId('Order ID does not exist');
+  }
+
+  // Check access 
+  if (order.userId !== sessionEntry.userId) {
+    throw new UnauthorisedError('You do not have permission to update this order');
+  }
+
+  // Validate 
+  if (deliveryAddress.length > 200) {
+    throw new InvalidDeliveryAddr('The address is too long.');
+  }
+
+  if (reqDeliveryPeriod.endDateTime <= reqDeliveryPeriod.startDateTime) {
+    throw new InvalidRequestPeriod('The requested delivery period is invalid.');
+  }
+
+  // Update Order
+  order.deliveryAddress = deliveryAddress;
+  order.reqDeliveryPeriod = reqDeliveryPeriod;
+  order.status = status;
+
+  // Return empty 
+  return {};
 }

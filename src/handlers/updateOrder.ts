@@ -2,7 +2,7 @@ import { APIGatewayProxyEvent } from 'aws-lambda';
 import { InvalidOrderId, UnauthorisedError, 
   InvalidDeliveryAddr, InvalidRequestPeriod, 
   InvalidInput } from '../throwError';
-import { updateOrder } from '../updateOrder';
+import { updateOrder } from '../order';
 
 // Update Order
 export const updateOrderHandler = async (event: APIGatewayProxyEvent) => {
