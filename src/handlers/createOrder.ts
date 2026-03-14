@@ -1,7 +1,9 @@
-import { APIGatewayProxyEvent } from "aws-lambda";
-import { User, ReqDeliveryPeriod, Item } from "../interfaces";
-import { createOrder } from "../order";
-import { UnauthorisedError, InvalidInput } from "../throwError";
+import { APIGatewayProxyEvent } from 'aws-lambda';
+import { createOrder } from '../order';
+import { Item, ReqDeliveryPeriod, User } from '../interfaces';
+import {
+  InvalidInput,
+  UnauthorisedError } from '../throwError';
 
 export const createOrderHandler = async (
   event: APIGatewayProxyEvent
@@ -48,5 +50,10 @@ export const createOrderHandler = async (
         body: JSON.stringify({ error: err.message })
       };
     }
+    // internal server error, server doesnot know how to handle the error
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: 'INTERNAL SERVER ERROR' }),
+    };
   }
 };

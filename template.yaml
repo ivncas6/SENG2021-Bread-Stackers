@@ -28,19 +28,6 @@ Resources:
             Limit: 1000
             Period: DAY
 
-  placeHolderFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      Handler: src/handlers/placeholder.dummyHandler
-      Events:
-        Api:
-          Type: Api
-          Properties:
-            RestApiId: !Ref BreadStackersApi
-            Path: /api/health
-            Method: GET
-
-  
 # Add handlers here whenever you create a new Lambda, see the template below. Make sure y'all remove the '{}' too:
 
   createOrderFunction:
