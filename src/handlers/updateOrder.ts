@@ -1,6 +1,8 @@
-import { APIGatewayProxyEvent } from "aws-lambda";
-import { InvalidOrderId, UnauthorisedError, InvalidDeliveryAddr, InvalidRequestPeriod, InvalidInput } from "../throwError";
-import { updateOrder } from "../updateOrder";
+import { APIGatewayProxyEvent } from 'aws-lambda';
+import { InvalidOrderId, UnauthorisedError, 
+  InvalidDeliveryAddr, InvalidRequestPeriod, 
+  InvalidInput } from '../throwError';
+import { updateOrder } from '../updateOrder';
 
 // Update Order
 export const updateOrderHandler = async (event: APIGatewayProxyEvent) => {

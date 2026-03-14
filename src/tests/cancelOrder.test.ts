@@ -148,7 +148,7 @@ test('Test endpoint for invalid session', async () => {
   const event = { 
     mockEvent,
     headers: {
-      session: "not a session"
+      session: 'not a session'
     },
     pathParameters: {
       // ... is a spread operator and takes everything in mock
@@ -192,7 +192,6 @@ test('Test endpoint for invalid session', async () => {
   // unknown needs to be included first
 
   // async nature of func -> await response to get a valid value
-
   const res = await cancelOrderHandler(event);
 
   expect(res.statusCode).toStrictEqual(401);
@@ -212,7 +211,7 @@ test('Test 500 error for generic error like db fail', async () => {
   const event = { 
     mockEvent,
     headers: {
-      session: "not a session"
+      session: 'not a session'
     },
     pathParameters: {
       // ... is a spread operator and takes everything in mock
@@ -235,4 +234,7 @@ test('Test 500 error for generic error like db fail', async () => {
   const body = JSON.parse(res.body);
   expect(body).toHaveProperty('error');
   expect(typeof body.error).toBe('string');
+
+  // clean
+  spy.mockRestore();
 });

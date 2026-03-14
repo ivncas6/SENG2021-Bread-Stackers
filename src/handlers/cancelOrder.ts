@@ -34,7 +34,7 @@ export const cancelOrderHandler = async (
     // unknown error
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'Internal server error' }),
+      body: JSON.stringify({ error: 'INTERNAL_SERVER_ERROR' }),
     };
   }
 };
