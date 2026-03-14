@@ -41,6 +41,14 @@ Resources:
             RestApiId: !Ref BreadStackersApi
             Path: /v0/order
             Method: POST
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints: 
+          - src/handlers/createOrder.ts
   
   listOrderFunction:
     Type: AWS::Serverless::Function
@@ -53,6 +61,14 @@ Resources:
             RestApiId: !Ref BreadStackersApi
             Path: /v0/order/list
             Method: GET
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints: 
+          - src/handlers/listOrder.ts
   
   getOrderInfoFunction:
     Type: AWS::Serverless::Function
@@ -65,6 +81,14 @@ Resources:
             RestApiId: !Ref BreadStackersApi
             Path: /v0/order/{orderId}
             Method: GET
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints: 
+          - src/handlers/orderInfo.ts
   
   updateOrderFunction:
     Type: AWS::Serverless::Function
@@ -77,6 +101,14 @@ Resources:
             RestApiId: !Ref BreadStackersApi
             Path: /v0/order/{orderId}
             Method: PUT
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints: 
+          - src/handlers/updateOrder.ts
   
   cancelOrderFunction:
     Type: AWS::Serverless::Function
@@ -89,6 +121,14 @@ Resources:
             RestApiId: !Ref BreadStackersApi
             Path: /v0/order/{orderId}
             Method: DELETE
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints: 
+          - src/handlers/cancelOrder.ts
   
   userRegisterFunction:
     Type: AWS::Serverless::Function
@@ -101,6 +141,14 @@ Resources:
             RestApiId: !Ref BreadStackersApi
             Path: /v0/user/register
             Method: POST
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints: 
+          - src/handlers/userRegister.ts
   
   userLoginFunction:
     Type: AWS::Serverless::Function
@@ -113,6 +161,14 @@ Resources:
             RestApiId: !Ref BreadStackersApi
             Path: /v0/user/login
             Method: POST
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints: 
+          - src/handlers/userLogin.ts
   
   userDetailsUpdateFunction:
     Type: AWS::Serverless::Function
@@ -125,6 +181,14 @@ Resources:
             RestApiId: !Ref BreadStackersApi
             Path: /v0/user/details
             Method: PUT
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints: 
+          - src/handlers/userDetails.ts
   
   userLogoutFunction:
     Type: AWS::Serverless::Function
@@ -137,6 +201,15 @@ Resources:
             RestApiId: !Ref BreadStackersApi
             Path: /v0/user/logout
             Method: POST
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints: 
+          - src/handlers/userLogout.ts
+    
 
 Outputs:
   WebEndpoint:
