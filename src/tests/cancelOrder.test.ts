@@ -6,6 +6,7 @@ import { cancelOrderHandler } from '../handlers/cancelOrder';
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import mockEvent from './mocks/cancelOrderMock.json';
 import * as orderModule from '../order';
+import { InvalidInput, UnauthorisedError } from '../throwError';
 
 /*APIGatewayProxyEvent Structure:
   const event = {
@@ -74,6 +75,30 @@ test('cancel a single order', () => {
   const data = getData();
   const userFind = data.orders.find(ord => ord.orderId === details.order.orderId);
   expect(userFind).toBeUndefined();
+});
+
+test('Inavlid orderId on backend', () => {
+  const details = createTemplateOrderAndUser();
+  expect(() => {
+    cancelOrder("3246", 'reason here', details.session.session);
+  }).toThrow(InvalidInput);
+});
+
+test('Invalid session on backend', () => {
+  const details = createTemplateOrderAndUser();
+  expect(() => {
+    cancelOrder(details.order.orderId, 'reason here', "271498");
+  }).toThrow(UnauthorisedError);
+});
+
+test('Wrong user session', () => {
+  const details = createTemplateOrderAndUser();
+  const session = userRegister(
+    'Jane', 'Smith', 'janesmith@gmail.com', 'password321') as Session;
+
+  expect(() => {
+    cancelOrder(details.order.orderId, 'reason here', session.session);
+  }).toThrow(UnauthorisedError);
 });
 
 

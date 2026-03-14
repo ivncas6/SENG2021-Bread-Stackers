@@ -91,6 +91,10 @@ export function cancelOrder(orderId: string, reason: string, session: string) {
     throw new InvalidInput('error: Invalid orderId');
   }
 
+  if (foundOrder.userId != userId) {
+    throw new UnauthorisedError('User does not exist');
+  }
+
   data.orders.splice(data.orders.indexOf(foundOrder), 1);
 
   // uses reason

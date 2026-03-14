@@ -72,7 +72,7 @@ describe('Backend logic test for Creating an Order', () => {
         },
         '123 Kingsford', reqDeliveryPeriod, items
       );
-    }).toThrow(InvalidInput);;
+    }).toThrow(InvalidInput);
   });
 	
   test('Testing Invalid input - Wrong Delivery Date', () => {
