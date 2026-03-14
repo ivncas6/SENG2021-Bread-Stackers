@@ -9,25 +9,26 @@ export const cancelOrderHandler = async (
     // assumes order has to be there as it's included in the route path - DBC
     const orderId = event.pathParameters!.orderId!;
     const body = JSON.parse(event.body ?? '{}');
+    const session = event.headers.session;
 
     // await to ensure the function finishes before it passes result
-    const result = await cancelOrder(orderId, body.reason);
+    const result = await cancelOrder(orderId, body.reason, session as string);
 
     return {
       statusCode: 200,
       body: JSON.stringify(result),
     };
-  } catch (err: unknown) {
-    if (err instanceof InvalidInput) {
+  } catch (e: unknown) {
+    if (e instanceof InvalidInput) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: err.message }),
+        body: JSON.stringify({ error: e.message }),
       };
     }
-    if (err instanceof UnauthorisedError) {
+    if (e instanceof UnauthorisedError) {
       return {
         statusCode: 401,
-        body: JSON.stringify({ error: err.message }),
+        body: JSON.stringify({ error: e.message }),
       };
     }
     // unknown error
