@@ -1,17 +1,8 @@
 import { APIGatewayProxyEvent } from 'aws-lambda';
-import { InvalidDeliveryAddr,
-  InvalidOrderId,
-  InvalidRequestPeriod,
-  InvalidInput,
-  UnauthorisedError } from '../throwError';
-import { updateOrder } from '../updateOrder';
-
-
-export const dummyHandler = async () => ({
-  statusCode: 200,
-  body: JSON.stringify({ status: 'OK' }),
-});
-
+import { InvalidOrderId, UnauthorisedError, 
+  InvalidDeliveryAddr, InvalidRequestPeriod, 
+  InvalidInput } from '../throwError';
+import { updateOrder } from '../order';
 
 // Update Order
 export const updateOrderHandler = async (event: APIGatewayProxyEvent) => {

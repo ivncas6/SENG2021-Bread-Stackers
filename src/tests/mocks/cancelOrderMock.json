@@ -4,13 +4,9 @@
   "pathParameters": {
     "orderId": "12345"
   },
-  "queryStringParameters": null,
-  "multiValueQueryStringParameters": null,
-  "headers": {},
-  "multiValueHeaders": null,
+  "headers": {
+    "Content-Type": "application/json"
+  },
   "body": "{\"reason\":\"I have no reason\"}",
-  "isBase64Encoded": false,
-  "stageVariables": null,
-  "requestContext": null,
   "resource": "/orders/{orderId}"
 }
