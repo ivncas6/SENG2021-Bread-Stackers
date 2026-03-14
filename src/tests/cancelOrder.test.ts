@@ -169,6 +169,38 @@ test('Test endpoint for invalid session', async () => {
   expect(typeof body.error).toBe('string');
 });
 
+// test 401 error for order not belonging to user
+test('Test endpoint for invalid session', async () => {
+  // create an order
+  const details = createTemplateOrderAndUser();
+  const otherSession = userRegister('Jane', 'Smith', 
+    'janesmith@gmail.com', 'password321');
+
+  const finalReason = 'I have no reason';
+  const event = { 
+    mockEvent,
+    headers: {
+      session: otherSession
+    },
+    pathParameters: {
+      // ... is a spread operator and takes everything in mock
+      ...mockEvent.pathParameters,
+      orderId: details.order.orderId,
+    },
+    body: JSON.stringify({ reason: finalReason })
+  } as unknown as APIGatewayProxyEvent;
+  // unknown needs to be included first
+
+  // async nature of func -> await response to get a valid value
+
+  const res = await cancelOrderHandler(event);
+
+  expect(res.statusCode).toStrictEqual(401);
+  const body = JSON.parse(res.body);
+  expect(body).toHaveProperty('error');
+  expect(typeof body.error).toBe('string');
+});
+
 test('Test 500 error for generic error like db fail', async () => {
   // create an order
   const details = createTemplateOrderAndUser();
