@@ -193,6 +193,10 @@ export function updateOrder(
     throw new UnauthorisedError('You do not have permission to update this order');
   }
 
+  if (!deliveryAddress || deliveryAddress.trim().length === 0) {
+    throw new InvalidDeliveryAddr('Address cannot be empty');
+  }
+
   // Validate 
   if (deliveryAddress.length > 200) {
     throw new InvalidDeliveryAddr('The address is too long.');

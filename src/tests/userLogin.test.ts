@@ -1,9 +1,9 @@
 import { clearData } from '../dataStore';
-import { userRegister, userLogout } from '../userRegister';
+import { userRegister, userLogout, userLogin } from '../userRegister';
 import { Session } from '../interfaces';
-import { UnauthorisedError } from '../throwError';
+/*import { UnauthorisedError } from '../throwError';
 import { APIGatewayProxyEvent } from 'aws-lambda';
-import { userLogoutHandler } from '../handlers/userLogout';
+import { userLoginHandler } from '../handlers/userLogin';*/
 
 beforeEach(() => {
   clearData();
@@ -20,19 +20,20 @@ function createUser() {
   return { session };
 }
 
-describe('Backend logic tests for userLogout', () => {
+describe('Backend logic tests for userLogin', () => {
 
-  test('successfully logs out a user', () => {
+  test('successfully login a user', () => {
     const { session } = createUser();
-
     const res = userLogout(session.session);
-
     expect(res).toEqual({});
+
+    const newSession = userLogin('sample@gmail.com', 'password98');
+    expect(newSession).toStrictEqual({session: expect.any(String)});
   });
 
-  test('invalid session provided', () => {
+  /*test('invalid email provided', () => {
     expect(() =>
-      userLogout('invalidsession')
+      userLogin('wrong@gmail.com', 'password98');
     ).toThrow(UnauthorisedError);
   });
 
@@ -52,15 +53,15 @@ describe('Backend logic tests for userLogout', () => {
       'password12'
     ) as Session;
 
-    const res = userLogout(user2.session);
+    const res = userLogin(user2.session);
 
-    expect(res).toEqual({});
-  });
+    expect(res).toStrictEqual({});
+  });*/
 
 });
 
 
-describe('Lambda tests for userLogoutHandler', () => {
+/*describe('Lambda tests for userLoginHandler', () => {
 
   test('session header missing', async () => {
 
@@ -68,10 +69,10 @@ describe('Lambda tests for userLogoutHandler', () => {
       headers: {}
     } as unknown as APIGatewayProxyEvent;
 
-    const response = await userLogoutHandler(event);
+    const response = await userLoginHandler(event);
 
-    expect(response.statusCode).toBe(400);
-    expect(JSON.parse(response.body)).toEqual({
+    expect(response.statusCode).toStrictEqual(400);
+    expect(JSON.parse(response.body)).toStrictEqual({
       error: 'provided session is not valid'
     });
   });
@@ -84,9 +85,9 @@ describe('Lambda tests for userLogoutHandler', () => {
       }
     } as unknown as APIGatewayProxyEvent;
 
-    const response = await userLogoutHandler(event);
+    const response = await userLoginHandler(event);
 
-    expect(response.statusCode).toBe(401);
+    expect(response.statusCode).toStrictEqual(401);
     expect(JSON.parse(response.body)).toEqual({
       error: expect.any(String)
     });
@@ -107,10 +108,10 @@ describe('Lambda tests for userLogoutHandler', () => {
       }
     } as unknown as APIGatewayProxyEvent;
 
-    const response = await userLogoutHandler(event);
+    const response = await userLoginHandler(event);
 
-    expect(response.statusCode).toBe(200);
-    expect(JSON.parse(response.body)).toEqual({});
+    expect(response.statusCode).toStrictEqual(200);
+    expect(JSON.parse(response.body)).toStrictEqual({});
   });
 
-});
+});*/

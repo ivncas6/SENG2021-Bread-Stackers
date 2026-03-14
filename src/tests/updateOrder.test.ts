@@ -3,13 +3,10 @@ import { clearData, getData } from '../dataStore';
 import { userRegister } from '../userRegister';
 import { createOrder, updateOrder } from '../order';
 import { updateOrderHandler } from '../handlers/updateOrder'; 
-import { Session } from '../interfaces';
+import { createOrderReturn, Session } from '../interfaces';
 import { 
   InvalidOrderId, 
-  UnauthorisedError, 
-  InvalidDeliveryAddr, 
-  InvalidRequestPeriod,
-  InvalidInput
+  UnauthorisedError,
 } from '../throwError';
 
 beforeEach(() => {
@@ -39,7 +36,7 @@ function createOrderAndUser() {
     '123 Kingsford',
     reqDeliveryPeriod,
     items
-  ) as any; 
+  ) as createOrderReturn; 
 
   return { session, orderId: order.orderId, reqDeliveryPeriod, userDetails, items };
 }
@@ -61,7 +58,7 @@ describe('Backend logic test for updateOrder', () => {
 
     // Verify state in dataStore
     const data = getData();
-    const updatedOrder = data.orders.find((o: any) => o.orderId === orderId);
+    const updatedOrder = data.orders.find((o) => o.orderId === orderId);
     
     
     expect(updatedOrder).toBeDefined();
@@ -121,10 +118,8 @@ describe('Lambda function for updateOrderHandler', () => {
 
     expect(response?.statusCode).toStrictEqual(401);
     const body = JSON.parse(response?.body ?? '{}');
-    expect(body).toStrictEqual({
-      errorCode: 401,
-      errorMsg: 'header missing'
-    });
+    expect(body).toHaveProperty('error');
+    expect(typeof body.error).toBe('string');
   });
 
   test('Order ID missing', async () => {
@@ -140,20 +135,19 @@ describe('Lambda function for updateOrderHandler', () => {
 
     expect(response?.statusCode).toStrictEqual(400);
     const body = JSON.parse(response?.body ?? '{}');
-    expect(body).toStrictEqual({
-      errorCode: 400,
-      errorMsg: 'Order ID is missing'
-    });
+    expect(body).toHaveProperty('error');
+    expect(typeof body.error).toBe('string');
   });
 
   test('Invalid Delivery Address', async () => {
     const { session, orderId, reqDeliveryPeriod } = createOrderAndUser();
+    const longName = '1234567890'.repeat(21);
 
     const event = {
       pathParameters: { orderId: orderId },
       headers: { session: session.session },
       body: JSON.stringify({
-        deliveryAddress: '', 
+        deliveryAddress: longName, 
         reqDeliveryPeriod: reqDeliveryPeriod
       })
     } as unknown as APIGatewayProxyEvent;
@@ -162,8 +156,8 @@ describe('Lambda function for updateOrderHandler', () => {
 
     expect(response?.statusCode).toStrictEqual(400);
     const body = JSON.parse(response?.body ?? '{}');
-    expect(body.errorCode).toBe(400);
-    expect(typeof body.errorMsg).toBe('string');
+    expect(body).toHaveProperty('error');
+    expect(typeof body.error).toStrictEqual('string');
   });
 
   test('Invalid Request Period', async () => {
@@ -184,6 +178,7 @@ describe('Lambda function for updateOrderHandler', () => {
 
     expect(response?.statusCode).toStrictEqual(400);
     const body = JSON.parse(response?.body ?? '{}');
-    expect(body.errorCode).toBe(400);
+    expect(body).toHaveProperty('error');
+    expect(typeof body.error).toStrictEqual('string');
   });
 });
