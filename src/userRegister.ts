@@ -50,7 +50,7 @@ export function userRegister(nameFirst: string, nameLast: string, email: string,
   return createNewSession(user.userId);
 }
 
-export function adminAuthLogin (email: string, password: string): SessionId | ErrorObject {
+export function userLogin(email: string, password: string): SessionId | ErrorObject {
   const data = getData();
 
   // search through the users array in the data object to find a user with matching email to input
@@ -70,7 +70,7 @@ export function adminAuthLogin (email: string, password: string): SessionId | Er
 }
 
 // Given the userId and set of user properties update the properties of the logged in adminUser
-export function adminUserDetailsUpdate (session: string, email: string,
+export function userDetailsUpdate(session: string, email: string,
   nameFirst: string, nameLast: string): EmptyObject | ErrorObject {
   const data = getData();
   const ses = data.sessions.find(s => s.session === session);
@@ -95,7 +95,7 @@ export function adminUserDetailsUpdate (session: string, email: string,
   return { };
 }
 
-export function logoutSession(sessionId: string): EmptyObject | ErrorObject {
+export function userLogout(sessionId: string): EmptyObject | ErrorObject {
   const data = getData();
 
   const sessionEntry = data.sessions.find(s => s.session === sessionId);

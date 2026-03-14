@@ -1,8 +1,12 @@
 import { APIGatewayProxyEvent } from 'aws-lambda';
-import { getOrderInfo } from '../order';
-import { InvalidOrderId, UnauthorisedError } from '../throwError';
+import { InvalidLastName,
+  InvalidFirstName, InvalidEmail, UnauthorisedError
+} from '../throwError';
+import { userDetailsUpdate} from '../userRegister';
 
-export const getOrderInfoHandler = async (event: APIGatewayProxyEvent) => {
+export const updateUserDetailsHandler = async (
+  event: APIGatewayProxyEvent
+) => {
   try {
     // get the session from the header
     const session = event.headers.session;
@@ -12,31 +16,27 @@ export const getOrderInfoHandler = async (event: APIGatewayProxyEvent) => {
         body: JSON.stringify({ error: 'provided session is not valid'})
       };
     }
-    // check if the provided path contains an orderId
-    if (!event.pathParameters) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: 'orderId is null.' })
-      };
-    }
-    // get the orderId from the route path
-    const orderId = event.pathParameters.orderId;
-    if (!orderId) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: 'orderId provided is not valid' })
-      };
-    }
+    // retrieve the parameters from the body
+    const body = JSON.parse(event.body ?? '{}');
 
-    // call the backend function
-    const res = getOrderInfo(session, orderId);
+    const email = body.email;
+    const firstName = body.firstName;
+    const lastName = body.lastName;
+
+    const res = userDetailsUpdate(
+      session, email, firstName, lastName
+    );
 
     return {
       statusCode: 200,
       body: JSON.stringify(res),
     };
+
   } catch (e) {
-    if (e instanceof InvalidOrderId) {
+    if (e instanceof InvalidLastName ||
+        e instanceof InvalidFirstName ||
+        e instanceof InvalidEmail
+    ) {
       return {
         statusCode: 400,
         body: JSON.stringify({ error: e.message })

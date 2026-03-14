@@ -435,7 +435,7 @@ paths:
         200:
           description: "**SUCCESS**"
           schema:
-            $ref: '#/definitions/emptyObj'
+            $ref: '#/definitions/orderCancel'
         400:
           description: "**INVALID INPUT**"
           schema:
