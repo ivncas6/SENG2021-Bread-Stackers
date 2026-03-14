@@ -2,7 +2,7 @@ import { clearData } from '../dataStore';
 import { userRegister } from '../userRegister';
 import { createOrder } from '../order';
 import { Session } from '../interfaces';
-import { InvalidInput, UnauthorisedError } from '../throwError';
+import { InvalidInput, InvalidRequestPeriod, UnauthorisedError } from '../throwError';
 import { createOrderHandler } from '../handlers/createOrder';
 import { APIGatewayProxyEvent } from 'aws-lambda';
 
@@ -62,36 +62,43 @@ describe('Backend logic test for Creating an Order', () => {
 
   test('Testing Invalid input - Wrong Phone number', () => {
     const { session } = createUser();
-    const res = createOrder('AUD', session.session , 
-      { name: 'John Smith',
+    expect(() => createOrder(
+      'AUD',
+      session.session,
+      {
+        name: 'John Smith',
         telephone: 12345678,
-        email: 'johnsmith@gmail.com' 
+        email: 'johnsmith@gmail.com'
       },
-      '123 Kingsford', reqDeliveryPeriod, items
-    );
-    expect(res).toThrow(InvalidInput);
+      '123 Kingsford',
+      reqDeliveryPeriod,
+      items
+    )).toThrow(InvalidInput);
   });
-	
+  
   test('Testing Invalid input - Wrong Delivery Date', () => {
     const { session } = createUser();
-    const res = createOrder('AUD', session.session , userDetails,
-      '123 Kingsford', 
+   
+    expect(() => createOrder(
+      'AUD',
+      session.session,
+      userDetails,
+      '123 Kingsford',
       {
         startDateTime: Math.floor(Date.now() / 1000),
-        endDateTime: Math.floor(Date.now()  / 1000), 
-      }, items
-    );
-    expect(res).toThrow(InvalidInput);
+        endDateTime: Math.floor(Date.now() / 1000),
+      },
+      items
+    )).toThrow(InvalidRequestPeriod);
   });
 
   test('Testing Invalid Session', () => {
-    const res = createOrder('AUD', 'abcd' , 
+    expect(() => createOrder('AUD', 'abcd' , 
       { name: 'John Smith',
         telephone: 12345678,
         email: 'johnsmith@gmail.com',},
       '123 Kingsford', reqDeliveryPeriod, items
-    );
-    expect(res).toThrow(UnauthorisedError);
+    )).toThrow(UnauthorisedError);
   });
 });
 
@@ -161,10 +168,10 @@ describe('Lambda function for createOrder', () => {
         user: userDetails,
         deliveryAddress: '123 Kingsford',
         reqDeliveryPeriod: 
-				{
-				  startDateTime: Math.floor(Date.now() / 1000),
-				  endDateTime: Math.floor(Date.now()  / 1000),
-				},
+        {
+          startDateTime: Math.floor(Date.now() / 1000),
+          endDateTime: Math.floor(Date.now()  / 1000),
+        },
         items: items
       })
     } as unknown as APIGatewayProxyEvent;
@@ -188,17 +195,17 @@ describe('Lambda function for createOrder', () => {
         user: userDetails,
         deliveryAddress: '123 Kingsford',
         reqDeliveryPeriod: 
-				{
-				  startDateTime: Math.floor(Date.now() / 1000),
-				  endDateTime: Math.floor(Date.now()  / 1000),
-				},
+        {
+          startDateTime: Math.floor(Date.now() / 1000),
+          endDateTime: Math.floor(Date.now()  / 1000),
+        },
         items: items
       })
     } as unknown as APIGatewayProxyEvent;
 
     const response = await createOrderHandler(result);
 
-    expect(response.statusCode).toStrictEqual(400);
+    expect(response.statusCode).toStrictEqual(401);
     expect(JSON.parse(response.body)).toStrictEqual({
       error: expect.any(String)
     });

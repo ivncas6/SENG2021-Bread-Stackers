@@ -2,7 +2,9 @@ import { APIGatewayProxyEvent } from 'aws-lambda';
 import { createOrder } from '../order';
 import { Item, ReqDeliveryPeriod, User } from '../interfaces';
 import {
+  InvalidDeliveryAddr,
   InvalidInput,
+  InvalidRequestPeriod,
   UnauthorisedError } from '../throwError';
 
 export const createOrderHandler = async (
@@ -44,7 +46,9 @@ export const createOrderHandler = async (
         body: JSON.stringify({ error: err.message })
       };
     }
-    if (err instanceof InvalidInput) {
+    if (err instanceof InvalidInput ||
+      err instanceof InvalidDeliveryAddr ||
+      err instanceof InvalidRequestPeriod) {
       return {
         statusCode: 400,
         body: JSON.stringify({ error: err.message })
