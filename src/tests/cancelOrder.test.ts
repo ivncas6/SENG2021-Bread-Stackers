@@ -80,14 +80,14 @@ test('cancel a single order', () => {
 test('Inavlid orderId on backend', () => {
   const details = createTemplateOrderAndUser();
   expect(() => {
-    cancelOrder("3246", 'reason here', details.session.session);
+    cancelOrder('3246', 'reason here', details.session.session);
   }).toThrow(InvalidInput);
 });
 
 test('Invalid session on backend', () => {
   const details = createTemplateOrderAndUser();
   expect(() => {
-    cancelOrder(details.order.orderId, 'reason here', "271498");
+    cancelOrder(details.order.orderId, 'reason here', '271498');
   }).toThrow(UnauthorisedError);
 });
 

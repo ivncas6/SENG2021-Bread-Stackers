@@ -6,6 +6,7 @@ import { InvalidInput, InvalidRequestPeriod,
   UnauthorisedError } from '../throwError';
 import { createOrderHandler } from '../handlers/createOrder';
 import { APIGatewayProxyEvent } from 'aws-lambda';
+import mockEvent from './mocks/createOrderMock.json';
 
 
 beforeEach(() => {
@@ -107,14 +108,17 @@ describe('Lambda function for createOrder', () => {
     const { session } = createUser();
 
     const result = {
+      // added mock to speed up test
+      ...mockEvent,
       headers: {
+        ...mockEvent.headers,
         session: session.session
       },
       body: JSON.stringify({
         currency: 'AUD',
         user: userDetails,
-        deliveryAddress: '123 Kingsford',
         reqDeliveryPeriod: reqDeliveryPeriod,
+        deliveryAddress: '123 Kingsford',
         items: items
       })
     } as unknown as APIGatewayProxyEvent;
@@ -158,18 +162,20 @@ describe('Lambda function for createOrder', () => {
     const { session } = createUser();
 
     const result = {
+      ...mockEvent,
       headers: {
+        ...mockEvent.headers,
         session: session.session
       },
       body: JSON.stringify({
         currency: 'AUD',
         user: userDetails,
-        deliveryAddress: '123 Kingsford',
         reqDeliveryPeriod: 
 				{
 				  startDateTime: Math.floor(Date.now() / 1000),
 				  endDateTime: Math.floor(Date.now()  / 1000),
 				},
+        deliveryAddress: '123 Kingsford',
         items: items
       })
     } as unknown as APIGatewayProxyEvent;

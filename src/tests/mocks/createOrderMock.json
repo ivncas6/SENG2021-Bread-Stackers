@@ -1,0 +1,11 @@
+{
+  "httpMethod": "POST",
+  "path": "/orders/",
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "pathParameters": null,
+  "body": "{\"currency\":\"AUD\",\"user\":{},\"deliveryAddress\":\"123 Kingsford\",\"reqDeliveryPeriod\":{},\"items\":[]}",
+  "isBase64Encoded": false,
+  "resource": "/orders/"
+}
