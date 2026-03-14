@@ -1,6 +1,6 @@
 import { APIGatewayProxyEvent } from 'aws-lambda';
-import { listOrders } from '../listOrder';
-import { InvalidInput, UnauthorisedError } from '../throwError';
+import { listOrders } from '../order';
+import { UnauthorisedError } from '../throwError';
 
 export const handler = async (event: APIGatewayProxyEvent) => {
   try {
@@ -20,12 +20,6 @@ export const handler = async (event: APIGatewayProxyEvent) => {
     if (err instanceof UnauthorisedError) {
       return {
         statusCode: 401,
-        body: JSON.stringify({ error: err.message }),
-      };
-    }
-    if (err instanceof InvalidInput) {
-      return {
-        statusCode: 400,
         body: JSON.stringify({ error: err.message }),
       };
     }
