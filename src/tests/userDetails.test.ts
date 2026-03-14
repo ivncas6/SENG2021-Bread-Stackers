@@ -1,6 +1,6 @@
 import { clearData } from '../dataStore';
 import { userRegister, userDetailsUpdate } from '../userRegister';
-import { Session, UserInfo } from '../interfaces';
+import { Session } from '../interfaces';
 import {
   InvalidEmail,
   InvalidFirstName,
@@ -192,7 +192,6 @@ describe('test for the user details update function', () => {
     expect(JSON.parse(response.body)).toEqual({ error: expect.any(String) });
   });
   test('empty session provided', async () => {
-    const user = registerUser();
     const result = {
       headers: {
         session: null,
