@@ -5,7 +5,7 @@ import { userRegister } from '../userRegister';
 import { OrderInfo, Session } from '../interfaces';
 import { UnauthorisedError } from '../throwError';
 import { APIGatewayProxyEvent } from 'aws-lambda';
-import { handler as listOrdersHandler } from '../handlers/listOrder';
+import { listOrderHandler } from '../handlers/listOrder';
 
 beforeEach(() => {
   clearData();
@@ -144,7 +144,7 @@ describe('Lambda handler tests for listOrders', () => {
       headers: { session: session.session },
     } as unknown as APIGatewayProxyEvent;
 
-    const response = await listOrdersHandler(event);
+    const response = await listOrderHandler(event);
     expect(response?.statusCode).toEqual(200);
     expect(JSON.parse(response?.body ?? '')).toEqual({ orders: [] });
   });
@@ -157,7 +157,7 @@ describe('Lambda handler tests for listOrders', () => {
       headers: { session: session.session },
     } as unknown as APIGatewayProxyEvent;
 
-    const response = await listOrdersHandler(event);
+    const response = await listOrderHandler(event);
     expect(response?.statusCode).toEqual(200);
     expect(JSON.parse(response?.body ?? '')).toEqual({
       orders: [{
@@ -178,7 +178,7 @@ describe('Lambda handler tests for listOrders', () => {
       headers: {},
     } as unknown as APIGatewayProxyEvent;
 
-    const response = await listOrdersHandler(event);
+    const response = await listOrderHandler(event);
     expect(response?.statusCode).toStrictEqual(401);
     expect(JSON.parse(response?.body ?? '')).toStrictEqual({ error: expect.any(String) });
   });
@@ -188,7 +188,7 @@ describe('Lambda handler tests for listOrders', () => {
       headers: { session: 'completely-invalid-session' },
     } as unknown as APIGatewayProxyEvent;
 
-    const response = await listOrdersHandler(event);
+    const response = await listOrderHandler(event);
     expect(response?.statusCode).toStrictEqual(401);
     expect(JSON.parse(response?.body ?? '')).toStrictEqual({ error: expect.any(String) });
   });
@@ -209,7 +209,7 @@ describe('Lambda handler tests for listOrders', () => {
       headers: { session: user2.session },
     } as unknown as APIGatewayProxyEvent;
 
-    const response = await listOrdersHandler(event);
+    const response = await listOrderHandler(event);
     expect(response?.statusCode).toEqual(200);
     expect(JSON.parse(response?.body ?? '').orders).toHaveLength(0);
   });
