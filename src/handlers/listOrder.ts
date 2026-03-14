@@ -2,7 +2,7 @@ import { APIGatewayProxyEvent } from 'aws-lambda';
 import { listOrders } from '../order';
 import { UnauthorisedError } from '../throwError';
 
-export const handler = async (event: APIGatewayProxyEvent) => {
+export const listOrderHandler = async (event: APIGatewayProxyEvent) => {
   try {
     const session = event.headers?.session;
     if (!session) {
