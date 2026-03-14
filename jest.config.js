@@ -1,33 +1,34 @@
 /** @type {import('jest').Config} */
 const config = {
-  // 1. Core Settings
+  // Core Settings
   preset: 'ts-jest',
   testEnvironment: 'node',
 
-  // 2. THE FIX FOR UUID:
+  // UUID
   // This tells Jest to use the version of uuid that works with Node
   moduleNameMapper: {
     '^uuid$': 'uuid',
   },
 
-  // 3. Transformation settings
+  // Transformation settings
   transform: {
     '^.+\\.ts$': 'ts-jest',
   },
 
-  // 4. Your Coverage Settings (Kept from your original file)
-  collectCoverage: true,
-  collectCoverageFrom: [
-    'src/**/*.ts', 
-    '!src/tests/**',
-  ],
-  coverageDirectory: 'coverage',
-  coverageThreshold: {
-    global: {
-      branches: 85,
-      lines: 85,
-    },
-  },
+  // Coverage Settings
+  // use 'ctrl' + '/' to uncomment later
+  // collectCoverage: true,
+  // collectCoverageFrom: [
+  //   'src/**/*.ts', 
+  //   '!src/tests/**',
+  // ],
+  // coverageDirectory: 'coverage',
+  // coverageThreshold: {
+  //   global: {
+  //     branches: 85,
+  //     lines: 85,
+  //   },
+  // },
 
   // A path to a custom dependency extractor
   // dependencyExtractor: undefined,

@@ -42,6 +42,18 @@ Resources:
             Path: /v0/order
             Method: POST
   
+  listOrderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/listOrder.listOrderHandler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BreadStackersApi
+            Path: /v0/order/list
+            Method: GET
+  
   getOrderInfoFunction:
     Type: AWS::Serverless::Function
     Properties:
