@@ -12,7 +12,7 @@ export const updateUserDetailsHandler = async (
     const session = event.headers.session;
     if (!session) {
       return {
-        statusCode: 400,
+        statusCode: 401,
         body: JSON.stringify({ error: 'provided session is not valid'})
       };
     }
