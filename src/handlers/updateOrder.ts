@@ -12,7 +12,7 @@ export const updateOrderHandler = async (event: APIGatewayProxyEvent) => {
     const session = event.headers.session || event.headers.Session;
 
     // Call updateOrder function
-    const result = updateOrder(
+    const result = await updateOrder(
       session as string,
       orderId,
       body.deliveryAddress,

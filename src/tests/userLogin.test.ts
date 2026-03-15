@@ -5,8 +5,9 @@ import { SessionId } from '../interfaces';
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import { userLoginHandler } from '../handlers/userLogin';*/
 
-beforeEach(() => {
-  clearData();
+beforeEach(async () => {
+  await clearData();
+  jest.clearAllMocks();
 });
 
 function createUser() {

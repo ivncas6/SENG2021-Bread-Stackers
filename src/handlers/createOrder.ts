@@ -26,7 +26,7 @@ export const createOrderHandler = async (
     const reqDeliveryPeriod: ReqDeliveryPeriod = body.reqDeliveryPeriod;
     const items: ReqItem[] = body.items;
 
-    const result = createOrder(
+    const result = await createOrder(
       currency,
       session,
       user,

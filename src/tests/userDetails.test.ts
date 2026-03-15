@@ -10,8 +10,9 @@ import {
 import { updateUserDetailsHandler } from '../handlers/userDetails';
 import { APIGatewayProxyEvent } from 'aws-lambda';
 
-beforeEach(() => {
-  clearData();
+beforeEach(async () => {
+  await clearData();
+  jest.clearAllMocks();
 });
 
 function registerUser() {

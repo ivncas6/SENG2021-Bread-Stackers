@@ -9,7 +9,7 @@ export const listOrderHandler = async (event: APIGatewayProxyEvent) => {
       throw new UnauthorisedError('Session header missing');
     }
 
-    const result = listOrders(session);
+    const result = await listOrders(session);
 
     return {
       statusCode: 200,

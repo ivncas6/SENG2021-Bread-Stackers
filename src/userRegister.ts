@@ -12,19 +12,25 @@ import { invalidnameFirst, invalidnameLast, getHashOf, checkPassword,
   getUserIdFromSession,
 } from './userHelper';
 import validator from 'validator';
+import { supabase } from './supabase';
 
-export function userRegister(nameFirst: string, nameLast: string, email: string, 
-  telephone: string, password: string): SessionId | ErrorObject {
-  const data = getData();
-
-  // Check if the user has already registered an email
-  if (data.users.some(user => user.email === email)) {
-    throw new InvalidEmail('User already exists.');
-  }
+export async function userRegister(nameFirst: string, nameLast: string, email: string, 
+  telephone: string, password: string): Promise<SessionId> {
 
   // Check if the email is valid using the validator.isEmail function
   if (!validator.isEmail(email)) {
     throw new InvalidEmail('Invalid email format.');
+  }
+
+  const { data: existingUser } = await supabase
+    .from('contacts')
+    .select('email')
+    .eq('email', email)
+    .single();
+
+  // Check if the user has already registered an email
+  if (existingUser) {
+    throw new InvalidEmail('User already exists.');
   }
 
   const digitsCheck = /^\d+$/.test(telephone);
@@ -41,20 +47,23 @@ export function userRegister(nameFirst: string, nameLast: string, email: string,
   }
 
   const hashPassword = getHashOf(password);
-  // Create user object
-  const contactId = data.users.length + 1;
-  const user = {
-    contactId,
-    firstName: nameFirst,
-    lastName: nameLast,
-    email,
-    telephone: telephone,
-    password: hashPassword
-  };
 
   // Store user object into database
-  data.users.push(user);
-  return createNewSession(user.contactId);
+  const { data: newUser, error } = await supabase 
+    .from('contacts')
+    .insert([{
+      firstName: nameFirst,
+      lastName: nameLast,
+      email,
+      telephone,
+      password: hashPassword
+    }])
+    .select()
+    .single();
+  
+  if (error) throw new Error(error.message);
+
+  return createNewSession(newUser.contactId);
 }
 
 export function userLogin(email: string, password: string): SessionId | ErrorObject {

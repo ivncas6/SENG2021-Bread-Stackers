@@ -16,7 +16,7 @@ export const registerUserHandler = async (
     const password = body.password;
     const telephone = body.telephone;
 
-    const user = userRegister(firstName, lastName, email, telephone, password);
+    const user = await userRegister(firstName, lastName, email, telephone, password);
 
     return {
       statusCode: 200,

@@ -8,13 +8,22 @@ import {
   InvalidOrderId, 
   UnauthorisedError,
 } from '../throwError';
+import { supabase } from '../supabase';
 
-beforeEach(() => {
-  clearData();
+const mockedSupabase = supabase as any;
+
+// keep this or suffer 20+ seconds
+jest.mock('../supabase')
+
+beforeEach(async () => {
+  await clearData();
+  jest.clearAllMocks();
+  // restore mock to default
+  mockedSupabase.single.mockResolvedValue({ data: null, error: null });
 });
 
-function createOrderAndUser() {
-  const session = userRegister(
+async function createOrderAndUser() {
+  const session = await userRegister(
     'John',
     'Smith',
     'johnsmith@gmail.com',
@@ -31,7 +40,7 @@ function createOrderAndUser() {
   const userDetails = { firstName: 'John', lastName: 'Smith',
     telephone: '0412345678', email: 'johnsmith@gmail.com' };
 
-  const order = createOrder(
+  const order = await createOrder(
     'AUD',
     session.session,
     userDetails,
@@ -45,7 +54,7 @@ function createOrderAndUser() {
 
 describe('Backend logic test for updateOrder', () => {
   test('successfully update order delivery address', () => {
-    const { session, orderId, reqDeliveryPeriod } = createOrderAndUser();
+    const { session, orderId, reqDeliveryPeriod } =  createOrderAndUser();
     
     const newAddress = '456 Kensington Street';
     
