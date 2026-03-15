@@ -8,6 +8,7 @@ import {
 } from './throwError';
 import { invalidnameFirst, invalidnameLast, getHashOf, checkPassword, 
   createNewSession, invalidemailcheck,
+  getUserIdFromSession,
 } from './userHelper';
 import validator from 'validator';
 
@@ -72,21 +73,17 @@ export function userLogin(email: string, password: string): SessionId | ErrorObj
 // Given the userId and set of user properties update the properties of the logged in adminUser
 export function userDetailsUpdate(session: string, email: string,
   nameFirst: string, nameLast: string): EmptyObject | ErrorObject {
+  const userId = getUserIdFromSession(session);
   const data = getData();
-  const ses = data.sessions.find(s => s.session === session);
-  if (!ses) {
-    throw new UnauthorisedError('Not a valid session');
-  }
-  const userId = ses.userId;
   const user = data.users.find((u) => u.userId === userId);
-
-  invalidemailcheck(ses.session, email);
-  invalidnameFirst(nameFirst);
-  invalidnameLast(nameLast);
 
   if (!user) {
     throw new UnauthorisedError('User does not exist');
   }
+
+  invalidemailcheck(session, email);
+  invalidnameFirst(nameFirst);
+  invalidnameLast(nameLast);
 
   user.email = email;
   user.nameFirst = nameFirst;
@@ -96,16 +93,10 @@ export function userDetailsUpdate(session: string, email: string,
 }
 
 export function userLogout(sessionId: string): EmptyObject | ErrorObject {
-  const data = getData();
 
-  const sessionEntry = data.sessions.find(s => s.session === sessionId);
+  /* Use for any live or self hosted server implementations in the future */
 
-  if (!sessionEntry) {
-    throw new UnauthorisedError('Session is empty or not valid');
-  }
-
-  data.sessions = data.sessions.filter(s => s.session !== sessionId);
-
+  getUserIdFromSession(sessionId);
   return {};
 }
 

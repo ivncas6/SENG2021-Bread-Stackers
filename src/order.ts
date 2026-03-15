@@ -1,12 +1,13 @@
 import  { createOrderReturn, EmptyObject, ErrorObject, Item, Order, 
   OrderInfo, 
-  ReqDeliveryPeriod, Session, User } from './interfaces';
+  ReqDeliveryPeriod, User } from './interfaces';
 import { v4 as uuidv4 } from 'uuid';
 import { getData } from './dataStore';
 import { createOrderUBLXML } from './generateUBL';
 import { InvalidDeliveryAddr, InvalidEmail, InvalidInput,
   InvalidOrderId,
   InvalidRequestPeriod, UnauthorisedError } from './throwError';
+import { getUserIdFromSession } from './userHelper';
 
 
 export function createOrder(currency: string, session: string, 
@@ -15,12 +16,9 @@ export function createOrder(currency: string, session: string,
   reqDeliveryPeriod: ReqDeliveryPeriod,
   items: Item[]): createOrderReturn | ErrorObject {
   
+  
+  const userId = getUserIdFromSession(session);
   const data = getData();
-  const ses = data.sessions.find(s => s.session === session);
-  if (!ses) {
-    throw new UnauthorisedError('Not a valid session');
-  }
-  const userId = ses.userId;
   const u = data.users.find((u) => u.userId === userId);
   if (!u) {
     throw new UnauthorisedError('User does not exist');
@@ -70,28 +68,19 @@ export function createOrder(currency: string, session: string,
 
 export function cancelOrder(orderId: string, reason: string, session: string) {
 
+  // find if user for sesh exists
+  const userId = getUserIdFromSession(session);
+
+  // get order
   const data = getData();
   const foundOrder = data.orders.find(order => order.orderId === orderId);
-
-  // find existing sesh
-  const ses = data.sessions.find((s) => s.session === session);
-  if (!ses) {
-    throw new UnauthorisedError('Not a valid session');
-  }
-
-  // find if user for sesh exists
-  const userId = ses.userId;
-  const u = data.users.find((u) => u.userId === userId);
-  if (!u) {
-    throw new UnauthorisedError('User does not exist');
-  }
 
   // error check
   if (foundOrder == null) {
     throw new InvalidInput('error: Invalid orderId');
   }
 
-  if (foundOrder.userId != userId) {
+  if (foundOrder.userId !== userId) {
     throw new UnauthorisedError('User does not exist');
   }
 
@@ -102,19 +91,17 @@ export function cancelOrder(orderId: string, reason: string, session: string) {
 }
 
 export function getOrderInfo(session: string, orderId: string): OrderInfo | ErrorObject {
-  const data = getData();
-  const ses = data.sessions.find((s) => s.session === session);
-  if (!ses) {
-    throw new UnauthorisedError('Not a valid session');
-  }
+  const userId = getUserIdFromSession(session);
+
   // find the order
+  const data = getData();
   const order = data.orders.find((order) => order.orderId === orderId);
   if (!order) {
     throw new InvalidOrderId(
       'Provided orderId doesnot correspond to any existing order',
     );
   }
-  if (order.userId !== ses.userId) {
+  if (order.userId !== userId) {
     throw new InvalidOrderId(
       'Order with the provided orderId does not belong to this user.',
     );
@@ -132,17 +119,14 @@ export function getOrderInfo(session: string, orderId: string): OrderInfo | Erro
 }
 
 export function listOrders(session: string): { orders: OrderInfo[] } {
-  const data = getData();
 
   // validates the session, tells us who is making the request
-  const sessionEntry = data.sessions.find(s => s.session === session);
-  if (!sessionEntry) {
-    throw new UnauthorisedError('Invalid or expired session');
-  }
+  const userId = getUserIdFromSession(session);
+  const data = getData();
 
   // filters and maps orders belonging to the logged-in user
   const orders: OrderInfo[] = data.orders
-    .filter(order => order.userId === sessionEntry.userId)
+    .filter(order => order.userId === userId)
     .map(order => ({
       orderId: order.orderId ?? '',
       status: 'active',
@@ -174,22 +158,19 @@ export function updateOrder(
   reqDeliveryPeriod: ReqDeliveryPeriod,
   status: string
 ): EmptyObject {
-  const data = getData();
 
   // Check the current session 
-  const sessionEntry = data.sessions.find((s: Session) => s.session === session);
-  if (!sessionEntry) {
-    throw new UnauthorisedError('Not a valid session');
-  }
+  const userId = getUserIdFromSession(session);
 
   // Check order exist 
+  const data = getData();
   const order = data.orders.find(o => o.orderId === orderId);
   if (!order) {
     throw new InvalidOrderId('Order ID does not exist');
   }
 
   // Check access 
-  if (order.userId !== sessionEntry.userId) {
+  if (order.userId !== userId) {
     throw new UnauthorisedError('You do not have permission to update this order');
   }
 

@@ -64,7 +64,7 @@ describe('test for the user details update function', () => {
       userDetailsUpdate(
         user.session,
         'johnsmith.com',
-        'JohnJohnJohnJohnJohnJohn',
+        'JohnJohn',
         'Smith',
       ),
     ).toThrow(InvalidEmail);

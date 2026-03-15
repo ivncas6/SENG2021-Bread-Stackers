@@ -4,6 +4,12 @@ Description: >-
 Transform:
 - AWS::Serverless-2016-10-31
 
+Parameters:
+  JWTSecretParameter:
+    Type: String
+    Description: Secret key that signs JWTs
+    NoEcho: True
+
 # Resources declares the AWS resources that you want to include in the stack
 # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resources-section-structure.html
 Resources:
@@ -221,6 +227,9 @@ Outputs:
 Globals:
   Function:
     Runtime: nodejs20.x
+    Environment:
+      Variables:
+        JWTSecret: !Ref JWTSecretParameter
     Architectures:
       - x86_64
     MemorySize: 128

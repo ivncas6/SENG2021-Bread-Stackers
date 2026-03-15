@@ -7,6 +7,9 @@ coverage
 # package.json handles dependencies
 node_modules
 
+# AWS configs
+samconfig.toml
+
 # AWS installations
 sam-install/
 .aws-sam/
