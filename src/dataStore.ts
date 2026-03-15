@@ -83,20 +83,51 @@ export async function persistOrderData(
   });
 }
 
-export async function persistOrderDataSupa(order: Order) {
-  const { data, error } = await supabase
-    .from('orders').insert([
-      {
-        orderId: order.orderId, 
-        currency: order.currency, 
-        finalPrice: order.finalPrice,
-        status: 'OPEN'
-      }
-    ]);
-  if (error) {
-    console.error('Error pushing data:', error.message);
-    throw error;
-  }
+export async function persistOrderDataSupa(
+  order: Order,
+  deliveryAddress: String,
+  reqDeliveryPeriod: ReqDeliveryPeriod,
+  items: ReqItem[]
+) {
+  // first insert an address
+  const { data: addressData, error: addressErr } = await supabase
+    .from('addresses')
+    .insert([{ street: deliveryAddress, country: 'AUS' }])
+    .select().single();
+
+  if (addressErr) throw addressErr;
+
+  // insert order
+  const { error: orderError } = await supabase
+    .from('orders').insert([{
+      orderId: order.orderId,
+      currency: order.currency, 
+      finalPrice: order.finalPrice,
+      buyer_id: order.buyerOrgID,
+      status: 'OPEN'
+    }]);
+  
+  if (orderError) throw orderError;
+
+  // insert delivery details
+  await supabase
+    .from('deliveries').insert([{
+      order_id: order.orderId,
+      address_id: addressData.addressID,
+      start_date: reqDeliveryPeriod.startDateTime,
+      end_Date: reqDeliveryPeriod.endDateTime
+    }])
+
+  // collect array of items
+  const itemsToInsert = items.map(i => ({
+    order_id: order.orderId,
+    name: i.name,
+    quantity: i.quantity,
+    price: i.unitPrice
+  }))
+
+  // insert them items
+  await supabase.from('order_items').insert(itemsToInsert);
 }
 
 export async function getOrderById(orderId: string) {
