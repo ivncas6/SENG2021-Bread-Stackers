@@ -26,7 +26,7 @@ export async function userRegister(nameFirst: string, nameLast: string, email: s
     .from('contacts')
     .select('email')
     .eq('email', email)
-    .single();
+    .maybeSingle();
 
   // Check if the user has already registered an email
   if (existingUser) {
@@ -64,9 +64,13 @@ export async function userRegister(nameFirst: string, nameLast: string, email: s
   if (error) throw new Error(error.message);
 
   try {
-    await createOrganisationSupa(newUser.contactId, `${nameFirst} ${nameLast}`);
-  } catch (orgError: any) {
-    throw new Error(`User created, but Org failed: ${orgError.message}`);
+    const org = await createOrganisationSupa(newUser.contactId, `${nameFirst} ${nameLast}`);
+    if (!org) {
+      throw new Error('Database returned no data for organization creation');
+    }
+  } catch (e: unknown) {
+    const reason = String(e);
+    throw new Error('User created, but Org failed: ' + reason);
   }
 
   return createNewSession(newUser.contactId);

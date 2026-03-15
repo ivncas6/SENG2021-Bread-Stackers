@@ -11,7 +11,17 @@ import { registerUserHandler } from '../handlers/userRegister';
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import { supabase } from '../supabase';
 
-const mockedSupabase = supabase as any;
+interface SupabaseMock {
+  from: jest.Mock;
+  select: jest.Mock;
+  insert: jest.Mock;
+  update: jest.Mock;
+  eq: jest.Mock;
+  single: jest.Mock;
+  maybeSingle: jest.Mock;
+}
+
+const mockedSupabase = supabase as unknown as SupabaseMock;
 
 // keep this or suffer 20+ seconds
 jest.mock('../supabase');
@@ -26,8 +36,17 @@ beforeEach(async () => {
 describe('await userRegister tests', () => {
 
   test('successfully registers user', async () => {
-    mockedSupabase.single.mockResolvedValueOnce({ data: null, error: null });
-    mockedSupabase.single.mockResolvedValueOnce({ data: { contactId: 123 }, error: null });
+    mockedSupabase.maybeSingle.mockResolvedValueOnce({ data: null, error: null });
+    mockedSupabase.single.mockResolvedValueOnce({ 
+      data: { contactId: 123, email: 'hello@gmail.com' }, 
+      error: null 
+    });
+
+    mockedSupabase.single.mockResolvedValueOnce({ 
+      data: { orgId: 1, orgName: 'Eric Wong\'s Shop' }, 
+      error: null 
+    });
+
     const res = await userRegister(
       'Eric',
       'Wong',
@@ -42,7 +61,8 @@ describe('await userRegister tests', () => {
   });
 
   test('duplicate email error', async () => {
-    mockedSupabase.single.mockResolvedValueOnce({ data: { email: 'dup@gmail.com' }, error: null });
+    mockedSupabase.maybeSingle.mockResolvedValueOnce(
+      { data: { email: 'dup@gmail.com' }, error: null });
     await expect(userRegister('Eric', 'Wong', 'dup@gmail.com',
       '0412345678', 'Password123')).rejects.toThrow(InvalidEmail);
   });
@@ -98,9 +118,16 @@ describe('await userRegister tests', () => {
 describe('Lambda function tests for userRegister', () => {
 
   test('successfully registers user', async () => {
-    mockedSupabase.single
-      .mockResolvedValueOnce({ data: null, error: null })
-      .mockResolvedValueOnce({ data: { contactId: 123 }, error: null });
+    mockedSupabase.maybeSingle.mockResolvedValueOnce({ data: null, error: null });
+    mockedSupabase.single.mockResolvedValueOnce({ 
+      data: { contactId: 123, email: 'hello@gmail.com' }, 
+      error: null 
+    });
+
+    mockedSupabase.single.mockResolvedValueOnce({ 
+      data: { orgId: 1, orgName: 'Eric Wong\'s Shop' }, 
+      error: null 
+    });
 
     const event = {
       body: JSON.stringify({

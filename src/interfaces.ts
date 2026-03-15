@@ -25,9 +25,6 @@ export interface Organisation {
 }
 
 export interface Order {
-  deliveries?: any;
-  organisations?: any;
-  order_lines?: never[];
   orderId: string; // PK
   issuedDate: string;
   issuedTime: string;
@@ -39,6 +36,9 @@ export interface Order {
   taxExclusive: number;
   taxInclusive: number;
   finalPrice: number;
+  deliveries?: any;
+  organisations?: any;
+  order_lines?: never[];
 }
 
 export interface Delivery {
@@ -84,6 +84,10 @@ export interface ReqUser {
   lastName: string
   telephone: string;
   email: string;
+}
+
+export interface OrderLineWithItem extends OrderLine {
+  items: Item;
 }
 
 export interface OrderId {

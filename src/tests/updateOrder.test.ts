@@ -3,7 +3,7 @@ import { clearData, getOrderByIdSupa } from '../dataStore';
 import { userRegister } from '../userRegister';
 import { createOrder, updateOrder } from '../order';
 import { updateOrderHandler } from '../handlers/updateOrder'; 
-import { createOrderReturn, SessionId } from '../interfaces';
+import { createOrderReturn, Order, SessionId } from '../interfaces';
 import { 
   InvalidOrderId, 
   UnauthorisedError,
@@ -81,7 +81,7 @@ describe('Backend logic test for updateOrder', () => {
       'processed'
     );
 
-    const updatedOrder = await getOrderByIdSupa(orderId) as any;
+    const updatedOrder = await getOrderByIdSupa(orderId) as Order;
     
     const delivery = updatedOrder.deliveries[0];
     const address = delivery.addresses;

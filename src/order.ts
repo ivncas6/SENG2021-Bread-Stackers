@@ -1,5 +1,6 @@
 import  { createOrderReturn, EmptyObject, 
-  Order, ReqDeliveryPeriod, ReqItem, ReqUser } from './interfaces';
+  Order, ReqDeliveryPeriod, ReqItem, ReqUser, 
+  OrderLineWithItem } from './interfaces';
 import { v4 as uuidv4 } from 'uuid';
 import { createOrderSupaPush, 
   getOrderByIdSupa, 
@@ -165,7 +166,7 @@ export async function getOrderInfo(session: string, orderId: string) {
       telephone: contact?.telephone || '',
       email: contact?.email || '',
     },
-    items: (order.order_lines || []).map((line: any) => ({
+    items: (order.order_lines || []).map((line: OrderLineWithItem) => ({
       name: line.items?.name || 'Unknown',
       description: line.items?.description || '',
       unitPrice: Number(line.items?.price || 0),

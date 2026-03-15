@@ -5,8 +5,8 @@ const mockChain = {
   insert: jest.fn().mockReturnThis(),
   update: jest.fn().mockReturnThis(),
   eq: jest.fn().mockReturnThis(),
-  maybeSingle: jest.fn(),
   single: jest.fn(),
+  maybeSingle: jest.fn().mockReturnThis(),
 };
 
 export const supabase = mockChain;
