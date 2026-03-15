@@ -36,7 +36,9 @@ export interface Order {
   taxExclusive: number;
   taxInclusive: number;
   finalPrice: number;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   deliveries?: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   organisations?: any;
   order_lines?: never[];
 }

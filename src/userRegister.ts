@@ -69,8 +69,11 @@ export async function userRegister(nameFirst: string, nameLast: string, email: s
       throw new Error('Database returned no data for organization creation');
     }
   } catch (e: unknown) {
-    const reason = String(e);
-    throw new Error('User created, but Org failed: ' + reason);
+    // We pass the original error 'e' into the 'cause' property
+    throw new Error(`User created, but Org failed: ${e instanceof Error ? 
+      e.message : String(e)}`, { 
+      cause: e 
+    });
   }
 
   return createNewSession(newUser.contactId);
