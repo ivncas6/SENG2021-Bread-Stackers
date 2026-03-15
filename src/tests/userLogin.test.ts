@@ -1,6 +1,6 @@
 import { clearData } from '../dataStore';
 import { userRegister, userLogout, userLogin } from '../userRegister';
-import { Session } from '../interfaces';
+import { SessionId } from '../interfaces';
 /*import { UnauthorisedError } from '../throwError';
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import { userLoginHandler } from '../handlers/userLogin';*/
@@ -14,8 +14,9 @@ function createUser() {
     'sample',
     'user',
     'sample@gmail.com',
+    '0412345678',
     'password98'
-  ) as Session;
+  ) as SessionId;
 
   return { session };
 }

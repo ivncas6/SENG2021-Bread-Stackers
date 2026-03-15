@@ -18,8 +18,8 @@ function createUser() {
     'John',
     'Smith',
     'johnsmith@gmail.com',
+    '0412345678',
     'password123',
-    '123456789',
   ) as SessionId;
   return { session };
 }

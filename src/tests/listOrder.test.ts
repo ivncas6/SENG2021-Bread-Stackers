@@ -68,8 +68,8 @@ describe('listOrders tests', () => {
       'John',
       'Smith',
       'johnsmith@gmail.com',
+      '0412345678',
       'password123',
-      '0412345678'
     ) as SessionId;
 
     const result = listOrders(session.session);
@@ -118,8 +118,8 @@ describe('listOrders tests', () => {
       'Anna',
       'Lee',
       'annalee@gmail.com',
-      'password123',
-      '0412345678'
+      '0412345678',
+      'password123'
     ) as SessionId;
 
     const result = listOrders(user2.session);
@@ -138,8 +138,8 @@ describe('Lambda handler tests for listOrders', () => {
       'John',
       'Smith',
       'johnsmith@gmail.com',
-      'password123',
       '0412345678',
+      'password123',
     ) as SessionId;
 
     const event = {
@@ -201,8 +201,8 @@ describe('Lambda handler tests for listOrders', () => {
       'Anna',
       'Lee',
       'annalee@gmail.com',
+      '0412345678',
       'password123',
-      '0412345678'
     ) as SessionId;
 
     const event = {

@@ -1,7 +1,7 @@
 import { cancelOrder, createOrder } from '../order';
 import { userLogout, userRegister } from '../userRegister';
 import { getData, clearData } from '../dataStore';
-import { createOrderReturn, Session } from '../interfaces';
+import { createOrderReturn, SessionId } from '../interfaces';
 import { cancelOrderHandler } from '../handlers/cancelOrder';
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import mockEvent from './mocks/cancelOrderMock.json';
@@ -32,7 +32,9 @@ beforeEach(() => {
 
 // requires create order to be working
 function createTemplateOrderAndUser() {
-  const session = userRegister('John', 'Smith', 'johnsmith@gmail.com', 'password123') as Session;
+  const session = userRegister(
+    'John', 'Smith', 'johnsmith@gmail.com', '0412345678', 'password123'
+  ) as SessionId;
   const delPeriod = {
     startDateTime: 123,
     endDateTime: 456,
@@ -52,8 +54,9 @@ function createTemplateOrderAndUser() {
     }
   ];
   const userDetails = {
-    name: 'John Smith',
-    telephone: 123456789,
+    firstName: 'John', 
+    lastName: 'Smith',
+    telephone: '0412345678',
     email: 'johnsmith@gmail.com',
   };
 
@@ -94,7 +97,8 @@ test('Invalid session on backend', () => {
 test('Wrong user session', () => {
   const details = createTemplateOrderAndUser();
   const session = userRegister(
-    'Jane', 'Smith', 'janesmith@gmail.com', 'password321') as Session;
+    'Jane', 'Smith', 'janesmith@gmail.com', 
+    '0412345678', 'password321') as SessionId;
 
   expect(() => {
     cancelOrder(details.order.orderId, 'reason here', session.session);
@@ -199,7 +203,7 @@ test('Test endpoint for invalid session', async () => {
   // create an order
   const details = createTemplateOrderAndUser();
   const otherSession = userRegister('Jane', 'Smith', 
-    'janesmith@gmail.com', 'password321');
+    'janesmith@gmail.com', '0412345678', 'password321');
 
   const finalReason = 'I have no reason';
   const event = { 

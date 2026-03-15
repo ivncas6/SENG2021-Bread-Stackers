@@ -48,49 +48,49 @@ describe('userRegister tests', () => {
 
   test('invalid first name characters', () => {
     expect(() =>
-      userRegister('Er!c', 'Wong', 'hello@gmail.com', 'Password123', '0412345678')
+      userRegister('Er!c', 'Wong', 'hello@gmail.com', '0412345678', 'Password123')
     ).toThrow(InvalidFirstName);
   });
 
   test('first name too short', () => {
     expect(() =>
-      userRegister('E', 'Wong', 'hello@gmail.com', 'Password123', '0412345678')
+      userRegister('E', 'Wong', 'hello@gmail.com', '0412345678', 'Password123')
     ).toThrow(InvalidFirstName);
   });
 
   test('invalid last name characters', () => {
     expect(() =>
-      userRegister('Eric', 'W&ng', 'hello@gmail.com', 'Password123', '0412345678')
+      userRegister('Eric', 'W&ng', 'hello@gmail.com', '0412345678', 'Password123')
     ).toThrow(InvalidLastName);
   });
 
   test('password too short', () => {
     expect(() =>
-      userRegister('Eric', 'Wong', 'hello@gmail.com', 'short', '0412345678')
+      userRegister('Eric', 'Wong', 'hello@gmail.com', '0412345678', 'short')
     ).toThrow(InvalidPassword);
   });
 
   test('password missing number', () => {
     expect(() =>
-      userRegister('Eric', 'Wong', 'hello@gmail.com', 'passwordonly', '0412345678')
+      userRegister('Eric', 'Wong', 'hello@gmail.com', '0412345678', 'passwordonly',)
     ).toThrow(InvalidPassword);
   });
 
   test('telephone is too long', () => {
     expect(() =>
-      userRegister('Eric', 'Wong', 'hello@gmail.com', '12345678as', '041234567822567')
+      userRegister('Eric', 'Wong', 'hello@gmail.com', '041234567822567', '12345678as',)
     ).toThrow(InvalidPassword);
   });
 
   test('telephone is too short', () => {
     expect(() =>
-      userRegister('Eric', 'Wong', 'hello@gmail.com', '12345678as', '041234')
+      userRegister('Eric', 'Wong', 'hello@gmail.com', '041234', '12345678as',)
     ).toThrow(InvalidPhone);
   });
 
   test('telephone is not a number', () => {
     expect(() =>
-      userRegister('Eric', 'Wong', 'hello@gmail.com', '12345678as', '04123456ba')
+      userRegister('Eric', 'Wong', 'hello@gmail.com', '04123456ba', '12345678as')
     ).toThrow(InvalidPhone);
   });
 

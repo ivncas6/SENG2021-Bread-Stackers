@@ -96,8 +96,8 @@ describe('getOrderInfo tests', () => {
       'Anna',
       'Lee',
       'annaLee@gmail.com',
-      'password123',
-      '0412345678'
+      '0412345678',
+      'password123'
     ) as SessionId;
     expect(() => getOrderInfo(user2.session, order.orderId)).toThrow(
       InvalidOrderId
