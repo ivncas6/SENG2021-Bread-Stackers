@@ -67,7 +67,7 @@ export function createOrder(
   };
 
   data.orders.push(order);
-  createOrderUBLXML(order);
+  createOrderUBLXML(order, items, user, deliveryAddress);
 
   return { orderId: orderId };
 }
@@ -86,7 +86,7 @@ export function cancelOrder(orderId: string, reason: string, session: string) {
     throw new InvalidInput('error: Invalid orderId');
   }
 
-  if (foundOrder.userId !== userId) {
+  if (foundOrder.buyerOrgID !== userId) {
     throw new UnauthorisedError('User does not exist');
   }
 
@@ -96,7 +96,7 @@ export function cancelOrder(orderId: string, reason: string, session: string) {
   return { reason: reason };
 }
 
-export function getOrderInfo(session: string, orderId: string): OrderInfo | ErrorObject {
+export function getOrderInfo(session: string, orderId: string) {
   const userId = getUserIdFromSession(session);
 
   // find the order
@@ -107,41 +107,38 @@ export function getOrderInfo(session: string, orderId: string): OrderInfo | Erro
       'Provided orderId doesnot correspond to any existing order',
     );
   }
-  if (order.userId !== userId) {
+  if (order.buyerOrgID !== userId) {
     throw new InvalidOrderId(
       'Order with the provided orderId does not belong to this user.',
     );
   }
   return {
     orderId: orderId,
-    orderDateTime: order.orderDate,
     status: order.status,
+    issuedDate: order.issuedDate,
+    issuedTime: order.issuedTime,
     currency: order.currency,
-    deliveryAddress: order.deliveryAddress,
-    userDetails: order.user,
-    reqDeliveryPeriod: order.reqDeliveryPeriod,
-    items: order.items,
+    finalPrice: order.finalPrice,
+    taxExclusive: order.taxExclusive,
+    taxInclusive: order.taxInclusive,
   };
 }
 
-export function listOrders(session: string): { orders: OrderInfo[] } {
+export function listOrders(session: string) {
 
   // validates the session, tells us who is making the request
   const userId = getUserIdFromSession(session);
   const data = getData();
 
   // filters and maps orders belonging to the logged-in user
-  const orders: OrderInfo[] = data.orders
-    .filter(order => order.userId === userId)
+  const orders = data.orders
+    .filter(order => order.buyerOrgID === userId)
     .map(order => ({
       orderId: order.orderId ?? '',
       status: 'active',
-      orderDateTime: order.orderDate,
-      currency: order.currency,
-      deliveryAddress: order.deliveryAddress,
-      userDetails: order.user,
-      reqDeliveryPeriod: order.reqDeliveryPeriod,
-      items: order.items,
+      issuedDate: order.issuedDate,
+      finalPrice: order.finalPrice,
+      currency: order.currency
     }));
 
   return { orders };
@@ -176,7 +173,7 @@ export function updateOrder(
   }
 
   // Check access 
-  if (order.userId !== userId) {
+  if (order.buyerOrgID !== userId) {
     throw new UnauthorisedError('You do not have permission to update this order');
   }
 
@@ -194,8 +191,10 @@ export function updateOrder(
   }
 
   // Update Order
+  /* Update later:
   order.deliveryAddress = deliveryAddress;
   order.reqDeliveryPeriod = reqDeliveryPeriod;
+  */
   order.status = status;
 
   // Return empty 
