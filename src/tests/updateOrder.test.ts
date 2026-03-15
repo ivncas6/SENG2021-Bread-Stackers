@@ -3,7 +3,7 @@ import { clearData, getData } from '../dataStore';
 import { userRegister } from '../userRegister';
 import { createOrder, updateOrder } from '../order';
 import { updateOrderHandler } from '../handlers/updateOrder'; 
-import { createOrderReturn, Session } from '../interfaces';
+import { createOrderReturn, SessionId } from '../interfaces';
 import { 
   InvalidOrderId, 
   UnauthorisedError,
@@ -19,7 +19,7 @@ function createOrderAndUser() {
     'Smith',
     'johnsmith@gmail.com',
     'password123',
-  ) as Session;
+  ) as SessionId;
 
   const reqDeliveryPeriod = {
     startDateTime: Math.floor(Date.now() / 1000) + 3600,
@@ -60,10 +60,13 @@ describe('Backend logic test for updateOrder', () => {
     const data = getData();
     const updatedOrder = data.orders.find((o) => o.orderId === orderId);
     
+    const delivery = data.deliveries.find(d => d.orderID === orderId);
+    const address = data.addresses.find(a => a.addressID === delivery?.deliveryAddressID);
     
     expect(updatedOrder).toBeDefined();
-    expect(updatedOrder?.deliveryAddress).toBe(newAddress);
-    expect(updatedOrder?.status).toBe('processed');
+    expect(address?.street).toStrictEqual(newAddress);
+    expect(updatedOrder?.status).toStrictEqual('processed');
+    expect(delivery?.startDate).toStrictEqual(reqDeliveryPeriod.startDateTime.toString());
   });
 
   test('Invalid Session', () => {

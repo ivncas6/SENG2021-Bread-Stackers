@@ -147,7 +147,7 @@ describe('Lambda handler tests for listOrders', () => {
   });
 
   test('successfully returns 200 with user orders', async () => {
-    const { session, order, userDetails, reqDeliveryPeriod, items, currency } =
+    const { session, order, currency } =
       createOrderAndUser();
 
     const event = {

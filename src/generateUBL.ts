@@ -14,7 +14,8 @@ function generateItemXML(items: ReqItem[]): string {
     </cac:LineItem>`).join('');
 }
 
-export function createOrderUBLXML(order: Order, items: ReqItem[], user: ReqUser, deliveryAddress: string): string {
+export function createOrderUBLXML(
+  order: Order, items: ReqItem[], user: ReqUser, deliveryAddress: string): string {
   const itemList = generateItemXML(items);
 
   return `<?xml version="1.0" encoding="UTF-8"?>
@@ -46,13 +47,21 @@ export function createOrderUBLXML(order: Order, items: ReqItem[], user: ReqUser,
     </cac:Delivery>
 
     <cac:TaxTotal>
-        <cbc:TaxAmount currencyID="${order.currency}">${order.taxInclusive - order.taxExclusive}</cbc:TaxAmount>
+        <cbc:TaxAmount currencyID="${order.currency}">
+            ${order.taxInclusive - order.taxExclusive}
+        </cbc:TaxAmount>
     </cac:TaxTotal>
 
     <cac:AnticipatedMonetaryTotal>
-        <cbc:LineExtensionAmount currencyID="${order.currency}">${order.taxExclusive}</cbc:LineExtensionAmount>
-        <cbc:TaxInclusiveAmount currencyID="${order.currency}">${order.taxInclusive}</cbc:TaxInclusiveAmount>
-        <cbc:PayableAmount currencyID="${order.currency}">${order.finalPrice}</cbc:PayableAmount>
+        <cbc:LineExtensionAmount currencyID="${order.currency}">
+            ${order.taxExclusive}
+        </cbc:LineExtensionAmount>
+        <cbc:TaxInclusiveAmount currencyID="${order.currency}">
+            ${order.taxInclusive}
+        </cbc:TaxInclusiveAmount>
+        <cbc:PayableAmount currencyID="${order.currency}">
+            ${order.finalPrice}
+        </cbc:PayableAmount>
     </cac:AnticipatedMonetaryTotal>
 
     ${itemList}

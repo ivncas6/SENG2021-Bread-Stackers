@@ -41,7 +41,7 @@ export function userRegister(nameFirst: string, nameLast: string, email: string,
     contactId,
     name: nameFirst + ' ' + nameLast,
     email,
-    telephone: "",
+    telephone: '',
     password: hashPassword
   };
 

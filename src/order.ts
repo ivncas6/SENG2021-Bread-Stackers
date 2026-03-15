@@ -1,4 +1,4 @@
-import  { createOrderReturn, EmptyObject, ErrorObject, Item, 
+import  { createOrderReturn, EmptyObject, 
   Order, ReqDeliveryPeriod, ReqItem, ReqUser } from './interfaces';
 import { v4 as uuidv4 } from 'uuid';
 import { getData } from './dataStore';
@@ -81,7 +81,7 @@ export function createOrder(
     startDate: reqDeliveryPeriod.startDateTime.toString(),
     endDate: reqDeliveryPeriod.endDateTime.toString(),
     deliveryTerms: 'Standard'
-  }) 
+  }); 
 
   createOrderUBLXML(order, items, user, deliveryAddress);
 
@@ -218,6 +218,20 @@ export function updateOrder(
   order.reqDeliveryPeriod = reqDeliveryPeriod;
   */
   order.status = status;
+
+  const delivery = data.deliveries.find(d => d.orderID === orderId);
+  
+  if (delivery) {
+    delivery.startDate = reqDeliveryPeriod.startDateTime.toString();
+    delivery.endDate = reqDeliveryPeriod.endDateTime.toString();
+
+    const address = data.addresses.find(
+      add => add.addressID === delivery.deliveryAddressID
+    );
+    if (address) {
+      address.street = deliveryAddress;
+    }
+  }
 
   // Return empty 
   return {};
