@@ -72,11 +72,15 @@ export async function userRegister(nameFirst: string, nameLast: string, email: s
   return createNewSession(newUser.contactId);
 }
 
-export function userLogin(email: string, password: string): SessionId | ErrorObject {
-  const data = getData();
+export async function userLogin(email: string, password: string): Promise<SessionId | ErrorObject> {
 
-  // search through the users array in the data object to find a user with matching email to input
-  const user = data.users.find(user => user.email === email);
+  const { data: user, error } = await supabase
+    .from('contacts')
+    .select('contactId, password')
+    .eq('email', email)
+    .maybeSingle();
+
+  if (error) throw error;
 
   // if the user was not found
   if (!user) {
@@ -126,7 +130,7 @@ export async function userDetailsUpdate(
   return { };
 }
 
-export function userLogout(sessionId: string): EmptyObject | ErrorObject {
+export async function userLogout(sessionId: string): Promise<EmptyObject | ErrorObject> {
 
   /* Use for any live or self hosted server implementations in the future */
 

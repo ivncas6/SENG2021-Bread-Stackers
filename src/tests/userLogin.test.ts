@@ -10,8 +10,8 @@ beforeEach(async () => {
   jest.clearAllMocks();
 });
 
-function createUser() {
-  const session = userRegister(
+async function createUser() {
+  const session = await userRegister(
     'sample',
     'user',
     'sample@gmail.com',
@@ -24,13 +24,13 @@ function createUser() {
 
 describe('Backend logic tests for userLogin', () => {
 
-  test('successfully login a user', () => {
-    const { session } = createUser();
-    const res = userLogout(session.session);
+  test('successfully login a user', async () => {
+    const { session } = await createUser();
+    const res = await userLogout(session.session);
     expect(res).toEqual({});
 
-    const newSession = userLogin('sample@gmail.com', 'password98');
-    expect(newSession).toStrictEqual({session: expect.any(String)});
+    const newSession = await userLogin('sample@gmail.com', 'password98');
+    await expect(newSession).toStrictEqual({session: expect.any(String)});
   });
 
   /*test('invalid email provided', () => {
