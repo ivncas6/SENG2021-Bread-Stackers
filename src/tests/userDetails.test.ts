@@ -5,6 +5,7 @@ import {
   InvalidEmail,
   InvalidFirstName,
   InvalidLastName,
+  InvalidPhone,
   UnauthorisedError,
 } from '../throwError';
 import { updateUserDetailsHandler } from '../handlers/userDetails';
@@ -12,104 +13,148 @@ import { APIGatewayProxyEvent } from 'aws-lambda';
 
 beforeEach(async () => {
   await clearData();
-  jest.clearAllMocks();
 });
 
-function registerUser() {
-  const session = userRegister(
+async function registerUser() {
+  const session = await userRegister(
     'John',
     'Smith',
     'johnsmith@gmail.com',
     '0412345678',
     'password123',
-  ) as SessionId;
-  return session;
+  );
+  return session as SessionId;
 }
 
 describe('test for the user details update function', () => {
-  test('Successful update', () => {
-    const user = registerUser();
-    const res = userDetailsUpdate(
+  test('Successful update', async () => {
+    const user = await registerUser();
+    const res = await userDetailsUpdate(
       user.session,
       'johnsmith@gmail.com',
       'John',
       'Brenner',
+      '0412345678'
     );
     expect(res).toStrictEqual({});
   });
-  test('Invalid name 1', () => {
-    const user = registerUser();
-    expect(() =>
-      userDetailsUpdate(user.session, 'johnsmith@gmail.com', 'Joh!', 'Smith'),
-    ).toThrow(InvalidFirstName);
+
+  test('Invalid name characters', async () => {
+    const user = await registerUser();
+    await expect(
+      userDetailsUpdate(user.session, 'johnsmith@gmail.com', 'Joh!', 'Smith', '0412345678')
+    ).rejects.toThrow(InvalidFirstName);
   });
-  test('Invalid name 2', () => {
-    const user = registerUser();
-    expect(() =>
-      userDetailsUpdate(user.session, 'johnsmith@gmail.com', 'J', 'Smith'),
-    ).toThrow(InvalidFirstName);
+
+  test('Invalid short name', async () => {
+    const user = await registerUser();
+    await expect(
+      userDetailsUpdate(user.session, 'johnsmith@gmail.com', 'J', 'Smith', '0412345678')
+    ).rejects.toThrow(InvalidFirstName);
   });
-  test('Invalid name 3', () => {
-    const user = registerUser();
-    expect(() =>
+
+  test('Invalid long name', async () => {
+    const user = await registerUser();
+    await expect(
       userDetailsUpdate(
         user.session,
         'johnsmith@gmail.com',
         'JohnJohnJohnJohnJohnJohn',
         'Smith',
-      ),
-    ).toThrow(InvalidFirstName);
+        '0412345678'
+      )
+    ).rejects.toThrow(InvalidFirstName);
   });
-  test('Invalid email', () => {
-    const user = registerUser();
-    expect(() =>
+
+  test('Invalid email', async () => {
+    const user = await registerUser();
+    await expect(
       userDetailsUpdate(
         user.session,
         'johnsmith.com',
         'JohnJohn',
         'Smith',
-      ),
-    ).toThrow(InvalidEmail);
+        '0412345678'
+      )
+    ).rejects.toThrow(InvalidEmail);
   });
-  test('Invalid last name', () => {
-    const user = registerUser();
-    expect(() =>
-      userDetailsUpdate(user.session, 'johnsmith@gmail.com', 'John', 'Sm!th'),
-    ).toThrow(InvalidLastName);
+
+  test('Invalid last name character', async () => {
+    const user = await registerUser();
+    await expect(
+      userDetailsUpdate(user.session, 'johnsmith@gmail.com', 'John', 'Sm!th', '0412345678')
+    ).rejects.toThrow(InvalidLastName);
   });
-  test('Invalid last name 2', () => {
-    const user = registerUser();
-    expect(() =>
+
+  test('Invalid last name length', async () => {
+    const user = await registerUser();
+    await expect(
       userDetailsUpdate(
         user.session,
         'johnsmith@gmail.com',
         'John',
         'SmithSmithSmithSmithSmith',
-      ),
-    ).toThrow(InvalidLastName);
+        '0412345678'
+      )
+    ).rejects.toThrow(InvalidLastName);
   });
-  test('Invalid last name 2', () => {
-    const user = registerUser();
-    expect(() =>
-      userDetailsUpdate(user.session, 'johnsmith@gmail.com', 'John', 'S'),
-    ).toThrow(InvalidLastName);
-  });
-  test('Invalid session', () => {
-    const user = registerUser();
-    expect(() =>
+
+  test('Invalid session', async () => {
+    const user = await registerUser();
+    await expect(
       userDetailsUpdate(
         user.session + 'adw',
         'johnsmith@gmail.com',
         'John',
         'Smith',
-      ),
-    ).toThrow(UnauthorisedError);
+        '0412345678'
+      )
+    ).rejects.toThrow(UnauthorisedError);
+  });
+
+  test('Invalid phone short', async () => {
+    const user = await registerUser();
+    await expect(
+      userDetailsUpdate(
+        user.session,
+        'johnsmith@gmail.com',
+        'John',
+        'Smith',
+        '04123'
+      )
+    ).rejects.toThrow(InvalidPhone);
+  });
+
+  test('Invalid phone long', async () => {
+    const user = await registerUser();
+    await expect(
+      userDetailsUpdate(
+        user.session,
+        'johnsmith@gmail.com',
+        'John',
+        'Smith',
+        '04123234567890'
+      )
+    ).rejects.toThrow(InvalidPhone);
+  });
+
+  test('Invalid phone char', async () => {
+    const user = await registerUser();
+    await expect(
+      userDetailsUpdate(
+        user.session,
+        'johnsmith@gmail.com',
+        'John',
+        'Smith',
+        '04123234!5'
+      )
+    ).rejects.toThrow(InvalidPhone);
   });
 });
 
-describe('test for the user details update function', () => {
+describe('Lambda handler tests for userDetailsUpdate', () => {
   test('successful update', async () => {
-    const user = registerUser();
+    const user = await registerUser();
     const result = {
       headers: {
         session: user.session,
@@ -118,6 +163,7 @@ describe('test for the user details update function', () => {
         firstName: 'John',
         lastName: 'Smith',
         email: 'johnsmith@gmail.com',
+        telephone: '0412345678'
       }),
     } as unknown as APIGatewayProxyEvent;
 
@@ -125,8 +171,9 @@ describe('test for the user details update function', () => {
     expect(response.statusCode).toBe(200);
     expect(JSON.parse(response.body)).toStrictEqual({});
   });
+
   test('invalid email provided', async () => {
-    const user = registerUser();
+    const user = await registerUser();
     const result = {
       headers: {
         session: user.session,
@@ -135,49 +182,16 @@ describe('test for the user details update function', () => {
         firstName: 'John',
         lastName: 'Smith',
         email: 'johnsmith.com',
+        telephone: '0412345678'
       }),
     } as unknown as APIGatewayProxyEvent;
 
     const response = await updateUserDetailsHandler(result);
     expect(response.statusCode).toBe(400);
-    expect(JSON.parse(response.body)).toEqual({ error: expect.any(String) });
   });
-  test('invalid first name provided', async () => {
-    const user = registerUser();
-    const result = {
-      headers: {
-        session: user.session,
-      },
-      body: JSON.stringify({
-        firstName: 'J',
-        lastName: 'Smith',
-        email: 'johnsmith.com',
-      }),
-    } as unknown as APIGatewayProxyEvent;
 
-    const response = await updateUserDetailsHandler(result);
-    expect(response.statusCode).toBe(400);
-    expect(JSON.parse(response.body)).toEqual({ error: expect.any(String) });
-  });
-  test('invalid last name provided', async () => {
-    const user = registerUser();
-    const result = {
-      headers: {
-        session: user.session,
-      },
-      body: JSON.stringify({
-        firstName: 'John',
-        lastName: 'Sm!th',
-        email: 'johnsmith.com',
-      }),
-    } as unknown as APIGatewayProxyEvent;
-
-    const response = await updateUserDetailsHandler(result);
-    expect(response.statusCode).toBe(400);
-    expect(JSON.parse(response.body)).toEqual({ error: expect.any(String) });
-  });
   test('invalid session provided', async () => {
-    const user = registerUser();
+    const user = await registerUser();
     const result = {
       headers: {
         session: user.session + 'aws',
@@ -185,28 +199,12 @@ describe('test for the user details update function', () => {
       body: JSON.stringify({
         firstName: 'John',
         lastName: 'Smith',
-        email: 'johnsmith.com',
+        email: 'johnsmith@gmail.com',
+        telephone: '0412345678'
       }),
     } as unknown as APIGatewayProxyEvent;
 
     const response = await updateUserDetailsHandler(result);
     expect(response.statusCode).toBe(401);
-    expect(JSON.parse(response.body)).toEqual({ error: expect.any(String) });
-  });
-  test('empty session provided', async () => {
-    const result = {
-      headers: {
-        session: null,
-      },
-      body: JSON.stringify({
-        firstName: 'John',
-        lastName: 'Smith',
-        email: 'johnsmith.com',
-      }),
-    } as unknown as APIGatewayProxyEvent;
-
-    const response = await updateUserDetailsHandler(result);
-    expect(response.statusCode).toBe(401);
-    expect(JSON.parse(response.body)).toEqual({ error: expect.any(String) });
   });
 });

@@ -1,6 +1,7 @@
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import { InvalidLastName,
-  InvalidFirstName, InvalidEmail, UnauthorisedError
+  InvalidFirstName, InvalidEmail, UnauthorisedError,
+  InvalidPhone
 } from '../throwError';
 import { userDetailsUpdate} from '../userRegister';
 
@@ -22,9 +23,10 @@ export const updateUserDetailsHandler = async (
     const email = body.email;
     const firstName = body.firstName;
     const lastName = body.lastName;
+    const phone = body.phone;
 
     const res = await userDetailsUpdate(
-      session, email, firstName, lastName
+      session, email, firstName, lastName, phone
     );
 
     return {
@@ -35,7 +37,8 @@ export const updateUserDetailsHandler = async (
   } catch (e) {
     if (e instanceof InvalidLastName ||
         e instanceof InvalidFirstName ||
-        e instanceof InvalidEmail
+        e instanceof InvalidEmail ||
+        e instanceof InvalidPhone
     ) {
       return {
         statusCode: 400,

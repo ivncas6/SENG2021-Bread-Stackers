@@ -4,6 +4,7 @@ import {
   InvalidEmail,
   InvalidFirstName,
   InvalidLastName,
+  InvalidPhone,
 } from './throwError';
 import * as crypto from 'crypto';
 import validator from 'validator';
@@ -95,8 +96,25 @@ export async function invalidemailcheck(sessionId: string, email: string): Promi
   return null;
 }
 
-export function invalidphonecheck(telephone: string) {
+export async function invalidphonecheck(sessionId: string, telephone: string): Promise<ErrorObject | null> {
+  const isAllDigits = /^\d+$/.test(telephone);
+  if (!isAllDigits || telephone.length < 8 || telephone.length > 12) {
+    throw new InvalidPhone('The telephone number is incorrect');
+  }
 
+  const userId = getUserIdFromSession(sessionId);
+  const { data: existingUser } = await supabase
+    .from('contacts')
+    .select('contactId')
+    .eq('telephone', telephone)
+    .neq('contactId', userId)
+    .maybeSingle();
+
+  if (existingUser) {
+    throw new InvalidPhone('Phone number is already used by another user');
+  }
+
+  return null
 }
 
 

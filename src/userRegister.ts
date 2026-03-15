@@ -8,7 +8,7 @@ import {
   UnauthorisedError
 } from './throwError';
 import { invalidnameFirst, invalidnameLast, getHashOf, checkPassword, 
-  createNewSession, invalidemailcheck,
+  createNewSession, invalidemailcheck, invalidphonecheck,
   getUserIdFromSession,
 } from './userHelper';
 import validator from 'validator';
@@ -90,7 +90,12 @@ export async function userDetailsUpdate(
   session: string, 
   email: string,
   nameFirst: string, 
-  nameLast: string): Promise<EmptyObject | ErrorObject> {
+  nameLast: string,
+  telephone: string
+): Promise<EmptyObject | ErrorObject> {
+
+  invalidnameFirst(nameFirst);
+  invalidnameLast(nameLast);
  
   const userId = getUserIdFromSession(session);
   const u = await getUserByIdSupa(userId);
@@ -98,17 +103,17 @@ export async function userDetailsUpdate(
   if (!u) {
     throw new UnauthorisedError('User does not exist');
   }
-
-  invalidnameFirst(nameFirst);
-  invalidnameLast(nameLast);
-  invalidemailcheck(session, email);
+  
+  await invalidemailcheck(session, email);
+  await invalidphonecheck(session, telephone);
 
   const { error } = await supabase
     .from('contacts')
     .update({
       firstName: nameFirst,
       lastName: nameLast,
-      email: email
+      email: email,
+      phone: telephone
     })
     .eq('contactId', userId);
 
