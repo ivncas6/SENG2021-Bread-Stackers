@@ -108,7 +108,7 @@ describe('getOrderInfo tests', () => {
 // Lamda function test for getOrderInfo
 describe('Lamda function tests for getOrderInfo', () => {
   test('sucessfully returns order info', async () => {
-    const { session, order, userDetails, reqDeliveryPeriod, items, currency } =
+    const { session, order, userDetails, items, currency } =
       createOrderAndUser();
     const result = {
       headers: {
