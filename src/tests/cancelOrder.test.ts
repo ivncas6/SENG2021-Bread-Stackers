@@ -1,119 +1,116 @@
-import { cancelOrder, createOrder } from '../order';
-import { userLogout, userRegister } from '../userRegister';
-import { clearData, getUserByIdSupa } from '../dataStore';
-import { createOrderReturn, SessionId } from '../interfaces';
+import { cancelOrder } from '../order';
 import { cancelOrderHandler } from '../handlers/cancelOrder';
-import { APIGatewayProxyEvent } from 'aws-lambda';
+import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import mockEvent from './mocks/cancelOrderMock.json';
 import * as orderModule from '../order';
 import { InvalidInput, UnauthorisedError } from '../throwError';
-import { getUserIdFromSession } from '../userHelper';
+import * as userHelper from '../userHelper';
+import * as dataStore from '../dataStore';
+import { Order } from '../interfaces';
 
-// Counter to ensure unique emails across tests in the real DB
+// jest mocks
+jest.mock('../userHelper');
+jest.mock('../dataStore');
+
+const mockedUserHelper = userHelper as jest.Mocked<typeof userHelper>;
+const mockedDataStore = dataStore as jest.Mocked<typeof dataStore>;
+
 let testIdx = 0;
 
-beforeEach(async () => {
-  await clearData();
+beforeEach(() => {
+  jest.clearAllMocks();
 });
 
+// fake data
 async function createTemplateOrderAndUser() {
   testIdx++;
-  const uniqueEmail = `testuser${testIdx}@example.com`;
+  const mockSession = `valid-session-${testIdx}`;
+  const mockUserId = testIdx;
+  const mockOrgId = testIdx * 10;
+  const mockOrderId = `order-uuid-${testIdx}`;
+
+  // the default successful mock responses for this user/order
+  mockedUserHelper.getUserIdFromSession.mockReturnValue(mockUserId);
   
-  // Await the registration
-  const session = await userRegister(
-    'John', 'Smith', uniqueEmail, '0412345678', 'password123'
-  ) as SessionId;
+  // 'as never' skips strict Supabase response linting
+  mockedDataStore.getOrgByUserId.mockResolvedValue({ 
+    data: { orgId: mockOrgId }, error: null 
+  } as never);
+  
+  // Partial<Order> cuz Order fixes the missing fields lint error
+  const mockOrder: Partial<Order> = { buyerOrgID: mockOrgId, orderId: mockOrderId };
+  mockedDataStore.getOrderByIdSupa.mockResolvedValue(mockOrder as Order);
 
-  const delPeriod = {
-    startDateTime: 123,
-    endDateTime: 456,
+  return { 
+    session: { session: mockSession }, 
+    order: { orderId: mockOrderId },
+    userId: mockUserId,
+    orgId: mockOrgId
   };
-  const items = [
-    {
-      name: 'cabbage',
-      description: 'A leafy vegetable',
-      unitPrice: 12,
-      quantity: 50
-    },
-    {
-      name: 'tomato',
-      description: 'A red fruit',
-      unitPrice: 6,
-      quantity: 100
-    }
-  ];
-  const userDetails = {
-    firstName: 'John', 
-    lastName: 'Smith',
-    telephone: '0412345678',
-    email: uniqueEmail,
-  };
-
-  // Await the order creation
-  const order = await createOrder('AUD', session.session, userDetails, 
-    '308 Negra Arroyo Lane', delPeriod, items) as createOrderReturn;
-
-  return { order, session };
 }
 
-// --- Backend Logic Tests ---
+// backend
 
 test('cancel a single order', async () => {
   const details = await createTemplateOrderAndUser();
-  const userId = getUserIdFromSession(details.session.session);
 
   const res = await cancelOrder(details.order.orderId, 'reason here', details.session.session);
+  
   expect(res).toStrictEqual({ reason: 'reason here' });
-
-  const user = await getUserByIdSupa(Number(userId));
-  expect(user).toBeDefined();
+  // verify the delete function was called correctly instead of checking db
+  expect(mockedDataStore.deleteOrderSupa).toHaveBeenCalledWith(details.order.orderId);
 });
 
-test('Inavlid orderId on backend', async () => {
+test('Invalid orderId on backend', async () => {
   const details = await createTemplateOrderAndUser();
+  
+  // override the happy path to simulate a missing order
+  mockedDataStore.getOrderByIdSupa.mockResolvedValue(null);
+
   await expect(
-    cancelOrder(crypto.randomUUID(), 'reason here', details.session.session)
+    cancelOrder('fake-uuid', 'reason here', details.session.session)
   ).rejects.toThrow(InvalidInput);
 });
 
 test('Invalid session on backend', async () => {
   const details = await createTemplateOrderAndUser();
+  
+  // override to simulate an invalid token throwing an error
+  mockedUserHelper.getUserIdFromSession.mockImplementation(() => {
+    throw new UnauthorisedError('Invalid session');
+  });
+
   await expect(
-    cancelOrder(details.order.orderId, 'reason here', '271498')
+    cancelOrder(details.order.orderId, 'reason here', 'bad-session-123')
   ).rejects.toThrow(UnauthorisedError);
 });
 
-test('Wrong user session', async () => {
+test('Wrong user session (Order belongs to someone else)', async () => {
   const details = await createTemplateOrderAndUser();
-  // Create a second user to try and cancel the first user's order
-  const otherSession = await userRegister(
-    'Jane', 'Smith', `jane${testIdx}@smith.com`, 
-    '0412345678', 'password321') as SessionId;
+  
+  // override the order mock to belong to a different Org ID
+  const wrongOrder: Partial<Order> = { buyerOrgID: 9999, orderId: details.order.orderId };
+  mockedDataStore.getOrderByIdSupa.mockResolvedValue(wrongOrder as Order);
 
   await expect(
-    cancelOrder(details.order.orderId, 'reason here', otherSession.session)
+    cancelOrder(details.order.orderId, 'reason here', details.session.session)
   ).rejects.toThrow(UnauthorisedError);
 });
 
-// --- AWS Lambda Handler Tests ---
+// AWS lambda
 
 test('Test endpoint for order cancellation', async () => {
   const details = await createTemplateOrderAndUser();
   const finalReason = 'I have no reason';
+  
   const event = { 
     ...mockEvent,
-    headers: {
-      session: details.session.session
-    },
-    pathParameters: {
-      ...mockEvent.pathParameters,
-      orderId: details.order.orderId,
-    },
+    headers: { session: details.session.session },
+    pathParameters: { ...mockEvent.pathParameters, orderId: details.order.orderId },
     body: JSON.stringify({ reason: finalReason })
   } as unknown as APIGatewayProxyEvent;
 
-  const res = await cancelOrderHandler(event);
+  const res: APIGatewayProxyResult = await cancelOrderHandler(event);
 
   expect(res.statusCode).toStrictEqual(200);
   expect(JSON.parse(res.body)).toStrictEqual({ reason: finalReason });
@@ -121,68 +118,55 @@ test('Test endpoint for order cancellation', async () => {
 
 test('Test endpoint for invalid orderId', async () => {
   const details = await createTemplateOrderAndUser();
+  mockedDataStore.getOrderByIdSupa.mockResolvedValue(null);
+
   const event = { 
     ...mockEvent,
-    headers: {
-      session: details.session.session
-    },
-    pathParameters: {
-      ...mockEvent.pathParameters,
-      orderId: crypto.randomUUID(), 
-    },
+    headers: { session: details.session.session },
+    pathParameters: { ...mockEvent.pathParameters, orderId: 'fake-id' },
     body: JSON.stringify({ reason: 'testing' })
   } as unknown as APIGatewayProxyEvent;
 
-  const res = await cancelOrderHandler(event);
+  const res: APIGatewayProxyResult = await cancelOrderHandler(event);
 
   expect(res.statusCode).toStrictEqual(400);
-  const body = JSON.parse(res.body);
-  expect(body).toHaveProperty('error');
+  expect(JSON.parse(res.body)).toHaveProperty('error');
 });
 
 test('Test endpoint for invalid session', async () => {
   const details = await createTemplateOrderAndUser();
   
-  // Logout to invalidate session
-  await userLogout(details.session.session);
+  mockedUserHelper.getUserIdFromSession.mockImplementation(() => {
+    throw new UnauthorisedError('Invalid session');
+  });
 
   const event = { 
     ...mockEvent,
-    headers: {
-      session: 'invalid_session_string'
-    },
-    pathParameters: {
-      ...mockEvent.pathParameters,
-      orderId: details.order.orderId,
-    },
-    body: JSON.stringify({ reason: 'I have no reason' })
+    headers: { session: 'invalid_session_string' },
+    pathParameters: { ...mockEvent.pathParameters, orderId: details.order.orderId },
+    body: JSON.stringify({ reason: 'testing' })
   } as unknown as APIGatewayProxyEvent;
 
-  const res = await cancelOrderHandler(event);
+  const res: APIGatewayProxyResult = await cancelOrderHandler(event);
 
   expect(res.statusCode).toStrictEqual(401);
-  const body = JSON.parse(res.body);
-  expect(body).toHaveProperty('error');
+  expect(JSON.parse(res.body)).toHaveProperty('error');
 });
 
 test('Test endpoint for order not belonging to user', async () => {
   const details = await createTemplateOrderAndUser();
-  const otherUser = await userRegister('Jane', 'Smith', 
-    `jane${testIdx}@gmail.com`, '0412345678', 'password321') as SessionId;
+  
+  const wrongOrder: Partial<Order> = { buyerOrgID: 9999, orderId: details.order.orderId };
+  mockedDataStore.getOrderByIdSupa.mockResolvedValue(wrongOrder as Order);
 
   const event = { 
     ...mockEvent,
-    headers: {
-      session: otherUser.session
-    },
-    pathParameters: {
-      ...mockEvent.pathParameters,
-      orderId: details.order.orderId,
-    },
-    body: JSON.stringify({ reason: 'I have no reason' })
+    headers: { session: details.session.session },
+    pathParameters: { ...mockEvent.pathParameters, orderId: details.order.orderId },
+    body: JSON.stringify({ reason: 'testing' })
   } as unknown as APIGatewayProxyEvent;
 
-  const res = await cancelOrderHandler(event);
+  const res: APIGatewayProxyResult = await cancelOrderHandler(event);
 
   expect(res.statusCode).toStrictEqual(401);
 });
@@ -192,26 +176,19 @@ test('Test 500 error for generic error like db fail', async () => {
 
   const event = { 
     ...mockEvent,
-    headers: {
-      session: details.session.session
-    },
-    pathParameters: {
-      ...mockEvent.pathParameters,
-      orderId: details.order.orderId,
-    },
-    body: JSON.stringify({ reason: 'I have no reason' })
+    headers: { session: details.session.session },
+    pathParameters: { ...mockEvent.pathParameters, orderId: details.order.orderId },
+    body: JSON.stringify({ reason: 'testing' })
   } as unknown as APIGatewayProxyEvent;
 
-  // Spy on the module to force an error
   const spy = jest.spyOn(orderModule, 'cancelOrder').mockImplementation(() => {
     throw new Error('Cannot access database');
   });
 
-  const res = await cancelOrderHandler(event);
+  const res: APIGatewayProxyResult = await cancelOrderHandler(event);
 
   expect(res.statusCode).toStrictEqual(500);
-  const body = JSON.parse(res.body);
-  expect(body).toHaveProperty('error');
+  expect(JSON.parse(res.body)).toHaveProperty('error');
 
   spy.mockRestore();
 });

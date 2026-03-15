@@ -11,6 +11,13 @@ export const updateOrderHandler = async (event: APIGatewayProxyEvent) => {
     const body = JSON.parse(event.body ?? '{}');
     const session = event.headers.session || event.headers.Session;
 
+    if (!session) {
+      return {
+        statusCode: 401,
+        body: JSON.stringify({ error: 'JWT session token is missing' })
+      };
+    }
+
     if (!orderId) {
       return {
         statusCode: 400,
