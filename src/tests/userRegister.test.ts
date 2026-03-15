@@ -5,7 +5,8 @@ import {
   InvalidEmail,
   InvalidFirstName,
   InvalidLastName,
-  InvalidPassword
+  InvalidPassword,
+  InvalidPhone
 } from '../throwError';
 import { registerUserHandler } from '../handlers/userRegister';
 import { APIGatewayProxyEvent } from 'aws-lambda';
@@ -22,7 +23,8 @@ describe('userRegister tests', () => {
       'Eric',
       'Wong',
       'hello@gmail.com',
-      'Password123'
+      'Password123',
+      '123456789'
     ) as SessionId;
 
     expect(res).toEqual({
@@ -31,53 +33,65 @@ describe('userRegister tests', () => {
   });
 
   test('duplicate email error', () => {
-    userRegister('Eric', 'Wong', 'hello@gmail.com', 'Password123');
+    userRegister('Eric', 'Wong', 'hello@gmail.com', 'Password123', '0412345678');
 
     expect(() =>
-      userRegister('Eric', 'Wong', 'hello@gmail.com', 'Password123')
+      userRegister('Eric', 'Wong', 'hello@gmail.com', 'Password123', '0412345679')
     ).toThrow(InvalidEmail);
   });
 
   test('invalid email format', () => {
     expect(() =>
-      userRegister('Eric', 'Wong', 'hellogmail.com', 'Password123')
+      userRegister('Eric', 'Wong', 'hellogmail.com', 'Password123', '0412345678')
     ).toThrow(InvalidEmail);
   });
 
   test('invalid first name characters', () => {
     expect(() =>
-      userRegister('Er!c', 'Wong', 'hello@gmail.com', 'Password123')
+      userRegister('Er!c', 'Wong', 'hello@gmail.com', 'Password123', '0412345678')
     ).toThrow(InvalidFirstName);
   });
 
   test('first name too short', () => {
     expect(() =>
-      userRegister('E', 'Wong', 'hello@gmail.com', 'Password123')
+      userRegister('E', 'Wong', 'hello@gmail.com', 'Password123', '0412345678')
     ).toThrow(InvalidFirstName);
   });
 
   test('invalid last name characters', () => {
     expect(() =>
-      userRegister('Eric', 'W&ng', 'hello@gmail.com', 'Password123')
+      userRegister('Eric', 'W&ng', 'hello@gmail.com', 'Password123', '0412345678')
     ).toThrow(InvalidLastName);
   });
 
   test('password too short', () => {
     expect(() =>
-      userRegister('Eric', 'Wong', 'hello@gmail.com', 'short')
+      userRegister('Eric', 'Wong', 'hello@gmail.com', 'short', '0412345678')
     ).toThrow(InvalidPassword);
   });
 
   test('password missing number', () => {
     expect(() =>
-      userRegister('Eric', 'Wong', 'hello@gmail.com', 'passwordonly')
+      userRegister('Eric', 'Wong', 'hello@gmail.com', 'passwordonly', '0412345678')
     ).toThrow(InvalidPassword);
   });
 
-  test('password missing letter', () => {
+  test('telephone is too long', () => {
     expect(() =>
-      userRegister('Eric', 'Wong', 'hello@gmail.com', '12345678')
+      userRegister('Eric', 'Wong', 'hello@gmail.com', '12345678as', '041234567822567')
     ).toThrow(InvalidPassword);
+  });
+
+  test('telephone is too short', () => {
+    expect(() =>
+      userRegister('Eric', 'Wong', 'hello@gmail.com', '12345678as', '041234')
+    ).toThrow(InvalidPhone);
+  });
+
+  test('telephone is not a number', () => {
+    expect(() =>
+      userRegister('Eric', 'Wong', 'hello@gmail.com', '12345678as', '04123456ba')
+    ).toThrow(InvalidPhone);
   });
 
 });

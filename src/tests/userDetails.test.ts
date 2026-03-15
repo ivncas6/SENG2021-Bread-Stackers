@@ -20,6 +20,7 @@ function registerUser() {
     'Smith',
     'johnsmith@gmail.com',
     'password123',
+    '0412345678',
   ) as SessionId;
   return session;
 }

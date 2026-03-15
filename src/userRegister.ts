@@ -2,6 +2,7 @@ import { EmptyObject, ErrorObject, SessionId } from './interfaces';
 import { getData } from './dataStore';
 import {
   InvalidEmail,
+  InvalidPhone,
   InvalidLogin,
   InvalidPassword,
   UnauthorisedError
@@ -13,7 +14,7 @@ import { invalidnameFirst, invalidnameLast, getHashOf, checkPassword,
 import validator from 'validator';
 
 export function userRegister(nameFirst: string, nameLast: string, email: string, 
-  password: string): SessionId | ErrorObject {
+  telephone: string, password: string): SessionId | ErrorObject {
   const data = getData();
 
   // Check if the user has already registered an email
@@ -24,6 +25,11 @@ export function userRegister(nameFirst: string, nameLast: string, email: string,
   // Check if the email is valid using the validator.isEmail function
   if (!validator.isEmail(email)) {
     throw new InvalidEmail('Invalid email format.');
+  }
+
+  const digitsCheck = /^\d+$/.test(telephone);
+  if (!digitsCheck || telephone.length < 8 || telephone.length > 12) {
+    throw new InvalidPhone('Invalid phone format');
   }
 
   invalidnameFirst(nameFirst);
@@ -42,7 +48,7 @@ export function userRegister(nameFirst: string, nameLast: string, email: string,
     firstName: nameFirst,
     lastName: nameLast,
     email,
-    telephone: '',
+    telephone: telephone,
     password: hashPassword
   };
 

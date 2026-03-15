@@ -17,6 +17,7 @@ function createOrderAndUser() {
     'Smith',
     'johnsmith@gmail.com',
     'password123',
+    '0412345678',
   ) as SessionId;
   const reqDeliveryPeriod = {
     startDateTime: Math.floor(Date.now() / 1000),
@@ -37,8 +38,9 @@ function createOrderAndUser() {
     },
   ];
   const userDetails = {
-    name: 'John Smith',
-    telephone: 123456789,
+    firstName: 'John', 
+    lastName: 'Smith',
+    telephone: '0412345678',
     email: 'johnsmith@gmail.com',
   };
   const currency = 'AUD';
@@ -94,7 +96,8 @@ describe('getOrderInfo tests', () => {
       'Anna',
       'Lee',
       'annaLee@gmail.com',
-      'password123'
+      'password123',
+      '0412345678'
     ) as SessionId;
     expect(() => getOrderInfo(user2.session, order.orderId)).toThrow(
       InvalidOrderId
@@ -165,7 +168,8 @@ describe('Lamda function tests for getOrderInfo', () => {
       'Anna',
       'Lee',
       'annaLee@gmail.com',
-      'password123'
+      'password123',
+      '0412345678',
     ) as SessionId;
     const result = {
       headers: {

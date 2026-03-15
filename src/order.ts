@@ -29,8 +29,9 @@ export function createOrder(
     throw new InvalidEmail('This email does not belong to the user.');
   }
 
-  const phone = Math.abs(user.telephone).toString();
-  if (phone.length !== 9) {
+  const phone = user.telephone;
+  const isAllDigits = /^\d+$/.test(phone);
+  if (!isAllDigits || phone.length < 8 || phone.length > 12) {
     throw new InvalidInput('The telephone number is incorrect');
   }
   

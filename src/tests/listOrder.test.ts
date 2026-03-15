@@ -17,6 +17,7 @@ function createOrderAndUser() {
     'Smith',
     'johnsmith@gmail.com',
     'password123',
+    '0412345678',
   ) as SessionId;
 
   const reqDeliveryPeriod = {
@@ -42,7 +43,7 @@ function createOrderAndUser() {
   const userDetails = {
     firstName: 'John',
     lastName: 'Smith',
-    telephone: 123456789,
+    telephone: '0412345678',
     email: 'johnsmith@gmail.com',
   };
 
@@ -68,6 +69,7 @@ describe('listOrders tests', () => {
       'Smith',
       'johnsmith@gmail.com',
       'password123',
+      '0412345678'
     ) as SessionId;
 
     const result = listOrders(session.session);
@@ -117,6 +119,7 @@ describe('listOrders tests', () => {
       'Lee',
       'annalee@gmail.com',
       'password123',
+      '0412345678'
     ) as SessionId;
 
     const result = listOrders(user2.session);
@@ -136,6 +139,7 @@ describe('Lambda handler tests for listOrders', () => {
       'Smith',
       'johnsmith@gmail.com',
       'password123',
+      '0412345678',
     ) as SessionId;
 
     const event = {
@@ -198,6 +202,7 @@ describe('Lambda handler tests for listOrders', () => {
       'Lee',
       'annalee@gmail.com',
       'password123',
+      '0412345678'
     ) as SessionId;
 
     const event = {

@@ -19,6 +19,7 @@ function createUser() {
     'Smith',
     'johnsmith@gmail.com',
     'password123',
+    '123456789',
   ) as SessionId;
   return { session };
 }
@@ -31,7 +32,7 @@ const reqDeliveryPeriod = {
 const userDetails = {
   firstName: 'John',
   lastName: 'Smith',
-  telephone: 123456789,
+  telephone: '0412345678',
   email: 'johnsmith@gmail.com',
 };
 
@@ -70,7 +71,7 @@ describe('Backend logic test for Creating an Order', () => {
         { 
           firstName: 'John', 
           lastName: 'Smith',
-          telephone: 12345678,
+          telephone: '0412345678',
           email: 'johnsmith@gmail.com' 
         },
         '123 Kingsford', reqDeliveryPeriod, items
@@ -97,7 +98,7 @@ describe('Backend logic test for Creating an Order', () => {
         { 
           firstName: 'John', 
           lastName: 'Smith',
-          telephone: 12345678,
+          telephone: '0412345678',
           email: 'johnsmith@gmail.com',},
         '123 Kingsford', reqDeliveryPeriod, items
       );

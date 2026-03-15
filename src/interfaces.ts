@@ -79,7 +79,7 @@ export interface ReqDeliveryPeriod {
 export interface ReqUser {
   firstName: string;
   lastName: string
-  telephone: number;
+  telephone: string;
   email: string;
 }
 
