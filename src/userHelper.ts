@@ -10,6 +10,7 @@ import validator from 'validator';
 import jwt from 'jsonwebtoken';
 import { UnauthorisedError } from './throwError';
 import 'dotenv/config';
+import { supabase } from './supabase';
 
 const secretKey = process.env.JWT_SECRET || 'fallback-key-get-your-own-in-env-file';
 
@@ -72,7 +73,7 @@ export function invalidnameLast(nameLast: string): ErrorObject | null {
   return null;
 }
 
-export function invalidemailcheck(sessionId: string, email: string): ErrorObject | null {
+export async function invalidemailcheck(sessionId: string, email: string): Promise<ErrorObject | null> {
   const userId = getUserIdFromSession(sessionId);
   const data: Data = getData();
 
@@ -80,14 +81,22 @@ export function invalidemailcheck(sessionId: string, email: string): ErrorObject
     throw new InvalidEmail('This email is not valid');
   }
 
-  const otherUsersEmail = data.users.some(
-    (user: Contact) => user.email === email && user.contactId !== userId
-  );
-  if (otherUsersEmail) {
+  const { data: existingUser } = await supabase
+    .from('contacts')
+    .select('contactId')
+    .eq('email', email)
+    .neq('contactId', userId) // Check everyone EXCEPT the current user
+    .maybeSingle();
+
+  if (existingUser) {
     throw new InvalidEmail('Email is already used by another user');
   }
 
   return null;
+}
+
+export function invalidphonecheck(telephone: string) {
+
 }
 
 

@@ -17,10 +17,10 @@ lint = true
 capabilities = "CAPABILITY_IAM"
 confirm_changeset = true
 resolve_s3 = true
-stack_name = "BreadStackersOrderCreateApi"
-s3_prefix = "BreadStackersOrderCreateApi"
-region = "ap-southeast-2"
+stack_name = "BreadStackersFinalOrderCreateApi"
+s3_prefix = "BreadStackersFinalOrderCreateApi"
 image_repositories = []
+parameter_overrides = "JWTSecretParameter=\"adb67e02cdbb535b5b10651043123bb5ba247e8c60553756476809cca20efba7\" SupabaseUrl=\"https://azqivhutrngckrujulyf.supabase.co\" SupabaseKey=\"sb_secret_KajMXbDwm-2WRAIhfOLtVg_toido4BW\""
 
 [default.package.parameters]
 resolve_s3 = true

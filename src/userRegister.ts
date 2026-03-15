@@ -1,5 +1,5 @@
 import { EmptyObject, ErrorObject, SessionId } from './interfaces';
-import { getData } from './dataStore';
+import { getData, getUserByIdSupa } from './dataStore';
 import {
   InvalidEmail,
   InvalidPhone,
@@ -86,23 +86,32 @@ export function userLogin(email: string, password: string): SessionId | ErrorObj
 }
 
 // Given the userId and set of user properties update the properties of the logged in adminUser
-export function userDetailsUpdate(session: string, email: string,
-  nameFirst: string, nameLast: string): EmptyObject | ErrorObject {
+export async function userDetailsUpdate(
+  session: string, 
+  email: string,
+  nameFirst: string, 
+  nameLast: string): Promise<EmptyObject | ErrorObject> {
+ 
   const userId = getUserIdFromSession(session);
-  const data = getData();
-  const user = data.users.find((u) => u.contactId === userId);
+  const u = await getUserByIdSupa(userId);
 
-  if (!user) {
+  if (!u) {
     throw new UnauthorisedError('User does not exist');
   }
 
-  invalidemailcheck(session, email);
   invalidnameFirst(nameFirst);
   invalidnameLast(nameLast);
+  invalidemailcheck(session, email);
 
-  user.email = email;
-  user.firstName = nameFirst;
-  user.lastName = nameLast; 
+  const { error } = await supabase
+    .from('contacts')
+    .update({
+      firstName: nameFirst,
+      lastName: nameLast,
+      email: email
+    })
+    .eq('contactId', userId);
+
   return { };
 }
 

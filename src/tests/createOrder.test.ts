@@ -7,21 +7,56 @@ import { InvalidPhone, InvalidRequestPeriod,
 import { createOrderHandler } from '../handlers/createOrder';
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import mockEvent from './mocks/createOrderMock.json';
+import { supabase } from '../supabase';
 
+const mockedSupabase = supabase as any;
+
+// keep this or suffer 20+ seconds
+jest.mock('../supabase', () => ({
+  supabase: {
+    from: jest.fn().mockReturnThis(),
+    select: jest.fn().mockReturnThis(),
+    eq: jest.fn().mockReturnThis(),
+    neq: jest.fn().mockReturnThis(),
+    delete: jest.fn().mockReturnThis(),
+    insert: jest.fn().mockReturnThis(),
+    single: jest.fn(),
+    maybeSingle: jest.fn(),
+  }
+}));
 
 beforeEach(async () => {
+  jest.clearAllMocks();
+  // clean everything
+  mockedSupabase.from.mockReturnThis();
+  mockedSupabase.select.mockReturnThis();
+  mockedSupabase.eq.mockReturnThis();
+  mockedSupabase.insert.mockReturnThis();
+
+  mockedSupabase.single.mockResolvedValue({ data: null, error: null });
+  mockedSupabase.maybeSingle.mockResolvedValue({ data: null, error: null });
+
   await clearData();
 });
 
-function createUser() {
-  const session = userRegister(
+async function createUser() {
+
+  const mockUser = { contactId: 123, email: 'johnsmith@gmail.com' };
+
+  // email, phone, and return user
+  mockedSupabase.maybeSingle.mockResolvedValueOnce({ data: null });
+  mockedSupabase.maybeSingle.mockResolvedValueOnce({ data: null });
+  mockedSupabase.single.mockResolvedValueOnce({ data: mockUser });
+
+  const session = await userRegister(
     'John',
     'Smith',
     'johnsmith@gmail.com',
     '0412345678',
     'password123',
   ) as SessionId;
-  return { session };
+
+  return { session, mockUser };
 }
 
 const reqDeliveryPeriod = {
@@ -54,9 +89,11 @@ const items = [
 
 describe('Backend logic test for Creating an Order', () => {
 
-  test('Successfully create one order', () => {
-    const { session } = createUser();
-    const res = createOrder('AUD', session.session , userDetails,
+  test('Successfully create one order', async () => {
+    const { session, mockUser } = await createUser();
+
+    mockedSupabase.maybeSingle.mockResolvedValue({ data: mockUser });
+    const res = await createOrder('AUD', session.session , userDetails,
       '123 Kingsford', reqDeliveryPeriod, items
     );
     expect(res).toEqual({
@@ -64,45 +101,32 @@ describe('Backend logic test for Creating an Order', () => {
     });
   });
 
-  test('Testing Invalid input - Wrong Phone number', () => {
-    const { session } = createUser();
-    expect(() => {
-      createOrder('AUD', session.session , 
-        { 
-          firstName: 'John', 
-          lastName: 'Smith',
-          telephone: '246',
-          email: 'johnsmith@gmail.com' 
-        },
+  test('Testing Invalid input - Wrong Phone number', async () => {
+    const { session } = await createUser();
+    await expect(
+      createOrder('AUD', session.session, 
+        // ...userDetails for default dets
+        { ...userDetails, telephone: '246' },
         '123 Kingsford', reqDeliveryPeriod, items
-      );
-    }).toThrow(InvalidPhone);
+      )).rejects.toThrow(InvalidPhone);
   });
 	
-  test('Testing Invalid input - Wrong Delivery Date', () => {
-    const { session } = createUser();
-    expect(() => {
+  test('Testing Invalid input - Wrong Delivery Date', async () => {
+    const { session } = await createUser();
+    await expect(
       createOrder('AUD', session.session , userDetails,
         '123 Kingsford', 
         {
           startDateTime: Math.floor(Date.now() / 1000),
           endDateTime: Math.floor(Date.now()  / 1000), 
         }, items
-      );
-    }).toThrow(InvalidRequestPeriod);
+      )).rejects.toThrow(InvalidRequestPeriod);
   });
 
-  test('Testing Invalid Session', () => {
-    expect(() => {
-      createOrder('AUD', 'abcd' , 
-        { 
-          firstName: 'John', 
-          lastName: 'Smith',
-          telephone: '0412345678',
-          email: 'johnsmith@gmail.com',},
-        '123 Kingsford', reqDeliveryPeriod, items
-      );
-    }).toThrow(UnauthorisedError);
+  test('Testing Invalid Session', async () => {
+    await expect(
+      createOrder('AUD', 'abcd' , userDetails, '123 Kingsford', 
+        reqDeliveryPeriod, items)).rejects.toThrow(UnauthorisedError);
   });
 });
 
@@ -110,7 +134,8 @@ describe('Backend logic test for Creating an Order', () => {
 describe('Lambda function for createOrder', () => {
 
   test('successfully creates an order', async () => {
-    const { session } = createUser();
+    const { session, mockUser } = await createUser();
+    mockedSupabase.maybeSingle.mockResolvedValue({ data: mockUser });
 
     const result = {
       // added mock to speed up test
@@ -137,7 +162,8 @@ describe('Lambda function for createOrder', () => {
   });
 
   test('Invalid Input - Wrong Phone number', async () => {
-    const { session } = createUser();
+    const { session, mockUser } = await createUser();
+    mockedSupabase.maybeSingle.mockResolvedValue({ data: mockUser });
 
     const result = {
       headers: {
@@ -164,7 +190,8 @@ describe('Lambda function for createOrder', () => {
   });
 
   test('Invalid Input - Wrong Delivery Date', async () => {
-    const { session } = createUser();
+    const { session, mockUser } = await createUser();
+    mockedSupabase.maybeSingle.mockResolvedValue({ data: mockUser });
 
     const result = {
       ...mockEvent,

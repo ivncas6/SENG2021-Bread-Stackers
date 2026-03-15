@@ -69,7 +69,10 @@ export async function createOrderSupaPush(
       status: 'OPEN'
     }]);
   
-  if (orderError) throw orderError;
+  if (orderError) {
+    console.error("Supabase Order Insert Error:", orderError.message);
+    throw new Error(`Order Table Error: ${orderError.message}`);
+  }
 
   // insert delivery details
   await supabase
@@ -113,7 +116,7 @@ export async function getOrderByIdSupa(orderId: string) {
 
 export async function getUserByIdSupa(userId: number) {
   const { data, error } = await supabase
-    .from('users')
+    .from('contacts')
     .select('*')
     .eq('contactId', userId)
     .maybeSingle();
@@ -168,4 +171,19 @@ export async function deleteOrderSupa(orderId: string) {
     console.error('Database Delete Error:', error.message);
     throw error;
   }
+}
+
+export async function createOrganisationSupa(contactId: number, ownerName: string) {
+  const { data, error } = await supabase
+    .from('organisations')
+    .insert([{ 
+      orgId: contactId, 
+      name: `${ownerName}'s Shop`,
+      contact_id: contactId 
+    }])
+    .select()
+    .single();
+
+  if (error) throw new Error(`Org Creation Failed: ${error.message}`);
+  return data;
 }
