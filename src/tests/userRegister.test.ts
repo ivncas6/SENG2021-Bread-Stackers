@@ -10,16 +10,7 @@ import {
 import { registerUserHandler } from '../handlers/userRegister';
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import { supabase } from '../supabase';
-
-interface SupabaseMock {
-  from: jest.Mock;
-  select: jest.Mock;
-  insert: jest.Mock;
-  update: jest.Mock;
-  eq: jest.Mock;
-  single: jest.Mock;
-  maybeSingle: jest.Mock;
-}
+import { SupabaseMock } from '../interfaces';
 
 const mockedSupabase = supabase as unknown as SupabaseMock;
 

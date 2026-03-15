@@ -92,6 +92,17 @@ export interface OrderLineWithItem extends OrderLine {
   items: Item;
 }
 
+export interface SupabaseMock {
+  from: jest.Mock;
+  select: jest.Mock;
+  insert: jest.Mock;
+  update: jest.Mock;
+  delete: jest.Mock;
+  eq: jest.Mock;
+  single: jest.Mock;
+  maybeSingle: jest.Mock;
+}
+
 export interface OrderId {
   orderId: string;
 }
