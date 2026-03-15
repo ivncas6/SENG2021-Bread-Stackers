@@ -7,6 +7,6 @@ const supabaseKey = process.env.SUPABASE_KEY as string;
 
 
 export const supabase = createClient(
-  supabaseUrl || 'https://azqivhutrngckrujulyf.supabase.co', 
-  supabaseKey || 'sb_secret_KajMXbDwm-2WRAIhfOLtVg_toido4BW'
+  supabaseUrl || 'https://placeholder.supabase.co', 
+  supabaseKey || 'placeholder'
 );
