@@ -1,10 +1,11 @@
 import  { createOrderReturn, EmptyObject, 
   Order, ReqDeliveryPeriod, ReqItem, ReqUser } from './interfaces';
 import { v4 as uuidv4 } from 'uuid';
-import { getData } from './dataStore';
+import { getData, persistOrderData } from './dataStore';
 import { createOrderUBLXML } from './generateUBL';
 import { InvalidDeliveryAddr, InvalidEmail, InvalidInput,
   InvalidOrderId,
+  InvalidPhone,
   InvalidRequestPeriod, UnauthorisedError } from './throwError';
 import { getUserIdFromSession } from './userHelper';
 
@@ -32,7 +33,7 @@ export function createOrder(
   const phone = user.telephone;
   const isAllDigits = /^\d+$/.test(phone);
   if (!isAllDigits || phone.length < 8 || phone.length > 12) {
-    throw new InvalidInput('The telephone number is incorrect');
+    throw new InvalidPhone('The telephone number is incorrect');
   }
   
   if(deliveryAddress.length > 200) {
@@ -55,7 +56,7 @@ export function createOrder(
   const order: Order = {
     orderId: orderId,
     issuedDate: currTime.toISOString().slice(0, 10),
-    issuedTime: currTime.toLocaleTimeString('en-GB'),
+    issuedTime: currTime.toLocaleTimeString('en-AU'),
     currency: currency,
     status: 'OPEN',
     buyerOrgID: userId,
@@ -64,44 +65,8 @@ export function createOrder(
     taxInclusive: taxInclusive,
     finalPrice: taxInclusive
   };
-  data.orders.push(order);
 
-  const addressId = data.addresses.length + 1;
-  data.addresses.push({
-    addressID: addressId,
-    street: deliveryAddress,
-    city: 'N/A',
-    postcode: 'N/A',
-    country: 'AUS'
-  });
-
-  data.deliveries.push({
-    deliveryID: data.deliveries.length + 1,
-    orderID: orderId,
-    deliveryAddressID: addressId,
-    startDate: reqDeliveryPeriod.startDateTime.toString(),
-    endDate: reqDeliveryPeriod.endDateTime.toString(),
-    deliveryTerms: 'Standard'
-  }); 
-
-  items.forEach((item) => {
-    const itemId = data.items.length + 1;
-    data.items.push({
-      itemId: itemId,
-      name: item.name,
-      price: item.unitPrice,
-      description: item.description
-    });
-
-    data.orderLines.push({
-      orderLineID: data.orderLines.length + 1,
-      orderID: orderId,
-      itemID: itemId,
-      quantity: item.quantity,
-      status: 'OPEN'
-    });
-  });
-
+  persistOrderData(data, order, deliveryAddress, reqDeliveryPeriod, items);
   createOrderUBLXML(order, items, user, deliveryAddress);
 
   return { orderId: orderId };

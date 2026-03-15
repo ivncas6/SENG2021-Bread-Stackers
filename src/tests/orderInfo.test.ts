@@ -16,8 +16,8 @@ function createOrderAndUser() {
     'John',
     'Smith',
     'johnsmith@gmail.com',
-    'password123',
     '0412345678',
+    'password123',
   ) as SessionId;
   const reqDeliveryPeriod = {
     startDateTime: Math.floor(Date.now() / 1000),
@@ -123,13 +123,20 @@ describe('Lamda function tests for getOrderInfo', () => {
     expect(response.statusCode).toEqual(200);
     expect(JSON.parse(response.body)).toEqual({
       orderId: order.orderId,
-      orderDateTime: expect.any(Number),
       status: expect.any(String),
       currency: currency,
-      deliveryAddress: '123 Street Name, Kingsford',
+      address: '123 Street Name, Kingsford',
+      deliveryDetails: {
+        startDateTime: expect.any(Number),
+        endDateTime: expect.any(Number)
+      },
+      issuedDate: expect.any(String),
+      issuedTime: expect.any(String),
+      taxExclusive: 475,
+      taxInclusive: 522.5,
+      finalPrice: 522.5,
+      items,
       userDetails,
-      reqDeliveryPeriod,
-      items
     });
   });
   test('orderId does not exist', async () => {
@@ -168,8 +175,8 @@ describe('Lamda function tests for getOrderInfo', () => {
       'Anna',
       'Lee',
       'annaLee@gmail.com',
-      'password123',
       '0412345678',
+      'password123',
     ) as SessionId;
     const result = {
       headers: {

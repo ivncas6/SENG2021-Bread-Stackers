@@ -71,7 +71,7 @@ describe('Backend logic test for Creating an Order', () => {
         { 
           firstName: 'John', 
           lastName: 'Smith',
-          telephone: '0432845654',
+          telephone: '246',
           email: 'johnsmith@gmail.com' 
         },
         '123 Kingsford', reqDeliveryPeriod, items
@@ -146,7 +146,7 @@ describe('Lambda function for createOrder', () => {
       body: JSON.stringify({
         currency: 'AUD',
         user: { name: 'John Smith',
-          telephone: 12345678,
+          telephone: '12345',
           email: 'johnsmith@gmail.com' 
         },
         deliveryAddress: '123 Kingsford',

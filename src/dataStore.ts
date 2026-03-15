@@ -1,4 +1,4 @@
-import { Address, Contact, Delivery, Item, Order, OrderLine } from './interfaces';
+import { Address, Contact, Delivery, Item, Order, OrderLine, ReqDeliveryPeriod, ReqItem } from './interfaces';
 import { createClient } from '@supabase/supabase-js';
 
 
@@ -38,3 +38,53 @@ export function clearData() {
 }
 
 export const getData = () : Data => data;
+
+export function persistOrderData(
+  data: any, 
+  order: Order, 
+  deliveryAddress: string, 
+  reqDeliveryPeriod: ReqDeliveryPeriod, 
+  items: ReqItem[]
+) {
+  // Orders
+  data.orders.push(order);
+
+  // addresses
+  const addressId = data.addresses.length + 1;
+  data.addresses.push({
+    addressID: addressId,
+    street: deliveryAddress,
+    city: 'N/A',
+    postcode: 'N/A',
+    country: 'AUS'
+  });
+
+  // Deliveries
+  data.deliveries.push({
+    deliveryID: data.deliveries.length + 1,
+    orderID: order.orderId,
+    deliveryAddressID: addressId,
+    startDate: reqDeliveryPeriod.startDateTime.toString(),
+    endDate: reqDeliveryPeriod.endDateTime.toString(),
+    deliveryTerms: 'Standard'
+  });
+
+  // items
+  items.forEach((item) => {
+    const itemId = data.items.length + 1;
+    data.items.push({
+      itemId: itemId,
+      name: item.name,
+      price: item.unitPrice,
+      description: item.description
+    });
+
+    data.orderLines.push({
+      orderLineID: data.orderLines.length + 1,
+      orderID: order.orderId,
+      itemID: itemId,
+      quantity: item.quantity,
+      status: 'OPEN'
+    });
+  });
+}
