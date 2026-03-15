@@ -1,4 +1,3 @@
-import { clearData } from '../dataStore';
 import { userRegister } from '../userRegister';
 import { SessionId } from '../interfaces';
 import {

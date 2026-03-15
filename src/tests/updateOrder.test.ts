@@ -1,9 +1,9 @@
 import { APIGatewayProxyEvent } from 'aws-lambda';
-import { clearData, getData, getOrderByIdSupa } from '../dataStore';
+import { clearData, getOrderByIdSupa } from '../dataStore';
 import { userRegister } from '../userRegister';
 import { createOrder, updateOrder } from '../order';
 import { updateOrderHandler } from '../handlers/updateOrder'; 
-import { createOrderReturn, Order, SessionId } from '../interfaces';
+import { createOrderReturn, SessionId } from '../interfaces';
 import { 
   InvalidOrderId, 
   UnauthorisedError,

@@ -30,7 +30,7 @@ describe('user logout test', () => {
     expect(res).toStrictEqual({});
   });
   test('invalid session provided', async () => {
-    const user = await registerUser();
+    await registerUser();
     await expect(() => userLogout(randomUUID())).rejects.toThrow(UnauthorisedError);
   });
 });

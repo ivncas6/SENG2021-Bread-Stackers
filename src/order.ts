@@ -1,7 +1,7 @@
 import  { createOrderReturn, EmptyObject, 
   Order, ReqDeliveryPeriod, ReqItem, ReqUser } from './interfaces';
 import { v4 as uuidv4 } from 'uuid';
-import { createOrderSupaPush, updateOrderStatus, 
+import { createOrderSupaPush, 
   getOrderByIdSupa, 
   updateOrderSupa,
   deleteOrderSupa,

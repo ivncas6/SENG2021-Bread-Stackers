@@ -169,7 +169,7 @@ describe('Lambda handler tests for userDetailsUpdate', () => {
     } as unknown as APIGatewayProxyEvent;
 
     const response = await updateUserDetailsHandler(result);
-    expect(response.statusCode).toBe(200);
+    expect(response.statusCode).toStrictEqual(200);
     expect(JSON.parse(response.body)).toStrictEqual({});
   });
 

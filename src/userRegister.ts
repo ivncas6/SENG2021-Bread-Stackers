@@ -1,5 +1,5 @@
 import { EmptyObject, ErrorObject, SessionId } from './interfaces';
-import { createOrganisationSupa, getData, getUserByIdSupa } from './dataStore';
+import { createOrganisationSupa, getUserByIdSupa } from './dataStore';
 import {
   InvalidEmail,
   InvalidPhone,
@@ -123,9 +123,11 @@ export async function userDetailsUpdate(
       firstName: nameFirst,
       lastName: nameLast,
       email: email,
-      phone: phone
+      telephone: phone
     })
     .eq('contactId', userId);
+  
+  if (error) throw error;
 
   return { };
 }

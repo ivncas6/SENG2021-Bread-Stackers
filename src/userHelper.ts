@@ -1,5 +1,4 @@
-import { Contact, ErrorObject, SessionId } from './interfaces';
-import { Data, getData } from './dataStore';
+import { ErrorObject, SessionId } from './interfaces';
 import {
   InvalidEmail,
   InvalidFirstName,
@@ -74,9 +73,9 @@ export function invalidnameLast(nameLast: string): ErrorObject | null {
   return null;
 }
 
-export async function invalidemailcheck(sessionId: string, email: string): Promise<ErrorObject | null> {
+export async function invalidemailcheck(sessionId: string, 
+  email: string): Promise<ErrorObject | null> {
   const userId = getUserIdFromSession(sessionId);
-  const data: Data = getData();
 
   if (!validator.isEmail(email)) {
     throw new InvalidEmail('This email is not valid');
@@ -96,7 +95,8 @@ export async function invalidemailcheck(sessionId: string, email: string): Promi
   return null;
 }
 
-export async function invalidphonecheck(sessionId: string, telephone: string): Promise<ErrorObject | null> {
+export async function invalidphonecheck(sessionId: string, 
+  telephone: string): Promise<ErrorObject | null> {
   const isAllDigits = /^\d+$/.test(telephone);
   if (!isAllDigits || telephone.length < 8 || telephone.length > 12) {
     throw new InvalidPhone('The telephone number is incorrect');

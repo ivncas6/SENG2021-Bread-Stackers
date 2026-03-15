@@ -25,6 +25,9 @@ export interface Organisation {
 }
 
 export interface Order {
+  deliveries?: any;
+  organisations?: any;
+  order_lines?: never[];
   orderId: string; // PK
   issuedDate: string;
   issuedTime: string;

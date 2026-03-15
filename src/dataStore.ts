@@ -108,7 +108,7 @@ export async function createOrderSupaPush(
   }
 }
 
-export async function getOrderByIdSupa(orderId: string): Promise<Order | any> {
+export async function getOrderByIdSupa(orderId: string): Promise<Order | null> {
   if (!isUUID(orderId)) {
     return null; 
   }
@@ -142,7 +142,7 @@ export async function getOrderByIdSupa(orderId: string): Promise<Order | any> {
 }
 
 export async function getUserByIdSupa(userId: number) {
-  const { data, error } = await supabase
+  const { data } = await supabase
     .from('contacts')
     .select('*')
     .eq('contactId', userId)
