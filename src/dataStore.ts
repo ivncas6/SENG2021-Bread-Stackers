@@ -23,24 +23,22 @@ let data: Data = {
 };
 
 export async function clearData() {
-  data = {
-    users: [],
-    orders: [],
-    deliveries: [],
-    orderLines: [],
-    addresses: [],
-    items: [],
-  };
+  // DO NOT CHANGE ORDER YOU GUYS
 
-  const { error: errorItems } = await supabase.from('order_items').delete().neq('name', '');
-  const { error: errorDeliveries } = await supabase.from('deliveries').delete().neq('order_id', '');
-  const { error: errorOrders } = await supabase.from('orders').delete().neq('orderId', '');
-  const { error: errorAddresses } = await supabase.from('addresses').delete().neq('street', '');
-  const { error: errorUsers } = await supabase.from('users').delete().neq('email', '');
+  // order Details
+  await supabase.from('order_lines').delete().neq('orderLineID', 0);
+  await supabase.from('deliveries').delete().neq('deliveryID', 0);
 
-  if (errorUsers || errorOrders) {
-    console.error("Error clearing Supabase data:", errorUsers || errorOrders);
-  }
+  // delete Orders
+  await supabase.from('orders').delete().neq('status', 'RESET_WIPE');
+
+  // delete Orgs (they point to contacts and addresses)
+  await supabase.from('organisations').delete().neq('orgId', 0);
+
+  // delete 'core' tables last
+  await supabase.from('contacts').delete().neq('email', '');
+  await supabase.from('addresses').delete().neq('addressID', 0);
+  await supabase.from('items').delete().neq('itemId', 0);
 }
 
 export const getData = () : Data => data;
