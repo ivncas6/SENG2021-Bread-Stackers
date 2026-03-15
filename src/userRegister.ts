@@ -1,5 +1,5 @@
 import { EmptyObject, ErrorObject, SessionId } from './interfaces';
-import { getData, getUserByIdSupa } from './dataStore';
+import { createOrganisationSupa, getData, getUserByIdSupa } from './dataStore';
 import {
   InvalidEmail,
   InvalidPhone,
@@ -62,6 +62,12 @@ export async function userRegister(nameFirst: string, nameLast: string, email: s
     .single();
   
   if (error) throw new Error(error.message);
+
+  try {
+    await createOrganisationSupa(newUser.contactId, `${nameFirst} ${nameLast}`);
+  } catch (orgError: any) {
+    throw new Error(`User created, but Org failed: ${orgError.message}`);
+  }
 
   return createNewSession(newUser.contactId);
 }

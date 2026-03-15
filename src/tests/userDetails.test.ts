@@ -1,4 +1,5 @@
 import { userRegister, userDetailsUpdate } from '../userRegister';
+import { clearData } from '../dataStore';
 import { SessionId } from '../interfaces';
 import {
   InvalidEmail,
@@ -9,19 +10,13 @@ import {
 } from '../throwError';
 import { updateUserDetailsHandler } from '../handlers/userDetails';
 import { APIGatewayProxyEvent } from 'aws-lambda';
-import { supabase } from '../supabase';
-const mockedSupabase = supabase as any;
 
 beforeEach(async () => {
-  jest.clearAllMocks();
-  mockedSupabase.single.mockResolvedValue({ data: null, error: null });
-  mockedSupabase.maybeSingle.mockResolvedValue({ data: null, error: null });
+  // Always clear the real database before each test to prevent email collisions
+  await clearData();
 });
 
 async function registerUser() {
-  mockedSupabase.single
-    .mockResolvedValueOnce({ data: null, error: null })
-    .mockResolvedValueOnce({ data: { contactId: 999 }, error: null });
   return await userRegister(
     'John',
     'Smith',
@@ -35,8 +30,6 @@ describe('test for the user details update function', () => {
   test('Successful update', async () => {
     const user = await registerUser();
 
-    mockedSupabase.single.mockResolvedValueOnce({ data: { contactId: 999 }, error: null });
-
     const res = await userDetailsUpdate(
       user.session,
       'johnsmith@gmail.com',
@@ -45,7 +38,6 @@ describe('test for the user details update function', () => {
       '0412345678'
     );
     expect(res).toStrictEqual({});
-    expect(mockedSupabase.from).toHaveBeenCalledWith('contacts');
   });
 
   test('Invalid name characters', async () => {
@@ -110,7 +102,6 @@ describe('test for the user details update function', () => {
 
   test('Invalid session', async () => {
     const user = await registerUser();
-    mockedSupabase.single.mockResolvedValueOnce({ data: null, error: null });
     await expect(
       userDetailsUpdate(
         user.session + 'adw',
@@ -124,7 +115,6 @@ describe('test for the user details update function', () => {
 
   test('Invalid phone short', async () => {
     const user = await registerUser();
-    mockedSupabase.single.mockResolvedValueOnce({ data: { contactId: 999 }, error: null });
     await expect(
       userDetailsUpdate(
         user.session,
@@ -166,7 +156,6 @@ describe('test for the user details update function', () => {
 describe('Lambda handler tests for userDetailsUpdate', () => {
   test('successful update', async () => {
     const user = await registerUser();
-    mockedSupabase.single.mockResolvedValueOnce({ data: { contactId: 999 }, error: null });
     const result = {
       headers: {
         session: user.session,
@@ -222,7 +211,6 @@ describe('Lambda handler tests for userDetailsUpdate', () => {
 
   test('invalid session provided', async () => {
     const user = await registerUser();
-    mockedSupabase.single.mockResolvedValueOnce({ data: null, error: null });
     const result = {
       headers: {
         session: user.session + 'aws',

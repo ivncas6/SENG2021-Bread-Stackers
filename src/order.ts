@@ -48,6 +48,16 @@ export async function createOrder(
     throw new InvalidRequestPeriod('The requested delivery period is invalid.');
   } 
 
+  const { data: orgData } = await supabase
+    .from('organisations')
+    .select('orgId')
+    .eq('contactId', userId)
+    .single();
+
+  if (!orgData) {
+    throw new Error("User does not have an associated organization");
+  }
+
   let taxExclusive = 0;
   for (const i of items) {
     taxExclusive += i.unitPrice * i.quantity;
@@ -63,7 +73,7 @@ export async function createOrder(
     issuedTime: currTime.toLocaleTimeString('en-AU'),
     currency: currency,
     status: 'OPEN',
-    buyerOrgID: userId,
+    buyerOrgID: orgData.orgId,
     sellerOrgID: 1,
     taxExclusive: taxExclusive,
     taxInclusive: taxInclusive,

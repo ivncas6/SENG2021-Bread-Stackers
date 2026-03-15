@@ -51,7 +51,7 @@ export async function createOrderSupaPush(
   reqDeliveryPeriod: ReqDeliveryPeriod,
   items: ReqItem[]
 ) {
-  // first insert an address
+  // insert address
   const { data: addressData, error: addressErr } = await supabase
     .from('addresses')
     .insert([{ street: deliveryAddress, country: 'AUS' }])
@@ -65,7 +65,7 @@ export async function createOrderSupaPush(
       orderId: order.orderId,
       currency: order.currency, 
       finalPrice: order.finalPrice,
-      buyer_id: order.buyerOrgID,
+      buyerOrgID: order.buyerOrgID,
       status: 'OPEN'
     }]);
   
@@ -74,25 +74,33 @@ export async function createOrderSupaPush(
     throw new Error(`Order Table Error: ${orderError.message}`);
   }
 
-  // insert delivery details
+  // insert delivery
   await supabase
     .from('deliveries').insert([{
-      order_id: order.orderId,
-      address_id: addressData.addressID,
-      start_date: reqDeliveryPeriod.startDateTime,
-      end_Date: reqDeliveryPeriod.endDateTime
+      orderID: order.orderId,
+      deliveryAddressID: addressData.addressID,
+      startDate: reqDeliveryPeriod.startDateTime.toString(),
+      endDate: reqDeliveryPeriod.endDateTime.toString()
     }]);
 
-  // collect array of items
-  const itemsToInsert = items.map(i => ({
-    order_id: order.orderId,
-    name: i.name,
-    quantity: i.quantity,
-    price: i.unitPrice
-  }));
 
-  // insert them items
-  await supabase.from('order_items').insert(itemsToInsert);
+  for (const i of items) {
+    // create the item to get an itemId
+    const { data: itemData } = await supabase.from('items').insert([{
+        name: i.name,
+        price: i.unitPrice,
+        description: i.description
+    }]).select().single();
+
+    if (itemData) {
+        await supabase.from('order_lines').insert([{
+            orderID: order.orderId,
+            itemID: itemData.itemId,
+            quantity: i.quantity,
+            status: 'OPEN'
+        }]);
+    }
+  }
 }
 
 export async function getOrderByIdSupa(orderId: string) {
@@ -177,9 +185,8 @@ export async function createOrganisationSupa(contactId: number, ownerName: strin
   const { data, error } = await supabase
     .from('organisations')
     .insert([{ 
-      orgId: contactId, 
-      name: `${ownerName}'s Shop`,
-      contact_id: contactId 
+      orgName: `${ownerName}'s Shop`,
+      contactId: contactId
     }])
     .select()
     .single();

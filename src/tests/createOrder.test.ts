@@ -7,47 +7,13 @@ import { InvalidPhone, InvalidRequestPeriod,
 import { createOrderHandler } from '../handlers/createOrder';
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import mockEvent from './mocks/createOrderMock.json';
-import { supabase } from '../supabase';
-
-const mockedSupabase = supabase as any;
-
-// keep this or suffer 20+ seconds
-jest.mock('../supabase', () => ({
-  supabase: {
-    from: jest.fn().mockReturnThis(),
-    select: jest.fn().mockReturnThis(),
-    eq: jest.fn().mockReturnThis(),
-    neq: jest.fn().mockReturnThis(),
-    delete: jest.fn().mockReturnThis(),
-    insert: jest.fn().mockReturnThis(),
-    single: jest.fn(),
-    maybeSingle: jest.fn(),
-  }
-}));
 
 beforeEach(async () => {
-  jest.clearAllMocks();
-  // clean everything
-  mockedSupabase.from.mockReturnThis();
-  mockedSupabase.select.mockReturnThis();
-  mockedSupabase.eq.mockReturnThis();
-  mockedSupabase.insert.mockReturnThis();
-
-  mockedSupabase.single.mockResolvedValue({ data: null, error: null });
-  mockedSupabase.maybeSingle.mockResolvedValue({ data: null, error: null });
-
+  // Clean actual database/datastore
   await clearData();
 });
 
 async function createUser() {
-
-  const mockUser = { contactId: 123, email: 'johnsmith@gmail.com' };
-
-  // email, phone, and return user
-  mockedSupabase.maybeSingle.mockResolvedValueOnce({ data: null });
-  mockedSupabase.maybeSingle.mockResolvedValueOnce({ data: null });
-  mockedSupabase.single.mockResolvedValueOnce({ data: mockUser });
-
   const session = await userRegister(
     'John',
     'Smith',
@@ -56,7 +22,7 @@ async function createUser() {
     'password123',
   ) as SessionId;
 
-  return { session, mockUser };
+  return { session };
 }
 
 const reqDeliveryPeriod = {
@@ -86,13 +52,11 @@ const items = [
   },
 ];
 
-
 describe('Backend logic test for Creating an Order', () => {
 
   test('Successfully create one order', async () => {
-    const { session, mockUser } = await createUser();
+    const { session } = await createUser();
 
-    mockedSupabase.maybeSingle.mockResolvedValue({ data: mockUser });
     const res = await createOrder('AUD', session.session , userDetails,
       '123 Kingsford', reqDeliveryPeriod, items
     );
@@ -105,12 +69,11 @@ describe('Backend logic test for Creating an Order', () => {
     const { session } = await createUser();
     await expect(
       createOrder('AUD', session.session, 
-        // ...userDetails for default dets
         { ...userDetails, telephone: '246' },
         '123 Kingsford', reqDeliveryPeriod, items
       )).rejects.toThrow(InvalidPhone);
   });
-	
+  
   test('Testing Invalid input - Wrong Delivery Date', async () => {
     const { session } = await createUser();
     await expect(
@@ -134,11 +97,9 @@ describe('Backend logic test for Creating an Order', () => {
 describe('Lambda function for createOrder', () => {
 
   test('successfully creates an order', async () => {
-    const { session, mockUser } = await createUser();
-    mockedSupabase.maybeSingle.mockResolvedValue({ data: mockUser });
+    const { session } = await createUser();
 
     const result = {
-      // added mock to speed up test
       ...mockEvent,
       headers: {
         ...mockEvent.headers,
@@ -162,8 +123,7 @@ describe('Lambda function for createOrder', () => {
   });
 
   test('Invalid Input - Wrong Phone number', async () => {
-    const { session, mockUser } = await createUser();
-    mockedSupabase.maybeSingle.mockResolvedValue({ data: mockUser });
+    const { session } = await createUser();
 
     const result = {
       headers: {
@@ -171,7 +131,9 @@ describe('Lambda function for createOrder', () => {
       },
       body: JSON.stringify({
         currency: 'AUD',
-        user: { name: 'John Smith',
+        user: { 
+          firstName: 'John',
+          lastName: 'Smith',
           telephone: '12345',
           email: 'johnsmith@gmail.com' 
         },
@@ -190,8 +152,7 @@ describe('Lambda function for createOrder', () => {
   });
 
   test('Invalid Input - Wrong Delivery Date', async () => {
-    const { session, mockUser } = await createUser();
-    mockedSupabase.maybeSingle.mockResolvedValue({ data: mockUser });
+    const { session } = await createUser();
 
     const result = {
       ...mockEvent,
@@ -203,10 +164,10 @@ describe('Lambda function for createOrder', () => {
         currency: 'AUD',
         user: userDetails,
         reqDeliveryPeriod: 
-				{
-				  startDateTime: Math.floor(Date.now() / 1000),
-				  endDateTime: Math.floor(Date.now()  / 1000),
-				},
+        {
+          startDateTime: Math.floor(Date.now() / 1000),
+          endDateTime: Math.floor(Date.now()  / 1000),
+        },
         deliveryAddress: '123 Kingsford',
         items: items
       })
@@ -220,7 +181,6 @@ describe('Lambda function for createOrder', () => {
     });
   });
 
-
   test('Testing Invalid Session', async () => {
     const result = {
       headers: {
@@ -230,11 +190,7 @@ describe('Lambda function for createOrder', () => {
         currency: 'AUD',
         user: userDetails,
         deliveryAddress: '123 Kingsford',
-        reqDeliveryPeriod: 
-				{
-				  startDateTime: Math.floor(Date.now() / 1000),
-				  endDateTime: Math.floor(Date.now()  / 1000),
-				},
+        reqDeliveryPeriod: reqDeliveryPeriod,
         items: items
       })
     } as unknown as APIGatewayProxyEvent;
@@ -246,5 +202,4 @@ describe('Lambda function for createOrder', () => {
       error: expect.any(String)
     });
   });
-
 });
