@@ -16,7 +16,7 @@
     "author": "",
     "license": "ISC",
     "scripts": {
-        "test": "jest",
+        "test": "jest --runInBand",
         "lint": "eslint '**/*.{ts,js}'",
         "lint-fix": "eslint --fix '**/*.{ts,js}'",
         "coverage": "jest --coverage"
