@@ -1,7 +1,7 @@
 import { clearData } from '../dataStore';
 import { userRegister } from '../userRegister';
 import { createOrder } from '../order';
-import { Session } from '../interfaces';
+import { SessionId } from '../interfaces';
 import { InvalidInput, InvalidRequestPeriod, 
   UnauthorisedError } from '../throwError';
 import { createOrderHandler } from '../handlers/createOrder';
@@ -19,7 +19,7 @@ function createUser() {
     'Smith',
     'johnsmith@gmail.com',
     'password123',
-  ) as Session;
+  ) as SessionId;
   return { session };
 }
 

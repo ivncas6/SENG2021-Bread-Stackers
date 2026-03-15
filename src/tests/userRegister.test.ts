@@ -1,6 +1,6 @@
 import { clearData } from '../dataStore';
 import { userRegister } from '../userRegister';
-import { Session } from '../interfaces';
+import { SessionId } from '../interfaces';
 import {
   InvalidEmail,
   InvalidFirstName,
@@ -23,7 +23,7 @@ describe('userRegister tests', () => {
       'Wong',
       'hello@gmail.com',
       'Password123'
-    ) as Session;
+    ) as SessionId;
 
     expect(res).toEqual({
       session: expect.any(String)

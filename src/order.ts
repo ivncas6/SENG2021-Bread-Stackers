@@ -7,7 +7,6 @@ import { InvalidDeliveryAddr, InvalidEmail, InvalidInput,
   InvalidOrderId,
   InvalidRequestPeriod, UnauthorisedError } from './throwError';
 import { getUserIdFromSession } from './userHelper';
-import { userDetailsUpdate } from './userRegister';
 
 
 export function createOrder(
@@ -83,6 +82,24 @@ export function createOrder(
     endDate: reqDeliveryPeriod.endDateTime.toString(),
     deliveryTerms: 'Standard'
   }); 
+
+  items.forEach((item) => {
+    const itemId = data.items.length + 1;
+    data.items.push({
+      itemId: itemId,
+      name: item.name,
+      price: item.unitPrice,
+      description: item.description
+    });
+
+    data.orderLines.push({
+      orderLineID: data.orderLines.length + 1,
+      orderID: orderId,
+      itemID: itemId,
+      quantity: item.quantity,
+      status: 'OPEN'
+    });
+  });
 
   createOrderUBLXML(order, items, user, deliveryAddress);
 
