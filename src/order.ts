@@ -4,7 +4,9 @@ import { v4 as uuidv4 } from 'uuid';
 import { createOrderSupaPush, updateOrderStatus, 
   getOrderByIdSupa, 
   updateOrderSupa,
-  getUserByIdSupa} from './dataStore';
+  deleteOrderSupa,
+  getUserByIdSupa,
+  getOrgByUserId} from './dataStore';
 import { createOrderUBLXML } from './generateUBL';
 import { InvalidDeliveryAddr, InvalidEmail, InvalidInput,
   InvalidOrderId,
@@ -48,12 +50,7 @@ export async function createOrder(
     throw new InvalidRequestPeriod('The requested delivery period is invalid.');
   } 
 
-  const { data: orgData } = await supabase
-    .from('organisations')
-    .select('orgId')
-    .eq('contactId', userId)
-    .single();
-
+  const { data: orgData } = await getOrgByUserId(userId);
   if (!orgData) {
     throw new Error("User does not have an associated organization");
   }
@@ -91,6 +88,12 @@ export async function cancelOrder(orderId: string, reason: string, session: stri
   // find if user for sesh exists
   const userId = getUserIdFromSession(session);
 
+  const { data: orgData } = await getOrgByUserId(userId);
+
+  if (!orgData) {
+    throw new UnauthorisedError('User has no associated organization');
+  }
+
   // get order
   const foundOrder = await getOrderByIdSupa(orderId);
 
@@ -99,17 +102,18 @@ export async function cancelOrder(orderId: string, reason: string, session: stri
     throw new InvalidInput('error: Invalid orderId');
   }
 
-  if (foundOrder.buyerOrgID !== userId) {
-    throw new UnauthorisedError('User does not exist');
+  if (foundOrder.buyerOrgID !== orgData.orgId) {
+    throw new UnauthorisedError('You do not have permission to cancel this order');
   }
 
-  await updateOrderStatus(orderId, 'CANCELLED');
+  // if not hard delete just change status
+  // await updateOrderStatus(orderId, 'CANCELLED');
 
-  // if a hard delete is what we're going for
-  // await deleteOrderSupa(orderId);
+  await deleteOrderSupa(orderId);
 
-  console.log('Order ' + orderId + ' cancelled by userId ' 
-    + userId + '. Reason: ' + reason);
+  // in case we want to logging deletes
+  /*console.log('Order ' + orderId + ' cancelled by userId ' 
+    + userId + '. Reason: ' + reason);*/
 
   // uses reason
   return { reason: reason };

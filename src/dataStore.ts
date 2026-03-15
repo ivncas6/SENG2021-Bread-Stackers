@@ -112,13 +112,17 @@ export async function getOrderByIdSupa(orderId: string) {
         *,
         addresses ( * )
       ),
-      order_items ( * ),
-      users:buyer_id ( * )
+      order_lines ( * ),
+      organisations!buyerOrgID ( * )
     `)
     .eq('orderId', orderId)
-    .single();
+    .maybeSingle();
 
-  if (error) throw error;
+  if (error && error.code !== 'PGRST116') {
+    console.error("Fetch Order Error:", error.message);
+    throw error;
+  }
+  
   return data;
 }
 
@@ -179,6 +183,14 @@ export async function deleteOrderSupa(orderId: string) {
     console.error('Database Delete Error:', error.message);
     throw error;
   }
+}
+
+export async function getOrgByUserId(userId: number) {
+  return await supabase
+    .from('organisations')
+    .select('orgId')
+    .eq('contactId', userId)
+    .single();
 }
 
 export async function createOrganisationSupa(contactId: number, ownerName: string) {
