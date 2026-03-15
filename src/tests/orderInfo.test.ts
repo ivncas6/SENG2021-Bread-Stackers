@@ -2,7 +2,7 @@ import { getOrderInfo } from '../order';
 import { clearData } from '../dataStore';
 import { createOrder } from '../order';
 import { userRegister } from '../userRegister';
-import { OrderInfo, Session } from '../interfaces';
+import { createOrderReturn, SessionId } from '../interfaces';
 import { InvalidOrderId, UnauthorisedError } from '../throwError';
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import { getOrderInfoHandler } from '../handlers/orderInfo';
@@ -17,7 +17,7 @@ function createOrderAndUser() {
     'Smith',
     'johnsmith@gmail.com',
     'password123',
-  ) as Session;
+  ) as SessionId;
   const reqDeliveryPeriod = {
     startDateTime: Math.floor(Date.now() / 1000),
     endDateTime: Math.floor((Date.now() + 72 * 3600 * 1000) / 1000), // three days from startDate
@@ -50,7 +50,7 @@ function createOrderAndUser() {
     '123 Street Name, Kingsford',
     reqDeliveryPeriod,
     items,
-  ) as OrderInfo;
+  ) as createOrderReturn;
 
   return { session, order, userDetails, reqDeliveryPeriod, items, currency };
 }
@@ -61,15 +61,19 @@ describe('getOrderInfo tests', () => {
     const { session, order, userDetails, reqDeliveryPeriod, items, currency } =
       createOrderAndUser();
     const res = getOrderInfo(session.session, order.orderId);
-    expect(res).toEqual({
+    expect(res).toStrictEqual({
       orderId: order.orderId,
-      orderDateTime: expect.any(Number),
+      issuedDate: expect.any(String),
+      issuedTime: expect.any(String),
       status: expect.any(String),
       currency: currency,
-      deliveryAddress: '123 Street Name, Kingsford',
+      finalPrice: 522.5,
+      address: '123 Street Name, Kingsford',
+      deliveryDetails: reqDeliveryPeriod,
       userDetails,
-      reqDeliveryPeriod,
-      items
+      items: items,
+      taxExclusive: 475,
+      taxInclusive: 522.5,
     });
   });
   test('invalid orderid error', () => {
@@ -91,7 +95,7 @@ describe('getOrderInfo tests', () => {
       'Lee',
       'annaLee@gmail.com',
       'password123'
-    ) as Session;
+    ) as SessionId;
     expect(() => getOrderInfo(user2.session, order.orderId)).toThrow(
       InvalidOrderId
     );
@@ -162,7 +166,7 @@ describe('Lamda function tests for getOrderInfo', () => {
       'Lee',
       'annaLee@gmail.com',
       'password123'
-    ) as Session;
+    ) as SessionId;
     const result = {
       headers: {
         session: user2.session

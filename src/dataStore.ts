@@ -1,4 +1,4 @@
-import { Address, Contact, Delivery, Order, OrderLine } from './interfaces';
+import { Address, Contact, Delivery, Item, Order, OrderLine } from './interfaces';
 import { createClient } from '@supabase/supabase-js';
 
 
@@ -13,7 +13,8 @@ export interface Data {
     orders: Order[];
     deliveries: Delivery[];
     orderLines: OrderLine[];
-    addresses: Address[],
+    addresses: Address[];
+    items: Item[];
 }
 
 let data: Data = {
@@ -22,6 +23,7 @@ let data: Data = {
   deliveries: [],
   orderLines: [],
   addresses: [],
+  items: [],
 };
 
 export function clearData() {
@@ -31,6 +33,7 @@ export function clearData() {
     deliveries: [],
     orderLines: [],
     addresses: [],
+    items: [],
   };
 }
 

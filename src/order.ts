@@ -7,6 +7,7 @@ import { InvalidDeliveryAddr, InvalidEmail, InvalidInput,
   InvalidOrderId,
   InvalidRequestPeriod, UnauthorisedError } from './throwError';
 import { getUserIdFromSession } from './userHelper';
+import { userDetailsUpdate } from './userRegister';
 
 
 export function createOrder(
@@ -129,8 +130,21 @@ export function getOrderInfo(session: string, orderId: string) {
     );
   }
 
-  /*const delivery = data.deliveries.find(d => d.orderID === orderId);
-  const items = data.orderLines.filter(line => line.orderID === orderId);*/
+  const delivery = data.deliveries.find(d => d.orderID === orderId);
+  const address = data.addresses.find(a => a.addressID === delivery?.deliveryAddressID);
+  const orderLines = data.orderLines.filter(line => line.orderID === orderId);
+  const user = data.users.find(u => u.contactId === order.buyerOrgID);
+  const itemsResponse = orderLines.map(line => {
+    // Find the matching item in the Item table
+    const itemData = data.items.find(i => i.itemId === line.itemID);
+    
+    return {
+      name: itemData?.name || 'Unknown Item',
+      description: itemData?.description || '',
+      unitPrice: itemData?.price || 0,
+      quantity: line.quantity
+    };
+  });
 
   return {
     orderId: orderId,
@@ -138,11 +152,20 @@ export function getOrderInfo(session: string, orderId: string) {
     issuedDate: order.issuedDate,
     issuedTime: order.issuedTime,
     currency: order.currency,
-    finalPrice: order.finalPrice,
     taxExclusive: order.taxExclusive,
     taxInclusive: order.taxInclusive,
-    /*deliveryDetails: delivery,
-    items: items*/
+    finalPrice: order.finalPrice,
+    address: address?.street || '',
+    deliveryDetails: {
+      startDateTime: Number(delivery?.startDate),
+      endDateTime: Number(delivery?.endDate),
+    },
+    userDetails: {
+      name: user?.name,
+      telephone: user?.telephone,
+      email: user?.email
+    },
+    items: itemsResponse
   };
 }
 
