@@ -1,5 +1,5 @@
 import { APIGatewayProxyEvent } from 'aws-lambda';
-import { InvalidLastName, InvalidFirstName, InvalidEmail, InvalidPassword } from '../throwError';
+import { InvalidLastName, InvalidFirstName, InvalidEmail, InvalidPassword, InvalidPhone } from '../throwError';
 import { userRegister } from '../userRegister';
 
 export const registerUserHandler = async (
@@ -26,7 +26,8 @@ export const registerUserHandler = async (
     if (e instanceof InvalidLastName ||
         e instanceof InvalidFirstName ||
         e instanceof InvalidEmail ||
-        e instanceof InvalidPassword
+        e instanceof InvalidPassword ||
+        e instanceof InvalidPhone
     ) {
       return {
         statusCode: 400,

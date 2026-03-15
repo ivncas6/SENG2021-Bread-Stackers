@@ -16,8 +16,8 @@ function createOrderAndUser() {
     'John',
     'Smith',
     'johnsmith@gmail.com',
-    'password123',
     '0412345678',
+    'password123',
   ) as SessionId;
 
   const reqDeliveryPeriod = {

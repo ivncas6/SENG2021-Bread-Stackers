@@ -23,8 +23,8 @@ describe('userRegister tests', () => {
       'Eric',
       'Wong',
       'hello@gmail.com',
+      '0412345678',
       'Password123',
-      '123456789'
     ) as SessionId;
 
     expect(res).toEqual({
@@ -33,16 +33,16 @@ describe('userRegister tests', () => {
   });
 
   test('duplicate email error', () => {
-    userRegister('Eric', 'Wong', 'hello@gmail.com', 'Password123', '0412345678');
+    userRegister('Eric', 'Wong', 'hello@gmail.com', '0412345678', 'Password123');
 
     expect(() =>
-      userRegister('Eric', 'Wong', 'hello@gmail.com', 'Password123', '0412345679')
+      userRegister('Eric', 'Wong', 'hello@gmail.com', '0412345678', 'Password123')
     ).toThrow(InvalidEmail);
   });
 
   test('invalid email format', () => {
     expect(() =>
-      userRegister('Eric', 'Wong', 'hellogmail.com', 'Password123', '0412345678')
+      userRegister('Eric', 'Wong', 'hellogmail.com', '0412345678', 'Password123')
     ).toThrow(InvalidEmail);
   });
 
@@ -79,7 +79,7 @@ describe('userRegister tests', () => {
   test('telephone is too long', () => {
     expect(() =>
       userRegister('Eric', 'Wong', 'hello@gmail.com', '041234567822567', '12345678as',)
-    ).toThrow(InvalidPassword);
+    ).toThrow(InvalidPhone);
   });
 
   test('telephone is too short', () => {
@@ -106,6 +106,7 @@ describe('Lambda function tests for userRegister', () => {
         firstName: 'Eric',
         lastName: 'Wong',
         email: 'hello@gmail.com',
+        telephone: '0412345678',
         password: 'Password123'
       })
     } as unknown as APIGatewayProxyEvent;
@@ -126,6 +127,7 @@ describe('Lambda function tests for userRegister', () => {
         firstName: 'Eric',
         lastName: 'Wong',
         email: 'hellogmail.com',
+        telpehone: '0412345678',
         password: 'Password123'
       })
     } as unknown as APIGatewayProxyEvent;
@@ -146,6 +148,7 @@ describe('Lambda function tests for userRegister', () => {
         firstName: 'Er!c',
         lastName: 'Wong',
         email: 'hello@gmail.com',
+        telephone: '0412345678',
         password: 'Password123'
       })
     } as unknown as APIGatewayProxyEvent;
@@ -166,6 +169,7 @@ describe('Lambda function tests for userRegister', () => {
         firstName: 'Eric',
         lastName: 'Wong',
         email: 'hello@gmail.com',
+        telephone: '0412345678',
         password: '123'
       })
     } as unknown as APIGatewayProxyEvent;

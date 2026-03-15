@@ -2,7 +2,7 @@ import { clearData } from '../dataStore';
 import { userRegister } from '../userRegister';
 import { createOrder } from '../order';
 import { SessionId } from '../interfaces';
-import { InvalidInput, InvalidRequestPeriod, 
+import { InvalidPhone, InvalidRequestPeriod, 
   UnauthorisedError } from '../throwError';
 import { createOrderHandler } from '../handlers/createOrder';
 import { APIGatewayProxyEvent } from 'aws-lambda';
@@ -71,12 +71,12 @@ describe('Backend logic test for Creating an Order', () => {
         { 
           firstName: 'John', 
           lastName: 'Smith',
-          telephone: '0412345678',
+          telephone: '0432845654',
           email: 'johnsmith@gmail.com' 
         },
         '123 Kingsford', reqDeliveryPeriod, items
       );
-    }).toThrow(InvalidInput);
+    }).toThrow(InvalidPhone);
   });
 	
   test('Testing Invalid input - Wrong Delivery Date', () => {
