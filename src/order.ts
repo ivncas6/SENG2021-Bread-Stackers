@@ -1,7 +1,9 @@
 import  { createOrderReturn, EmptyObject, 
   Order, ReqDeliveryPeriod, ReqItem, ReqUser } from './interfaces';
 import { v4 as uuidv4 } from 'uuid';
-import { getData, createOrderSupaPush, updateOrderStatus, getOrderByIdSupa, deleteOrderSupa } from './dataStore';
+import { getData, createOrderSupaPush, updateOrderStatus, 
+  getOrderByIdSupa, deleteOrderSupa, 
+  updateOrderSupa} from './dataStore';
 import { createOrderUBLXML } from './generateUBL';
 import { InvalidDeliveryAddr, InvalidEmail, InvalidInput,
   InvalidOrderId,
@@ -199,8 +201,7 @@ export async function updateOrder(
   const userId = getUserIdFromSession(session);
 
   // Check order exist 
-  const data = getData();
-  const order = data.orders.find(o => o.orderId === orderId);
+  const order = await getOrderByIdSupa(orderId)
   if (!order) {
     throw new InvalidOrderId('Order ID does not exist');
   }
@@ -223,28 +224,7 @@ export async function updateOrder(
     throw new InvalidRequestPeriod('The requested delivery period is invalid.');
   }
 
-  // Update Order
-  /* Update later:
-  order.deliveryAddress = deliveryAddress;
-  order.reqDeliveryPeriod = reqDeliveryPeriod;
-  */
-  order.status = status;
-
-  const delivery = data.deliveries.find(d => d.orderID === orderId);
-  
-  if (delivery) {
-    delivery.startDate = reqDeliveryPeriod.startDateTime.toString();
-    delivery.endDate = reqDeliveryPeriod.endDateTime.toString();
-
-    const address = data.addresses.find(
-      add => add.addressID === delivery.deliveryAddressID
-    );
-    if (address) {
-      address.street = deliveryAddress;
-    }
-  }
-
-  await updateOrderStatus(orderId, status);
+  await updateOrderSupa(orderId, deliveryAddress, reqDeliveryPeriod, status);
 
   // Return empty 
   return {};

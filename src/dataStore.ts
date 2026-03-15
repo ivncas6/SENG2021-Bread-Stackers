@@ -103,6 +103,15 @@ export async function getOrderByIdSupa(orderId: string) {
   return data;
 }
 
+export async function getUserByIdSupa(userId: string) {
+  const { data, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('contactId', userId)
+    .maybeSingle();
+  return data;
+}
+
 export async function updateOrderStatus(orderId: string, newStatus: string) {
   const { data, error } = await supabase
     .from('orders')
