@@ -3,7 +3,8 @@ import  { createOrderReturn, EmptyObject,
 import { v4 as uuidv4 } from 'uuid';
 import { getData, createOrderSupaPush, updateOrderStatus, 
   getOrderByIdSupa, deleteOrderSupa, 
-  updateOrderSupa} from './dataStore';
+  updateOrderSupa,
+  getUserByIdSupa} from './dataStore';
 import { createOrderUBLXML } from './generateUBL';
 import { InvalidDeliveryAddr, InvalidEmail, InvalidInput,
   InvalidOrderId,
@@ -22,9 +23,9 @@ export async function createOrder(
   items: ReqItem[]
 ): Promise<createOrderReturn> {
   
-  const userId = getUserIdFromSession(session);
-  const data = getData();
-  const u = data.users.find((u) => u.contactId === userId);
+  const userId = Number(getUserIdFromSession(session));
+  const u = await getUserByIdSupa(userId);
+
   if (!u) {
     throw new UnauthorisedError('User does not exist');
   }

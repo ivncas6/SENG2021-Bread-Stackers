@@ -103,7 +103,7 @@ export async function getOrderByIdSupa(orderId: string) {
   return data;
 }
 
-export async function getUserByIdSupa(userId: string) {
+export async function getUserByIdSupa(userId: number) {
   const { data, error } = await supabase
     .from('users')
     .select('*')

@@ -1,12 +1,13 @@
 import { cancelOrder, createOrder } from '../order';
 import { userLogout, userRegister } from '../userRegister';
-import { getData, clearData } from '../dataStore';
+import { getData, clearData, getUserByIdSupa } from '../dataStore';
 import { createOrderReturn, SessionId } from '../interfaces';
 import { cancelOrderHandler } from '../handlers/cancelOrder';
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import mockEvent from './mocks/cancelOrderMock.json';
 import * as orderModule from '../order';
 import { InvalidInput, UnauthorisedError } from '../throwError';
+import { getUserIdFromSession } from '../userHelper';
 
 /*APIGatewayProxyEvent Structure:
   const event = {
@@ -61,7 +62,7 @@ function createTemplateOrderAndUser() {
   };
 
   const order = createOrder('AUD', session.session, userDetails, 
-    '308 Negra Arroyo Lane', delPeriod, items) as createOrderReturn;
+    '308 Negra Arroyo Lane', delPeriod, items) as Promise<createOrderReturn>;
 
   return { order, session };
 }
@@ -72,11 +73,16 @@ test('cancel a single order', () => {
 
   const details = createTemplateOrderAndUser();
 
-  const res = cancelOrder(details.order.orderId, 'reason here', details.session.session);
+  const userId = getUserIdFromSession(details.session.session);
+
+  const res = await cancelOrder(details.order.orderId, 'reason here', details.session.session);
   expect(res).toStrictEqual({ reason: 'reason here' });
 
   const data = getData();
   const userFind = data.orders.find(ord => ord.orderId === details.order.orderId);
+
+  const user = getUserByIdSupa(userId);
+
   expect(userFind).toBeUndefined();
 });
 
