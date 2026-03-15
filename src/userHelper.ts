@@ -11,7 +11,7 @@ import jwt from 'jsonwebtoken';
 import { UnauthorisedError } from './throwError';
 import 'dotenv/config';
 
-const secretKey = process.env.JWTsecret || 'fallback-key-get-your-own-in-env-file';
+const secretKey = process.env.JWT_SECRET || 'fallback-key-get-your-own-in-env-file';
 
 /**
  * Given a registered userId the function will create a new session.

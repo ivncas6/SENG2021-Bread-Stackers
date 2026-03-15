@@ -234,7 +234,9 @@ Globals:
     Runtime: nodejs20.x
     Environment:
       Variables:
-        JWTSecret: !Ref JWTSecretParameter
+        JWT_SECRET: !Ref JWTSecretParameter
+        SUPABASE_URL: !Ref SupabaseUrl
+        SUPABASE_KEY: !Ref SupabaseKey
     Architectures:
       - x86_64
     MemorySize: 128
