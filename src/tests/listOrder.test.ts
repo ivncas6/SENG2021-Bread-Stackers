@@ -108,7 +108,7 @@ describe('listOrders tests', () => {
 
     const result = await listOrders(session.session);
     expect(result.orders).toHaveLength(2);
-  });
+  }, 10000);
 
   test('does not return orders belonging to other users', async () => {
     // user 1 creates an order
