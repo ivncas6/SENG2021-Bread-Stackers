@@ -2,7 +2,7 @@ import { listOrders } from '../order';
 import { clearData } from '../dataStore';
 import { createOrder } from '../order';
 import { userRegister } from '../userRegister';
-import { OrderInfo, Session } from '../interfaces';
+import { createOrderReturn, SessionId } from '../interfaces';
 import { UnauthorisedError } from '../throwError';
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import { listOrderHandler } from '../handlers/listOrder';
@@ -17,7 +17,7 @@ function createOrderAndUser() {
     'Smith',
     'johnsmith@gmail.com',
     'password123',
-  ) as Session;
+  ) as SessionId;
 
   const reqDeliveryPeriod = {
     startDateTime: Math.floor(Date.now() / 1000),
@@ -54,7 +54,7 @@ function createOrderAndUser() {
     '123 Street Name, Kingsford',
     reqDeliveryPeriod,
     items,
-  ) as OrderInfo;
+  ) as createOrderReturn;
 
   return { session, order, userDetails, reqDeliveryPeriod, items, currency };
 }
@@ -67,27 +67,24 @@ describe('listOrders tests', () => {
       'Smith',
       'johnsmith@gmail.com',
       'password123',
-    ) as Session;
+    ) as SessionId;
 
     const result = listOrders(session.session);
     expect(result).toEqual({ orders: [] });
   });
 
   test('successfully returns a single order belonging to the user', () => {
-    const { session, order, userDetails, reqDeliveryPeriod, items, currency } =
+    const { session, order, currency } =
       createOrderAndUser();
 
     const result = listOrders(session.session);
     expect(result.orders).toHaveLength(1);
     expect(result.orders[0]).toEqual({
       orderId: order.orderId,
-      orderDateTime: expect.any(Number),
       status: expect.any(String),
+      issuedDate: expect.any(String),
       currency: currency,
-      deliveryAddress: '123 Street Name, Kingsford',
-      userDetails,
-      reqDeliveryPeriod,
-      items,
+      finalPrice: 522.5,
     });
   });
 
@@ -119,7 +116,7 @@ describe('listOrders tests', () => {
       'Lee',
       'annalee@gmail.com',
       'password123',
-    ) as Session;
+    ) as SessionId;
 
     const result = listOrders(user2.session);
     expect(result.orders).toHaveLength(0);
@@ -138,7 +135,7 @@ describe('Lambda handler tests for listOrders', () => {
       'Smith',
       'johnsmith@gmail.com',
       'password123',
-    ) as Session;
+    ) as SessionId;
 
     const event = {
       headers: { session: session.session },
@@ -162,13 +159,10 @@ describe('Lambda handler tests for listOrders', () => {
     expect(JSON.parse(response?.body ?? '')).toEqual({
       orders: [{
         orderId: order.orderId,
-        orderDateTime: expect.any(Number),
         status: expect.any(String),
+        issuedDate: expect.any(String),
         currency: currency,
-        deliveryAddress: '123 Street Name, Kingsford',
-        userDetails,
-        reqDeliveryPeriod,
-        items,
+        finalPrice: 522.5
       }]
     });
   });
@@ -203,7 +197,7 @@ describe('Lambda handler tests for listOrders', () => {
       'Lee',
       'annalee@gmail.com',
       'password123',
-    ) as Session;
+    ) as SessionId;
 
     const event = {
       headers: { session: user2.session },

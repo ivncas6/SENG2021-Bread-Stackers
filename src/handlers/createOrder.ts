@@ -1,6 +1,6 @@
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import { createOrder } from '../order';
-import { Item, ReqDeliveryPeriod, User } from '../interfaces';
+import { ReqItem, ReqDeliveryPeriod, ReqUser } from '../interfaces';
 import {
   InvalidInput,
   InvalidRequestPeriod,
@@ -19,10 +19,10 @@ export const createOrderHandler = async (
     }
 
     const currency: string = body.currency;
-    const user: User = body.user;
+    const user: ReqUser = body.user;
     const deliveryAddress: string = body.deliveryAddress;
     const reqDeliveryPeriod: ReqDeliveryPeriod = body.reqDeliveryPeriod;
-    const items: Item[] = body.items;
+    const items: ReqItem[] = body.items;
 
     const result = createOrder(
       currency,

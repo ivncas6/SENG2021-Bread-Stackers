@@ -1,6 +1,6 @@
 import { clearData } from '../dataStore';
 import { userRegister, userDetailsUpdate } from '../userRegister';
-import { Session } from '../interfaces';
+import { SessionId } from '../interfaces';
 import {
   InvalidEmail,
   InvalidFirstName,
@@ -20,7 +20,7 @@ function registerUser() {
     'Smith',
     'johnsmith@gmail.com',
     'password123',
-  ) as Session;
+  ) as SessionId;
   return session;
 }
 

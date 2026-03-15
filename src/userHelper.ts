@@ -1,4 +1,4 @@
-import { ErrorObject, UserInfo, SessionId } from './interfaces';
+import { Contact, ErrorObject, SessionId } from './interfaces';
 import { Data, getData } from './dataStore';
 import {
   InvalidEmail,
@@ -81,7 +81,7 @@ export function invalidemailcheck(sessionId: string, email: string): ErrorObject
   }
 
   const otherUsersEmail = data.users.some(
-    (user: UserInfo) => user.email === email && user.userId !== userId
+    (user: Contact) => user.email === email && user.contactId !== userId
   );
   if (otherUsersEmail) {
     throw new InvalidEmail('Email is already used by another user');

@@ -36,19 +36,18 @@ export function userRegister(nameFirst: string, nameLast: string, email: string,
 
   const hashPassword = getHashOf(password);
   // Create user object
-  const userId = data.users.length;
+  const contactId = data.users.length + 1;
   const user = {
-    userId,
+    contactId,
     name: nameFirst + ' ' + nameLast,
     email,
-    nameFirst,
-    nameLast,
+    telephone: "",
     password: hashPassword
   };
 
   // Store user object into database
   data.users.push(user);
-  return createNewSession(user.userId);
+  return createNewSession(user.contactId);
 }
 
 export function userLogin(email: string, password: string): SessionId | ErrorObject {
@@ -67,7 +66,7 @@ export function userLogin(email: string, password: string): SessionId | ErrorObj
   }
   // Resets to 0 after successful login
 
-  return createNewSession(user.userId);
+  return createNewSession(user.contactId);
 }
 
 // Given the userId and set of user properties update the properties of the logged in adminUser
@@ -75,7 +74,7 @@ export function userDetailsUpdate(session: string, email: string,
   nameFirst: string, nameLast: string): EmptyObject | ErrorObject {
   const userId = getUserIdFromSession(session);
   const data = getData();
-  const user = data.users.find((u) => u.userId === userId);
+  const user = data.users.find((u) => u.contactId === userId);
 
   if (!user) {
     throw new UnauthorisedError('User does not exist');
@@ -86,9 +85,7 @@ export function userDetailsUpdate(session: string, email: string,
   invalidnameLast(nameLast);
 
   user.email = email;
-  user.nameFirst = nameFirst;
-  user.nameLast = nameLast;
-
+  user.name = nameFirst + ' ' + nameLast; 
   return { };
 }
 

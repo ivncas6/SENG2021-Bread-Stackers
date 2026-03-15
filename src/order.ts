@@ -7,7 +7,6 @@ import { InvalidDeliveryAddr, InvalidEmail, InvalidInput,
   InvalidOrderId,
   InvalidRequestPeriod, UnauthorisedError } from './throwError';
 import { getUserIdFromSession } from './userHelper';
-import { time } from 'node:console';
 
 
 export function createOrder(
@@ -52,7 +51,6 @@ export function createOrder(
   const orderId: string = uuidv4();
   const currTime = new Date();
     
-  const orderDate: number = Math.floor(Date.now()/1000);
   const order: Order = {
     orderId: orderId,
     issuedDate: currTime.toISOString().slice(0, 10),
@@ -65,8 +63,17 @@ export function createOrder(
     taxInclusive: taxInclusive,
     finalPrice: taxInclusive
   };
-
   data.orders.push(order);
+
+  data.deliveries.push({
+    deliveryID: data.deliveries.length + 1,
+    orderID: orderId,
+    deliveryAddressID: 9,
+    startDate: reqDeliveryPeriod.startDateTime.toString(),
+    endDate: reqDeliveryPeriod.endDateTime.toString(),
+    deliveryTerms: 'Standard'
+  }) 
+
   createOrderUBLXML(order, items, user, deliveryAddress);
 
   return { orderId: orderId };
@@ -112,6 +119,10 @@ export function getOrderInfo(session: string, orderId: string) {
       'Order with the provided orderId does not belong to this user.',
     );
   }
+
+  /*const delivery = data.deliveries.find(d => d.orderID === orderId);
+  const items = data.orderLines.filter(line => line.orderID === orderId);*/
+
   return {
     orderId: orderId,
     status: order.status,
@@ -121,6 +132,8 @@ export function getOrderInfo(session: string, orderId: string) {
     finalPrice: order.finalPrice,
     taxExclusive: order.taxExclusive,
     taxInclusive: order.taxInclusive,
+    /*deliveryDetails: delivery,
+    items: items*/
   };
 }
 
