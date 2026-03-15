@@ -1,12 +1,6 @@
 import { Address, Contact, Delivery, Item, Order, 
   OrderLine, ReqDeliveryPeriod, ReqItem } from './interfaces';
-import { createClient } from '@supabase/supabase-js';
-
-
-// link to supabase, make sure to put your keys in .env
-const supabaseUrl = process.env.supabaseURL || '';
-const supabaseKey = process.env.supabaseKey || '';
-export const supabase = createClient(supabaseUrl, supabaseKey);
+import { supabase } from './supabase';
 
 export interface Data {
     users: Contact[];
@@ -39,7 +33,7 @@ export function clearData() {
 
 export const getData = () : Data => data;
 
-export function persistOrderData(
+export async function persistOrderData(
   data: any, 
   order: Order, 
   deliveryAddress: string, 
@@ -87,4 +81,35 @@ export function persistOrderData(
       status: 'OPEN'
     });
   });
+}
+
+export async function persistOrderDataSupa(order: Order) {
+  const { data, error } = await supabase
+    .from('orders').insert([
+      {
+        orderId: order.orderId, 
+        currency: order.currency, 
+        finalPrice: order.finalPrice,
+        status: 'OPEN'
+      }
+    ]);
+  if (error) {
+    console.error('Error pushing data:', error.message);
+    throw error;
+  }
+}
+
+export async function getOrderById(orderId: string) {
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*')
+    .eq('orderId', orderId)
+    .single();
+
+  if (error) {
+    console.error('Error querying data:', error.message);
+    return null;
+  }
+
+  return data;
 }
