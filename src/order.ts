@@ -65,10 +65,19 @@ export function createOrder(
   };
   data.orders.push(order);
 
+  const addressId = data.addresses.length + 1;
+  data.addresses.push({
+    addressID: addressId,
+    street: deliveryAddress,
+    city: 'N/A',
+    postcode: 'N/A',
+    country: 'AUS'
+  });
+
   data.deliveries.push({
     deliveryID: data.deliveries.length + 1,
     orderID: orderId,
-    deliveryAddressID: 9,
+    deliveryAddressID: addressId,
     startDate: reqDeliveryPeriod.startDateTime.toString(),
     endDate: reqDeliveryPeriod.endDateTime.toString(),
     deliveryTerms: 'Standard'
