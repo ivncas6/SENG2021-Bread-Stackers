@@ -14,7 +14,7 @@ export interface Data {
     items: Item[];
 }
 
-let data: Data = {
+const data: Data = {
   users: [],
   orders: [],
   deliveries: [],
@@ -66,6 +66,8 @@ export async function createOrderSupaPush(
       orderId: order.orderId,
       currency: order.currency, 
       finalPrice: order.finalPrice,
+      taxExclusive: order.taxExclusive,
+      taxInclusive: order.taxInclusive,
       buyerOrgID: order.buyerOrgID,
       status: 'OPEN',
       issuedDate: order.issuedDate,
@@ -73,7 +75,7 @@ export async function createOrderSupaPush(
     }]);
   
   if (orderError) {
-    console.error("Supabase Order Insert Error:", orderError.message);
+    console.error('Supabase Order Insert Error:', orderError.message);
     throw new Error(`Order Table Error: ${orderError.message}`);
   }
 
@@ -90,26 +92,27 @@ export async function createOrderSupaPush(
   for (const i of items) {
     // create the item to get an itemId
     const { data: itemData } = await supabase.from('items').insert([{
-        name: i.name,
-        price: i.unitPrice,
-        description: i.description
+      name: i.name,
+      price: i.unitPrice,
+      description: i.description
     }]).select().single();
 
     if (itemData) {
-        await supabase.from('order_lines').insert([{
-            orderID: order.orderId,
-            itemID: itemData.itemId,
-            quantity: i.quantity,
-            status: 'OPEN'
-        }]);
+      await supabase.from('order_lines').insert([{
+        orderID: order.orderId,
+        itemID: itemData.itemId,
+        quantity: i.quantity,
+        status: 'OPEN'
+      }]);
     }
   }
 }
 
 export async function getOrderByIdSupa(orderId: string): Promise<Order | any> {
   if (!isUUID(orderId)) {
-    return null; // Return null so the logic throws InvalidOrderId instead of DB crashing
+    return null; 
   }
+
   const { data, error } = await supabase
     .from('orders')
     .select(`
@@ -118,14 +121,20 @@ export async function getOrderByIdSupa(orderId: string): Promise<Order | any> {
         *,
         addresses ( * )
       ),
-      order_lines ( * ),
-      organisations!buyerOrgID ( * )
+      order_lines ( 
+        *, 
+        items ( * ) 
+      ),
+      organisations!buyerOrgID ( 
+        *,
+        contacts ( * )
+      )
     `)
     .eq('orderId', orderId)
     .maybeSingle();
 
   if (error && error.code !== 'PGRST116') {
-    console.error("Fetch Order Error:", error.message);
+    console.error('Fetch Order Error:', error.message);
     throw error;
   }
   

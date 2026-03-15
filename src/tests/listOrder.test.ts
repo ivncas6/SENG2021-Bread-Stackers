@@ -129,7 +129,7 @@ describe('listOrders tests', () => {
 
   test('throws UnauthorisedError on invalid session', async () => {
     await expect(() => listOrders('invalid-session-string'))
-    .rejects.toThrow(UnauthorisedError);
+      .rejects.toThrow(UnauthorisedError);
   });
 });
 

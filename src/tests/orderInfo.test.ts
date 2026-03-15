@@ -7,12 +7,12 @@ import { InvalidOrderId, UnauthorisedError } from '../throwError';
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import { getOrderInfoHandler } from '../handlers/orderInfo';
 
-beforeEach(() => {
-  clearData();
+beforeEach(async () => {
+  await clearData();
 });
 
-function createOrderAndUser() {
-  const session = userRegister(
+async function createOrderAndUser() {
+  const session = await userRegister(
     'John',
     'Smith',
     'johnsmith@gmail.com',
@@ -45,7 +45,7 @@ function createOrderAndUser() {
   };
   const currency = 'AUD';
 
-  const order = createOrder(
+  const order = await createOrder(
     currency,
     session.session,
     userDetails,
@@ -59,10 +59,10 @@ function createOrderAndUser() {
 
 // backend logic test for getOrderInfo
 describe('getOrderInfo tests', () => {
-  test('successfully returns the order info', () => {
+  test('successfully returns the order info', async () => {
     const { session, order, userDetails, reqDeliveryPeriod, items, currency } =
-      createOrderAndUser();
-    const res = getOrderInfo(session.session, order.orderId);
+      await createOrderAndUser();
+    const res = await getOrderInfo(session.session, order.orderId);
     expect(res).toStrictEqual({
       orderId: order.orderId,
       issuedDate: expect.any(String),
@@ -78,30 +78,29 @@ describe('getOrderInfo tests', () => {
       taxInclusive: 522.5,
     });
   });
-  test('invalid orderid error', () => {
-    const { session, order } = createOrderAndUser();
-    expect(() => getOrderInfo(session.session, order.orderId + '123')).toThrow(
+  test('invalid orderid error', async () => {
+    const { session, order } = await createOrderAndUser();
+    await expect(getOrderInfo(session.session, order.orderId + '123')).rejects.toThrow(
       InvalidOrderId
     );
   });
-  test('invalid session error', () => {
-    const { session, order } = createOrderAndUser();
-    expect(() =>
+  test('invalid session error', async () => {
+    const { session, order } = await createOrderAndUser();
+    await expect(() =>
       getOrderInfo(session.session + 'athwuhd', order.orderId)
-    ).toThrow(UnauthorisedError);
+    ).rejects.toThrow(UnauthorisedError);
   });
-  test('order does not belong to user', () => {
-    const { order } = createOrderAndUser();
-    const user2 = userRegister(
+  test('order does not belong to user', async () => {
+    const { order } = await createOrderAndUser();
+    const user2 = await userRegister(
       'Anna',
       'Lee',
       'annaLee@gmail.com',
       '0412345678',
       'password123'
     ) as SessionId;
-    expect(() => getOrderInfo(user2.session, order.orderId)).toThrow(
-      InvalidOrderId
-    );
+    await expect(getOrderInfo(user2.session, order.orderId))
+      .rejects.toThrow(InvalidOrderId);
   });
 });
 
@@ -109,7 +108,7 @@ describe('getOrderInfo tests', () => {
 describe('Lamda function tests for getOrderInfo', () => {
   test('sucessfully returns order info', async () => {
     const { session, order, userDetails, items, currency } =
-      createOrderAndUser();
+      await createOrderAndUser();
     const result = {
       headers: {
         session: session.session
@@ -140,7 +139,7 @@ describe('Lamda function tests for getOrderInfo', () => {
     });
   });
   test('orderId does not exist', async () => {
-    const { session, order } = createOrderAndUser();
+    const { session, order } = await createOrderAndUser();
     const result = {
       headers: {
         session: session.session
@@ -155,7 +154,7 @@ describe('Lamda function tests for getOrderInfo', () => {
     expect(JSON.parse(response.body)).toStrictEqual({ error: expect.any(String) });
   });
   test('invalid session provided', async () => {
-    const { session, order } = createOrderAndUser();
+    const { session, order } = await createOrderAndUser();
     const result = {
       headers: {
         session: session.session + '15dse'
@@ -170,8 +169,8 @@ describe('Lamda function tests for getOrderInfo', () => {
     expect(JSON.parse(response.body)).toStrictEqual({ error: expect.any(String) });
   });
   test('order doesnot belong to the user', async () => {
-    const { order } = createOrderAndUser();
-    const user2 = userRegister(
+    const { order } = await createOrderAndUser();
+    const user2 = await userRegister(
       'Anna',
       'Lee',
       'annaLee@gmail.com',

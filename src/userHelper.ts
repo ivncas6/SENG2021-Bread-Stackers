@@ -114,7 +114,7 @@ export async function invalidphonecheck(sessionId: string, telephone: string): P
     throw new InvalidPhone('Phone number is already used by another user');
   }
 
-  return null
+  return null;
 }
 
 

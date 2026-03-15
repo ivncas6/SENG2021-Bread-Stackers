@@ -52,7 +52,7 @@ export async function createOrder(
 
   const { data: orgData } = await getOrgByUserId(userId);
   if (!orgData) {
-    throw new Error("User does not have an associated organization");
+    throw new Error('User does not have an associated organization');
   }
 
   let taxExclusive = 0;
@@ -122,6 +122,11 @@ export async function cancelOrder(orderId: string, reason: string, session: stri
 export async function getOrderInfo(session: string, orderId: string) {
   const userId = getUserIdFromSession(session);
 
+  const { data: orgData } = await getOrgByUserId(Number(userId));
+  if (!orgData) {
+    throw new UnauthorisedError('User has no associated organization');
+  }
+
   // find the order
   const order = await getOrderByIdSupa(orderId);
 
@@ -130,15 +135,15 @@ export async function getOrderInfo(session: string, orderId: string) {
       'Provided orderId doesnot correspond to any existing order',
     );
   }
-  if (order.buyerOrgID !== userId) {
+  if (String(order.buyerOrgID) !== String(orgData.orgId)) {
     throw new InvalidOrderId(
       'Order with the provided orderId does not belong to this user.',
     );
   }
 
-  const delivery = order.deliveries;
+  const delivery = order.deliveries?.[0];
   const address = delivery?.addresses;
-  const user = order.users;
+  const contact = order.organisations?.contacts;
 
   return {
     orderId: orderId,
@@ -146,25 +151,25 @@ export async function getOrderInfo(session: string, orderId: string) {
     issuedDate: order.issuedDate,
     issuedTime: order.issuedTime,
     currency: order.currency,
-    taxExclusive: order.taxExclusive,
-    taxInclusive: order.taxInclusive,
-    finalPrice: order.finalPrice,
+    taxExclusive: Number(order.taxExclusive || 0),
+    taxInclusive: Number(order.taxInclusive || 0),
+    finalPrice: Number(order.finalPrice || 0),
     address: address?.street || '',
     deliveryDetails: {
-      startDateTime: Number(delivery?.startDate),
-      endDateTime: Number(delivery?.endDate),
+      startDateTime: Number(delivery?.startDate || 0),
+      endDateTime: Number(delivery?.endDate || 0),
     },
     userDetails: {
-      firstName: user?.firstName,
-      lastName: user?.lastName,
-      telephone: user?.telephone,
-      email: user?.email
+      firstName: contact?.firstName || '',
+      lastName: contact?.lastName || '',
+      telephone: contact?.telephone || '',
+      email: contact?.email || '',
     },
-    items: order.order.items.map((i: any) => ({
-      name: i.name,
-      description: i.description,
-      unitPrice: i.unitPrice,
-      quantity: i.quantity
+    items: (order.order_lines || []).map((line: any) => ({
+      name: line.items?.name || 'Unknown',
+      description: line.items?.description || '',
+      unitPrice: Number(line.items?.price || 0),
+      quantity: line.quantity
     }))
   };
 }
@@ -216,7 +221,7 @@ export async function updateOrder(
   }
 
   // Check order exist 
-  const order = await getOrderByIdSupa(orderId)
+  const order = await getOrderByIdSupa(orderId);
   if (!order) {
     throw new InvalidOrderId('Order ID does not exist');
   }

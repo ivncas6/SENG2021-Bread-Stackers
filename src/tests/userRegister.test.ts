@@ -15,7 +15,7 @@ import { supabase } from '../supabase';
 const mockedSupabase = supabase as any;
 
 // keep this or suffer 20+ seconds
-jest.mock('../supabase')
+jest.mock('../supabase');
 
 beforeEach(async () => {
   jest.clearAllMocks();
@@ -45,12 +45,12 @@ describe('await userRegister tests', () => {
   test('duplicate email error', async () => {
     mockedSupabase.single.mockResolvedValueOnce({ data: { email: 'dup@gmail.com' }, error: null });
     await expect(userRegister('Eric', 'Wong', 'dup@gmail.com',
-    '0412345678', 'Password123')).rejects.toThrow(InvalidEmail);
+      '0412345678', 'Password123')).rejects.toThrow(InvalidEmail);
   });
 
   test('invalid email format', async () => {
     return expect(userRegister('Eric', 'Wong', 'hellogmail.com', '0412345678', 'Password123'))
-    .rejects.toThrow(InvalidEmail);
+      .rejects.toThrow(InvalidEmail);
   });
 
   test('invalid first name characters', async () => {
