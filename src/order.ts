@@ -1,23 +1,24 @@
 import  { createOrderReturn, EmptyObject, 
   Order, ReqDeliveryPeriod, ReqItem, ReqUser } from './interfaces';
 import { v4 as uuidv4 } from 'uuid';
-import { getData, persistOrderData } from './dataStore';
+import { getData, createOrderSupaPush, updateOrderStatus, getOrderByIdSupa, deleteOrderSupa } from './dataStore';
 import { createOrderUBLXML } from './generateUBL';
 import { InvalidDeliveryAddr, InvalidEmail, InvalidInput,
   InvalidOrderId,
   InvalidPhone,
   InvalidRequestPeriod, UnauthorisedError } from './throwError';
 import { getUserIdFromSession } from './userHelper';
+import { supabase } from './supabase';
 
 
-export function createOrder(
+export async function createOrder(
   currency: string, 
   session: string, 
   user: ReqUser, 
   deliveryAddress: string, 
   reqDeliveryPeriod: ReqDeliveryPeriod,
   items: ReqItem[]
-): createOrderReturn {
+): Promise<createOrderReturn> {
   
   const userId = getUserIdFromSession(session);
   const data = getData();
@@ -66,20 +67,19 @@ export function createOrder(
     finalPrice: taxInclusive
   };
 
-  persistOrderData(data, order, deliveryAddress, reqDeliveryPeriod, items);
+  await createOrderSupaPush(order, deliveryAddress, reqDeliveryPeriod, items);
   createOrderUBLXML(order, items, user, deliveryAddress);
 
   return { orderId: orderId };
 }
 
-export function cancelOrder(orderId: string, reason: string, session: string) {
+export async function cancelOrder(orderId: string, reason: string, session: string) {
 
   // find if user for sesh exists
   const userId = getUserIdFromSession(session);
 
   // get order
-  const data = getData();
-  const foundOrder = data.orders.find(order => order.orderId === orderId);
+  const foundOrder = await getOrderByIdSupa(orderId);
 
   // error check
   if (foundOrder == null) {
@@ -90,18 +90,24 @@ export function cancelOrder(orderId: string, reason: string, session: string) {
     throw new UnauthorisedError('User does not exist');
   }
 
-  data.orders.splice(data.orders.indexOf(foundOrder), 1);
+  await updateOrderStatus(orderId, 'CANCELLED');
+
+  // if a hard delete is what we're going for
+  // await deleteOrderSupa(orderId);
+
+  console.log('Order ' + orderId + ' cancelled by userId ' 
+    + userId + '. Reason: ' + reason);
 
   // uses reason
   return { reason: reason };
 }
 
-export function getOrderInfo(session: string, orderId: string) {
+export async function getOrderInfo(session: string, orderId: string) {
   const userId = getUserIdFromSession(session);
 
   // find the order
-  const data = getData();
-  const order = data.orders.find((order) => order.orderId === orderId);
+  const order = await getOrderByIdSupa(orderId);
+
   if (!order) {
     throw new InvalidOrderId(
       'Provided orderId doesnot correspond to any existing order',
@@ -113,21 +119,9 @@ export function getOrderInfo(session: string, orderId: string) {
     );
   }
 
-  const delivery = data.deliveries.find(d => d.orderID === orderId);
-  const address = data.addresses.find(a => a.addressID === delivery?.deliveryAddressID);
-  const orderLines = data.orderLines.filter(line => line.orderID === orderId);
-  const user = data.users.find(u => u.contactId === order.buyerOrgID);
-  const itemsResponse = orderLines.map(line => {
-    // Find the matching item in the Item table
-    const itemData = data.items.find(i => i.itemId === line.itemID);
-    
-    return {
-      name: itemData?.name || 'Unknown Item',
-      description: itemData?.description || '',
-      unitPrice: itemData?.price || 0,
-      quantity: line.quantity
-    };
-  });
+  const delivery = order.deliveries;
+  const address = delivery?.addresses;
+  const user = order.users;
 
   return {
     orderId: orderId,
@@ -149,18 +143,28 @@ export function getOrderInfo(session: string, orderId: string) {
       telephone: user?.telephone,
       email: user?.email
     },
-    items: itemsResponse
+    items: order.order.items.map((i: any) => ({
+      name: i.name,
+      description: i.description,
+      unitPrice: i.unitPrice,
+      quantity: i.quantity
+    }))
   };
 }
 
-export function listOrders(session: string) {
+export async function listOrders(session: string) {
 
   // validates the session, tells us who is making the request
   const userId = getUserIdFromSession(session);
-  const data = getData();
 
+  const { data: orders, error } = await supabase
+    .from('orders')
+    .select('orderId, status, issuedDate, finalPrice, currency')
+    .eq('buyer_id', userId);
+  
+  if (error) throw error;
   // filters and maps orders belonging to the logged-in user
-  const orders = data.orders
+  /*const orders = data.orders
     .filter(order => order.buyerOrgID === userId)
     .map(order => ({
       orderId: order.orderId ?? '',
@@ -168,7 +172,7 @@ export function listOrders(session: string) {
       issuedDate: order.issuedDate,
       finalPrice: order.finalPrice,
       currency: order.currency
-    }));
+    }));*/
 
   return { orders };
 }
@@ -183,13 +187,13 @@ export function listOrders(session: string) {
  * @returns {EmptyObject}
  */
 
-export function updateOrder(
+export async function updateOrder(
   session: string,
   orderId: string,
   deliveryAddress: string,
   reqDeliveryPeriod: ReqDeliveryPeriod,
   status: string
-): EmptyObject {
+): Promise<EmptyObject> {
 
   // Check the current session 
   const userId = getUserIdFromSession(session);
@@ -239,6 +243,8 @@ export function updateOrder(
       address.street = deliveryAddress;
     }
   }
+
+  await updateOrderStatus(orderId, status);
 
   // Return empty 
   return {};
