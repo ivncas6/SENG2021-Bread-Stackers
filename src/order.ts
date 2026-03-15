@@ -215,14 +215,18 @@ export async function updateOrder(
   // Check the current session 
   const userId = getUserIdFromSession(session);
 
+  const { data: orgData } = await getOrgByUserId(Number(userId));
+  if (!orgData) {
+    throw new UnauthorisedError('User has no associated organization');
+  }
+
   // Check order exist 
   const order = await getOrderByIdSupa(orderId)
   if (!order) {
     throw new InvalidOrderId('Order ID does not exist');
   }
 
-  // Check access 
-  if (order.buyerOrgID !== userId) {
+  if (order.buyerOrgID !== orgData.orgId) {
     throw new UnauthorisedError('You do not have permission to update this order');
   }
 

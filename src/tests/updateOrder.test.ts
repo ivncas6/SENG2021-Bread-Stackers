@@ -1,25 +1,41 @@
 import { APIGatewayProxyEvent } from 'aws-lambda';
-import { clearData, getData } from '../dataStore';
+import { clearData, getData, getOrderByIdSupa } from '../dataStore';
 import { userRegister } from '../userRegister';
 import { createOrder, updateOrder } from '../order';
 import { updateOrderHandler } from '../handlers/updateOrder'; 
-import { createOrderReturn, SessionId } from '../interfaces';
+import { createOrderReturn, Order, SessionId } from '../interfaces';
 import { 
   InvalidOrderId, 
   UnauthorisedError,
 } from '../throwError';
-import { supabase } from '../supabase';
+/*import { supabase } from '../supabase';
 
 const mockedSupabase = supabase as any;
 
 // keep this or suffer 20+ seconds
-jest.mock('../supabase')
+// We provide a minimal implementation so clearData() doesn't crash
+jest.mock('../supabase', () => ({
+  supabase: {
+    from: jest.fn().mockReturnThis(),
+    delete: jest.fn().mockReturnThis(),
+    neq: jest.fn().mockReturnThis(),
+    select: jest.fn().mockReturnThis(),
+    eq: jest.fn().mockReturnThis(),
+    single: jest.fn(),
+    maybeSingle: jest.fn(),
+    insert: jest.fn().mockReturnThis(),
+    update: jest.fn().mockReturnThis(),
+  }
+}));*/
 
 beforeEach(async () => {
-  await clearData();
   jest.clearAllMocks();
   // restore mock to default
-  mockedSupabase.single.mockResolvedValue({ data: null, error: null });
+  // mockedSupabase.single.mockResolvedValue({ data: null, error: null });
+  // mockedSupabase.maybeSingle.mockResolvedValue({ data: null, error: null });
+  
+  // Actually clear the local dataStore
+  await clearData();
 });
 
 async function createOrderAndUser() {
@@ -53,13 +69,13 @@ async function createOrderAndUser() {
 }
 
 describe('Backend logic test for updateOrder', () => {
-  test('successfully update order delivery address', () => {
-    const { session, orderId, reqDeliveryPeriod } =  createOrderAndUser();
+  test('successfully update order delivery address', async () => {
+    const { session, orderId, reqDeliveryPeriod } = await createOrderAndUser();
     
     const newAddress = '456 Kensington Street';
     
     // Call backend logic
-    updateOrder(
+    await updateOrder(
       session.session,
       orderId,
       newAddress,
@@ -67,37 +83,35 @@ describe('Backend logic test for updateOrder', () => {
       'processed'
     );
 
-    // Verify state in dataStore
-    const data = getData();
-    const updatedOrder = data.orders.find((o) => o.orderId === orderId);
+    const updatedOrder = await getOrderByIdSupa(orderId) as any;
     
-    const delivery = data.deliveries.find(d => d.orderID === orderId);
-    const address = data.addresses.find(a => a.addressID === delivery?.deliveryAddressID);
+    const delivery = updatedOrder.deliveries[0];
+    const address = delivery.addresses;
     
     expect(updatedOrder).toBeDefined();
     expect(address?.street).toStrictEqual(newAddress);
     expect(updatedOrder?.status).toStrictEqual('processed');
-    expect(delivery?.startDate).toStrictEqual(reqDeliveryPeriod.startDateTime.toString());
+    expect(Number(delivery?.startDate)).toStrictEqual(reqDeliveryPeriod.startDateTime);
   });
 
-  test('Invalid Session', () => {
-    const { orderId, reqDeliveryPeriod } = createOrderAndUser();
-    expect(() => {
-      updateOrder('invalid_session_123', orderId, 'Address', reqDeliveryPeriod, 'processed');
-    }).toThrow(UnauthorisedError);
+  test('Invalid Session', async () => {
+    const { orderId, reqDeliveryPeriod } = await createOrderAndUser();
+    await expect(
+      updateOrder('invalid_session_123', orderId, 'Address', reqDeliveryPeriod, 'processed')
+    ).rejects.toThrow(UnauthorisedError);
   });
 
-  test('Order does not exist', () => {
-    const { session, reqDeliveryPeriod } = createOrderAndUser();
-    expect(() => {
-      updateOrder(session.session, 'non_existent_id', 'Address', reqDeliveryPeriod, 'processed');
-    }).toThrow(InvalidOrderId);
+  test('Order does not exist', async () => {
+    const { session, reqDeliveryPeriod } = await createOrderAndUser();
+    await expect(
+      updateOrder(session.session, 'non_existent_id', 'Address', reqDeliveryPeriod, 'processed')
+    ).rejects.toThrow(InvalidOrderId);
   });
 });
 
 describe('Lambda function for updateOrderHandler', () => {
   test('successfully updates an order', async () => {
-    const { session, orderId, reqDeliveryPeriod } = createOrderAndUser();
+    const { session, orderId, reqDeliveryPeriod } = await createOrderAndUser();
 
     const event = {
       pathParameters: {
@@ -120,7 +134,7 @@ describe('Lambda function for updateOrderHandler', () => {
   });
 
   test('session header missing', async () => {
-    const { orderId } = createOrderAndUser();
+    const { orderId } = await createOrderAndUser();
 
     const event = {
       pathParameters: { orderId: orderId },
@@ -137,7 +151,7 @@ describe('Lambda function for updateOrderHandler', () => {
   });
 
   test('Order ID missing', async () => {
-    const { session } = createOrderAndUser();
+    const { session } = await createOrderAndUser();
 
     const event = {
       pathParameters: {}, 
@@ -154,7 +168,7 @@ describe('Lambda function for updateOrderHandler', () => {
   });
 
   test('Invalid Delivery Address', async () => {
-    const { session, orderId, reqDeliveryPeriod } = createOrderAndUser();
+    const { session, orderId, reqDeliveryPeriod } = await createOrderAndUser();
     const longName = '1234567890'.repeat(21);
 
     const event = {
@@ -175,7 +189,7 @@ describe('Lambda function for updateOrderHandler', () => {
   });
 
   test('Invalid Request Period', async () => {
-    const { session, orderId } = createOrderAndUser();
+    const { session, orderId } = await createOrderAndUser();
 
     const event = {
       pathParameters: { orderId: orderId },

@@ -11,6 +11,13 @@ export const updateOrderHandler = async (event: APIGatewayProxyEvent) => {
     const body = JSON.parse(event.body ?? '{}');
     const session = event.headers.session || event.headers.Session;
 
+    if (!orderId) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: 'Order ID is missing from path' })
+      };
+    }
+
     // Call updateOrder function
     const result = await updateOrder(
       session as string,

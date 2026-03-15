@@ -1,3 +1,4 @@
+import { isUUID } from 'validator';
 import { Address, Contact, Delivery, Item, Order, 
   OrderLine, ReqDeliveryPeriod, ReqItem } from './interfaces';
 import { supabase } from './supabase';
@@ -103,7 +104,10 @@ export async function createOrderSupaPush(
   }
 }
 
-export async function getOrderByIdSupa(orderId: string) {
+export async function getOrderByIdSupa(orderId: string): Promise<Order | any> {
+  if (!isUUID(orderId)) {
+    return null; // Return null so the logic throws InvalidOrderId instead of DB crashing
+  }
   const { data, error } = await supabase
     .from('orders')
     .select(`
@@ -151,25 +155,38 @@ export async function updateOrderSupa(
   reqDeliveryPeriod: ReqDeliveryPeriod,
   status: string 
 ) {
-  await supabase
-    .from('orders')
-    .update({ status: status })
-    .eq('orderId', orderId);
+  // promise all uses concurrency so run simult + fast
+  const [orderRes, deliveryRes] = await Promise.all([
+    supabase
+      .from('orders')
+      .update({ status: status })
+      .eq('orderId', orderId),
+      
+    supabase
+      .from('deliveries')
+      .update({
+        startDate: reqDeliveryPeriod.startDateTime.toString(),
+        endDate: reqDeliveryPeriod.endDateTime.toString()
+      })
+      .eq('orderID', orderId)
+      .select('deliveryAddressID')
+      .single()
+  ]);
 
-  const { data: delivery } = await supabase
-    .from('deliveries')
-    .update({
-      start_date: reqDeliveryPeriod.startDateTime,
-      end_date: reqDeliveryPeriod.endDateTime
-    })
-    .eq('order_id', orderId)
-    .select('address_id')
-    .maybeSingle();
+  // throw
+  if (orderRes.error) throw orderRes.error;
+  if (deliveryRes.error) throw deliveryRes.error;
 
-  if (delivery?.address_id) {
-    await supabase.from('addresses')
+  // update addr 
+  const addressId = deliveryRes.data?.deliveryAddressID;
+  
+  if (addressId) {
+    const { error: addressError } = await supabase
+      .from('addresses')
       .update({ street: deliveryAddress })
-      .eq('addressID', delivery.address_id);
+      .eq('addressID', addressId);
+      
+    if (addressError) throw addressError;
   }
 }
 
