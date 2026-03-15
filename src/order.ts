@@ -178,7 +178,8 @@ export function getOrderInfo(session: string, orderId: string) {
       endDateTime: Number(delivery?.endDate),
     },
     userDetails: {
-      name: user?.name,
+      firstName: user?.firstName,
+      lastName: user?.lastName,
       telephone: user?.telephone,
       email: user?.email
     },

@@ -40,7 +40,8 @@ function createOrderAndUser() {
   ];
 
   const userDetails = {
-    name: 'John Smith',
+    firstName: 'John',
+    lastName: 'Smith',
     telephone: 123456789,
     email: 'johnsmith@gmail.com',
   };

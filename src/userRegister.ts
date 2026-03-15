@@ -39,7 +39,8 @@ export function userRegister(nameFirst: string, nameLast: string, email: string,
   const contactId = data.users.length + 1;
   const user = {
     contactId,
-    name: nameFirst + ' ' + nameLast,
+    firstName: nameFirst,
+    lastName: nameLast,
     email,
     telephone: '',
     password: hashPassword
@@ -85,7 +86,8 @@ export function userDetailsUpdate(session: string, email: string,
   invalidnameLast(nameLast);
 
   user.email = email;
-  user.name = nameFirst + ' ' + nameLast; 
+  user.firstName = nameFirst;
+  user.lastName = nameLast; 
   return { };
 }
 

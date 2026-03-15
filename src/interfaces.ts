@@ -2,14 +2,15 @@
 
 export interface Contact {
   contactId: number; // PK
-  name: string;
+  firstName: string;
+  lastName: string;
   telephone: string;
   email: string;
   password?: string
 }
 
 export interface Address {
-  addressId: number;
+  addressID: number;
   street: string;
   city: string;
   postcode: string;
@@ -76,7 +77,8 @@ export interface ReqDeliveryPeriod {
 }
 
 export interface ReqUser {
-  name: string;
+  firstName: string;
+  lastName: string
   telephone: number;
   email: string;
 }

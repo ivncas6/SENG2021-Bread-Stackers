@@ -31,7 +31,7 @@ export function createOrderUBLXML(
     <cac:BuyerCustomerParty>
         <cac:Party>
             <cac:Contact>
-                <cbc:Name>${user.name}</cbc:Name>
+                <cbc:Name>${user.firstName} ${user.lastName}</cbc:Name>
                 <cbc:Telephone>${user.telephone}</cbc:Telephone>
                 <cbc:ElectronicMail>${user.email}</cbc:ElectronicMail>
             </cac:Contact>

@@ -27,7 +27,7 @@ function createOrderAndUser() {
   };
 
   const items = [{ name: 'onion', description: 'purple', unitPrice: 5, quantity: 1 }];
-  const userDetails = { name: 'John Smith', telephone: 123456789, email: 'johnsmith@gmail.com' };
+  const userDetails = { firstName: 'John', lastName: 'Smith', telephone: 123456789, email: 'johnsmith@gmail.com' };
 
   const order = createOrder(
     'AUD',

@@ -29,7 +29,8 @@ const reqDeliveryPeriod = {
 };
 
 const userDetails = {
-  name: 'John Smith',
+  firstName: 'John',
+  lastName: 'Smith',
   telephone: 123456789,
   email: 'johnsmith@gmail.com',
 };
@@ -67,7 +68,8 @@ describe('Backend logic test for Creating an Order', () => {
     expect(() => {
       createOrder('AUD', session.session , 
         { 
-          name: 'John Smith',
+          firstName: 'John', 
+          lastName: 'Smith',
           telephone: 12345678,
           email: 'johnsmith@gmail.com' 
         },
@@ -92,7 +94,9 @@ describe('Backend logic test for Creating an Order', () => {
   test('Testing Invalid Session', () => {
     expect(() => {
       createOrder('AUD', 'abcd' , 
-        { name: 'John Smith',
+        { 
+          firstName: 'John', 
+          lastName: 'Smith',
           telephone: 12345678,
           email: 'johnsmith@gmail.com',},
         '123 Kingsford', reqDeliveryPeriod, items
