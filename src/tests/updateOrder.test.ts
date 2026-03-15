@@ -33,9 +33,6 @@ beforeEach(async () => {
   // restore mock to default
   // mockedSupabase.single.mockResolvedValue({ data: null, error: null });
   // mockedSupabase.maybeSingle.mockResolvedValue({ data: null, error: null });
-  
-  // Actually clear the local dataStore
-  await clearData();
 });
 
 async function createOrderAndUser() {

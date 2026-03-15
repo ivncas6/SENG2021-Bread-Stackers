@@ -16,12 +16,16 @@ export const listOrderHandler = async (event: APIGatewayProxyEvent) => {
       body: JSON.stringify(result),
     };
 
-  } catch (err: unknown) {
+  } catch (err: any) {
     if (err instanceof UnauthorisedError) {
       return {
         statusCode: 401,
         body: JSON.stringify({ error: err.message }),
       };
     }
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: err.message })
+    };
   }
 };

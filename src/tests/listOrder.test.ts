@@ -8,11 +8,12 @@ import { APIGatewayProxyEvent } from 'aws-lambda';
 import { listOrderHandler } from '../handlers/listOrder';
 
 beforeEach(async () => {
+  jest.clearAllMocks();
   await clearData();
 });
 
-function createOrderAndUser() {
-  const session = userRegister(
+async function createOrderAndUser() {
+  const session = await userRegister(
     'John',
     'Smith',
     'johnsmith@gmail.com',
@@ -49,7 +50,7 @@ function createOrderAndUser() {
 
   const currency = 'AUD';
 
-  const order = createOrder(
+  const order = await createOrder(
     currency,
     session.session,
     userDetails,
@@ -63,8 +64,8 @@ function createOrderAndUser() {
 
 // backend logic tests for listOrders 
 describe('listOrders tests', () => {
-  test('successfully returns empty list when user has no orders', () => {
-    const session = userRegister(
+  test('successfully returns empty list when user has no orders', async () => {
+    const session = await userRegister(
       'John',
       'Smith',
       'johnsmith@gmail.com',
@@ -72,15 +73,15 @@ describe('listOrders tests', () => {
       'password123',
     ) as SessionId;
 
-    const result = listOrders(session.session);
+    const result = await listOrders(session.session);
     expect(result).toEqual({ orders: [] });
   });
 
-  test('successfully returns a single order belonging to the user', () => {
+  test('successfully returns a single order belonging to the user', async () => {
     const { session, order, currency } =
-      createOrderAndUser();
+      await createOrderAndUser();
 
-    const result = listOrders(session.session);
+    const result = await listOrders(session.session);
     expect(result.orders).toHaveLength(1);
     expect(result.orders[0]).toEqual({
       orderId: order.orderId,
@@ -91,12 +92,12 @@ describe('listOrders tests', () => {
     });
   });
 
-  test('successfully returns multiple orders belonging to the user', () => {
+  test('successfully returns multiple orders belonging to the user', async () => {
     const { session, userDetails, reqDeliveryPeriod, items, currency } =
-      createOrderAndUser();
+      await createOrderAndUser();
 
     // create a second order for the same user
-    createOrder(
+    await createOrder(
       currency,
       session.session,
       userDetails,
@@ -105,16 +106,16 @@ describe('listOrders tests', () => {
       items,
     );
 
-    const result = listOrders(session.session);
+    const result = await listOrders(session.session);
     expect(result.orders).toHaveLength(2);
   });
 
-  test('does not return orders belonging to other users', () => {
+  test('does not return orders belonging to other users', async () => {
     // user 1 creates an order
-    createOrderAndUser();
+    await createOrderAndUser();
 
     // user 2 logs in and lists their orders
-    const user2 = userRegister(
+    const user2 = await userRegister(
       'Anna',
       'Lee',
       'annalee@gmail.com',
@@ -122,19 +123,20 @@ describe('listOrders tests', () => {
       'password123'
     ) as SessionId;
 
-    const result = listOrders(user2.session);
+    const result = await listOrders(user2.session);
     expect(result.orders).toHaveLength(0);
   });
 
-  test('throws UnauthorisedError on invalid session', () => {
-    expect(() => listOrders('invalid-session-string')).toThrow(UnauthorisedError);
+  test('throws UnauthorisedError on invalid session', async () => {
+    await expect(() => listOrders('invalid-session-string'))
+    .rejects.toThrow(UnauthorisedError);
   });
 });
 
 // lambda handler tests for listOrders 
 describe('Lambda handler tests for listOrders', () => {
   test('successfully returns 200 with empty orders list', async () => {
-    const session = userRegister(
+    const session = await userRegister(
       'John',
       'Smith',
       'johnsmith@gmail.com',
@@ -153,7 +155,7 @@ describe('Lambda handler tests for listOrders', () => {
 
   test('successfully returns 200 with user orders', async () => {
     const { session, order, currency } =
-      createOrderAndUser();
+      await createOrderAndUser();
 
     const event = {
       headers: { session: session.session },
@@ -194,10 +196,10 @@ describe('Lambda handler tests for listOrders', () => {
 
   test('does not return another user\'s orders', async () => {
     // user 1 creates an order
-    createOrderAndUser();
+    await createOrderAndUser();
 
     // user 2 lists their orders
-    const user2 = userRegister(
+    const user2 = await userRegister(
       'Anna',
       'Lee',
       'annalee@gmail.com',

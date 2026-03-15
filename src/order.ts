@@ -174,22 +174,17 @@ export async function listOrders(session: string) {
   // validates the session, tells us who is making the request
   const userId = getUserIdFromSession(session);
 
+  const { data: orgData } = await getOrgByUserId(Number(userId));
+  if (!orgData) {
+    return { orders: [] };
+  }
+
   const { data: orders, error } = await supabase
     .from('orders')
     .select('orderId, status, issuedDate, finalPrice, currency')
-    .eq('buyer_id', userId);
-  
+    .eq('buyerOrgID', orgData.orgId);
+
   if (error) throw error;
-  // filters and maps orders belonging to the logged-in user
-  /*const orders = data.orders
-    .filter(order => order.buyerOrgID === userId)
-    .map(order => ({
-      orderId: order.orderId ?? '',
-      status: 'active',
-      issuedDate: order.issuedDate,
-      finalPrice: order.finalPrice,
-      currency: order.currency
-    }));*/
 
   return { orders };
 }

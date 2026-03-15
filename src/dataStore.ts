@@ -67,7 +67,9 @@ export async function createOrderSupaPush(
       currency: order.currency, 
       finalPrice: order.finalPrice,
       buyerOrgID: order.buyerOrgID,
-      status: 'OPEN'
+      status: 'OPEN',
+      issuedDate: order.issuedDate,
+      issuedTime: order.issuedTime
     }]);
   
   if (orderError) {
