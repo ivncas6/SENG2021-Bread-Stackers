@@ -1,4 +1,4 @@
-import { Order, Users, Session} from './interfaces';
+import { Contact, Order } from './interfaces';
 import { createClient } from '@supabase/supabase-js';
 
 
@@ -9,22 +9,19 @@ const supabaseKey = process.env.supabaseKey || '';
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
 export interface Data {
-    users: Users[];
+    users: Contact[];
     orders: Order[];
-    sessions: Session[],
 }
 
 let data: Data = {
   users: [],
   orders: [],
-  sessions: [],
 };
 
 export function clearData() {
   data = {
     users: [],
     orders: [],
-    sessions: [],
   };
 }
 

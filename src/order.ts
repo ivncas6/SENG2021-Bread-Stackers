@@ -1,6 +1,5 @@
-import  { createOrderReturn, EmptyObject, ErrorObject, Item, Order, 
-  OrderInfo, 
-  ReqDeliveryPeriod, User } from './interfaces';
+import  { createOrderReturn, EmptyObject, ErrorObject, Item, 
+  Order, ReqDeliveryPeriod, ReqItem, ReqUser } from './interfaces';
 import { v4 as uuidv4 } from 'uuid';
 import { getData } from './dataStore';
 import { createOrderUBLXML } from './generateUBL';
@@ -8,18 +7,21 @@ import { InvalidDeliveryAddr, InvalidEmail, InvalidInput,
   InvalidOrderId,
   InvalidRequestPeriod, UnauthorisedError } from './throwError';
 import { getUserIdFromSession } from './userHelper';
+import { time } from 'node:console';
 
 
-export function createOrder(currency: string, session: string, 
-  user: User, 
+export function createOrder(
+  currency: string, 
+  session: string, 
+  user: ReqUser, 
   deliveryAddress: string, 
   reqDeliveryPeriod: ReqDeliveryPeriod,
-  items: Item[]): createOrderReturn | ErrorObject {
-  
+  items: ReqItem[]
+): createOrderReturn {
   
   const userId = getUserIdFromSession(session);
   const data = getData();
-  const u = data.users.find((u) => u.userId === userId);
+  const u = data.users.find((u) => u.contactId === userId);
   if (!u) {
     throw new UnauthorisedError('User does not exist');
   }
@@ -40,24 +42,28 @@ export function createOrder(currency: string, session: string,
   if (reqDeliveryPeriod.endDateTime <= reqDeliveryPeriod.startDateTime) {
     throw new InvalidRequestPeriod('The requested delivery period is invalid.');
   } 
-  let totalAmount = 0;
+
+  let taxExclusive = 0;
   for (const i of items) {
-    totalAmount += i.unitPrice * i.quantity;
+    taxExclusive += i.unitPrice * i.quantity;
   }
+  // assuming it's 10% for GST
+  const taxInclusive = taxExclusive * 1.1;
   const orderId: string = uuidv4();
+  const currTime = new Date();
     
   const orderDate: number = Math.floor(Date.now()/1000);
   const order: Order = {
     orderId: orderId,
-    orderDate: orderDate,
+    issuedDate: currTime.toISOString().slice(0, 10),
+    issuedTime: currTime.toLocaleTimeString('en-GB'),
     currency: currency,
-    totalAmount: totalAmount,
-    userId: userId,
-    user: user,
-    deliveryAddress: deliveryAddress,
-    reqDeliveryPeriod: reqDeliveryPeriod,
-    items: items,
-    status: 'OPEN'
+    status: 'OPEN',
+    buyerOrgID: userId,
+    sellerOrgID: 1,
+    taxExclusive: taxExclusive,
+    taxInclusive: taxInclusive,
+    finalPrice: taxInclusive
   };
 
   data.orders.push(order);
