@@ -7,8 +7,8 @@ import { UnauthorisedError } from '../throwError';
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import { listOrderHandler } from '../handlers/listOrder';
 
-beforeEach(() => {
-  clearData();
+beforeEach(async () => {
+  await clearData();
 });
 
 function createOrderAndUser() {

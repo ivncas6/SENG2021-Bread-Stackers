@@ -1,8 +1,8 @@
 import  { createOrderReturn, EmptyObject, 
   Order, ReqDeliveryPeriod, ReqItem, ReqUser } from './interfaces';
 import { v4 as uuidv4 } from 'uuid';
-import { getData, createOrderSupaPush, updateOrderStatus, 
-  getOrderByIdSupa, deleteOrderSupa, 
+import { createOrderSupaPush, updateOrderStatus, 
+  getOrderByIdSupa, 
   updateOrderSupa,
   getUserByIdSupa} from './dataStore';
 import { createOrderUBLXML } from './generateUBL';

@@ -27,8 +27,8 @@ import { getUserIdFromSession } from '../userHelper';
   }
 */
 
-beforeEach(() => {
-  clearData();
+beforeEach(async () => {
+  await clearData();
 });
 
 // requires create order to be working

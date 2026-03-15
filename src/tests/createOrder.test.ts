@@ -9,8 +9,8 @@ import { APIGatewayProxyEvent } from 'aws-lambda';
 import mockEvent from './mocks/createOrderMock.json';
 
 
-beforeEach(() => {
-  clearData();
+beforeEach(async () => {
+  await clearData();
 });
 
 function createUser() {

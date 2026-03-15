@@ -11,8 +11,8 @@ import {
 import { registerUserHandler } from '../handlers/userRegister';
 import { APIGatewayProxyEvent } from 'aws-lambda';
 
-beforeEach(() => {
-  clearData();
+beforeEach(async () => {
+  await clearData();
 });
 
 //this is backend logic tests 

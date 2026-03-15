@@ -22,7 +22,7 @@ let data: Data = {
   items: [],
 };
 
-export function clearData() {
+export async function clearData() {
   data = {
     users: [],
     orders: [],
@@ -31,6 +31,16 @@ export function clearData() {
     addresses: [],
     items: [],
   };
+
+  const { error: errorItems } = await supabase.from('order_items').delete().neq('name', '');
+  const { error: errorDeliveries } = await supabase.from('deliveries').delete().neq('order_id', '');
+  const { error: errorOrders } = await supabase.from('orders').delete().neq('orderId', '');
+  const { error: errorAddresses } = await supabase.from('addresses').delete().neq('street', '');
+  const { error: errorUsers } = await supabase.from('users').delete().neq('email', '');
+
+  if (errorUsers || errorOrders) {
+    console.error("Error clearing Supabase data:", errorUsers || errorOrders);
+  }
 }
 
 export const getData = () : Data => data;
