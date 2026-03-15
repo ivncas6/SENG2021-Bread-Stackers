@@ -91,7 +91,7 @@ export async function userDetailsUpdate(
   email: string,
   nameFirst: string, 
   nameLast: string,
-  telephone: string
+  phone: string
 ): Promise<EmptyObject | ErrorObject> {
 
   invalidnameFirst(nameFirst);
@@ -105,7 +105,7 @@ export async function userDetailsUpdate(
   }
   
   await invalidemailcheck(session, email);
-  await invalidphonecheck(session, telephone);
+  await invalidphonecheck(session, phone);
 
   const { error } = await supabase
     .from('contacts')
@@ -113,7 +113,7 @@ export async function userDetailsUpdate(
       firstName: nameFirst,
       lastName: nameLast,
       email: email,
-      phone: telephone
+      phone: phone
     })
     .eq('contactId', userId);
 

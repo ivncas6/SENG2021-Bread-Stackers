@@ -1,4 +1,3 @@
-import { clearData } from '../dataStore';
 import { userRegister, userDetailsUpdate } from '../userRegister';
 import { SessionId } from '../interfaces';
 import {
@@ -10,25 +9,34 @@ import {
 } from '../throwError';
 import { updateUserDetailsHandler } from '../handlers/userDetails';
 import { APIGatewayProxyEvent } from 'aws-lambda';
+import { supabase } from '../supabase';
+const mockedSupabase = supabase as any;
 
 beforeEach(async () => {
-  await clearData();
+  jest.clearAllMocks();
+  mockedSupabase.single.mockResolvedValue({ data: null, error: null });
+  mockedSupabase.maybeSingle.mockResolvedValue({ data: null, error: null });
 });
 
 async function registerUser() {
-  const session = await userRegister(
+  mockedSupabase.single
+    .mockResolvedValueOnce({ data: null, error: null })
+    .mockResolvedValueOnce({ data: { contactId: 999 }, error: null });
+  return await userRegister(
     'John',
     'Smith',
     'johnsmith@gmail.com',
     '0412345678',
     'password123',
-  );
-  return session as SessionId;
+  ) as SessionId;
 }
 
 describe('test for the user details update function', () => {
   test('Successful update', async () => {
     const user = await registerUser();
+
+    mockedSupabase.single.mockResolvedValueOnce({ data: { contactId: 999 }, error: null });
+
     const res = await userDetailsUpdate(
       user.session,
       'johnsmith@gmail.com',
@@ -37,6 +45,7 @@ describe('test for the user details update function', () => {
       '0412345678'
     );
     expect(res).toStrictEqual({});
+    expect(mockedSupabase.from).toHaveBeenCalledWith('contacts');
   });
 
   test('Invalid name characters', async () => {
@@ -101,6 +110,7 @@ describe('test for the user details update function', () => {
 
   test('Invalid session', async () => {
     const user = await registerUser();
+    mockedSupabase.single.mockResolvedValueOnce({ data: null, error: null });
     await expect(
       userDetailsUpdate(
         user.session + 'adw',
@@ -114,6 +124,7 @@ describe('test for the user details update function', () => {
 
   test('Invalid phone short', async () => {
     const user = await registerUser();
+    mockedSupabase.single.mockResolvedValueOnce({ data: { contactId: 999 }, error: null });
     await expect(
       userDetailsUpdate(
         user.session,
@@ -155,6 +166,7 @@ describe('test for the user details update function', () => {
 describe('Lambda handler tests for userDetailsUpdate', () => {
   test('successful update', async () => {
     const user = await registerUser();
+    mockedSupabase.single.mockResolvedValueOnce({ data: { contactId: 999 }, error: null });
     const result = {
       headers: {
         session: user.session,
@@ -163,7 +175,7 @@ describe('Lambda handler tests for userDetailsUpdate', () => {
         firstName: 'John',
         lastName: 'Smith',
         email: 'johnsmith@gmail.com',
-        telephone: '0412345678'
+        phone: '0412345678'
       }),
     } as unknown as APIGatewayProxyEvent;
 
@@ -182,7 +194,25 @@ describe('Lambda handler tests for userDetailsUpdate', () => {
         firstName: 'John',
         lastName: 'Smith',
         email: 'johnsmith.com',
-        telephone: '0412345678'
+        phone: '0412345678'
+      }),
+    } as unknown as APIGatewayProxyEvent;
+
+    const response = await updateUserDetailsHandler(result);
+    expect(response.statusCode).toBe(400);
+  });
+
+  test('invalid phone provided', async () => {
+    const user = await registerUser();
+    const result = {
+      headers: {
+        session: user.session,
+      },
+      body: JSON.stringify({
+        firstName: 'John',
+        lastName: 'Smith',
+        email: 'johnsmith@gmail.com',
+        phone: '0412345678456789'
       }),
     } as unknown as APIGatewayProxyEvent;
 
@@ -192,6 +222,7 @@ describe('Lambda handler tests for userDetailsUpdate', () => {
 
   test('invalid session provided', async () => {
     const user = await registerUser();
+    mockedSupabase.single.mockResolvedValueOnce({ data: null, error: null });
     const result = {
       headers: {
         session: user.session + 'aws',
@@ -200,7 +231,7 @@ describe('Lambda handler tests for userDetailsUpdate', () => {
         firstName: 'John',
         lastName: 'Smith',
         email: 'johnsmith@gmail.com',
-        telephone: '0412345678'
+        phone: '0412345678'
       }),
     } as unknown as APIGatewayProxyEvent;
 

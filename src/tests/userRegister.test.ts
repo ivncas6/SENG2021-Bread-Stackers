@@ -18,7 +18,6 @@ const mockedSupabase = supabase as any;
 jest.mock('../supabase')
 
 beforeEach(async () => {
-  await clearData();
   jest.clearAllMocks();
   // restore mock to default
   mockedSupabase.single.mockResolvedValue({ data: null, error: null });
