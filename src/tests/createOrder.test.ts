@@ -42,7 +42,7 @@ beforeEach(() => {
 
   // default mocks
   mockedUserHelper.getUserIdFromSession.mockReturnValue(1);
-  mockedDataStore.getUserByIdSupa.mockResolvedValue({ email: userDetails.email } as any);
+  mockedDataStore.getUserByIdSupa.mockResolvedValue({ email: userDetails.email } as never);
   mockedDataStore.getOrgByUserId.mockResolvedValue({ data: { orgId: 10 }, error: null } as never);
   mockedDataStore.createOrderSupaPush.mockResolvedValue();
   mockedGenerateUBL.createOrderUBLXML.mockImplementation();
@@ -51,7 +51,8 @@ beforeEach(() => {
 describe('Backend logic test for Creating an Order', () => {
 
   test('Successfully create one order', async () => {
-    const res = await createOrder('AUD', MOCK_SESSION, userDetails, '123 Kingsford', reqDeliveryPeriod, items);
+    const res = await createOrder('AUD', MOCK_SESSION, userDetails,
+      '123 Kingsford', reqDeliveryPeriod, items);
     
     expect(res).toEqual({ orderId: expect.any(String) });
     expect(mockedDataStore.createOrderSupaPush).toHaveBeenCalled();
@@ -59,7 +60,8 @@ describe('Backend logic test for Creating an Order', () => {
 
   test('Testing Invalid input - Wrong Phone number', async () => {
     await expect(
-      createOrder('AUD', MOCK_SESSION, { ...userDetails, telephone: '246' }, '123 Kingsford', reqDeliveryPeriod, items)
+      createOrder('AUD', MOCK_SESSION, { ...userDetails, telephone: '246' }, 
+        '123 Kingsford', reqDeliveryPeriod, items)
     ).rejects.toThrow(InvalidPhone);
   });
   
@@ -91,7 +93,8 @@ describe('Lambda function for createOrder', () => {
       ...mockEvent,
       headers: { ...mockEvent.headers, session: MOCK_SESSION },
       body: JSON.stringify({
-        currency: 'AUD', user: userDetails, reqDeliveryPeriod, deliveryAddress: '123 Kingsford', items
+        currency: 'AUD', user: userDetails, 
+        reqDeliveryPeriod, deliveryAddress: '123 Kingsford', items
       })
     } as unknown as APIGatewayProxyEvent;
 
@@ -122,7 +125,8 @@ describe('Lambda function for createOrder', () => {
     const event = {
       headers: { session: MOCK_SESSION },
       body: JSON.stringify({
-        currency: 'AUD', user: userDetails, reqDeliveryPeriod: badPeriod, deliveryAddress: '123 Kingsford', items
+        currency: 'AUD', user: userDetails, 
+        reqDeliveryPeriod: badPeriod, deliveryAddress: '123 Kingsford', items
       })
     } as unknown as APIGatewayProxyEvent;
 
@@ -140,7 +144,8 @@ describe('Lambda function for createOrder', () => {
     const event = {
       headers: { session: 'bad-session' },
       body: JSON.stringify({
-        currency: 'AUD', user: userDetails, deliveryAddress: '123 Kingsford', reqDeliveryPeriod, items
+        currency: 'AUD', user: userDetails, 
+        deliveryAddress: '123 Kingsford', reqDeliveryPeriod, items
       })
     } as unknown as APIGatewayProxyEvent;
 

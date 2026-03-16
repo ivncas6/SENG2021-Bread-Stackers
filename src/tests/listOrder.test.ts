@@ -4,7 +4,7 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { UnauthorisedError } from '../throwError';
 import { Order } from '../interfaces';
 
-// Mocking Dependencies
+// mocking deps
 import * as userHelper from '../userHelper';
 import * as dataStore from '../dataStore';
 import { supabase } from '../supabase';
@@ -22,7 +22,7 @@ const mockSupabaseEq = jest.fn();
 
 beforeEach(() => {
   jest.clearAllMocks();
-  // We mock the chain: supabase.from().select().eq()
+  // mock chain -> supabase.from().select().eq()
   mockedSupabase.from.mockReturnValue({
     select: jest.fn().mockReturnValue({
       eq: mockSupabaseEq
@@ -36,9 +36,10 @@ async function createOrderAndUser() {
   const mockOrderId = 'order-abc-123';
   const currency = 'AUD';
 
-  // Setup Happy Path Mocks
+  // keep these
   mockedUserHelper.getUserIdFromSession.mockReturnValue(1);
-  mockedDataStore.getOrgByUserId.mockResolvedValue({ data: { orgId: mockOrgId }, error: null } as never);
+  mockedDataStore.getOrgByUserId.mockResolvedValue(
+    { data: { orgId: mockOrgId }, error: null } as never);
 
   const mockOrder: Partial<Order> = {
     orderId: mockOrderId,
@@ -110,7 +111,7 @@ describe('Lambda handler tests for listOrders', () => {
   });
 
   test('successfully returns 200 with user orders', async () => {
-    const { session, order, currency, mockOrder } = await createOrderAndUser();
+    const { session, order, mockOrder } = await createOrderAndUser();
     mockSupabaseEq.mockResolvedValueOnce({ data: [mockOrder], error: null });
 
     const event = { headers: { session: session.session } } as unknown as APIGatewayProxyEvent;

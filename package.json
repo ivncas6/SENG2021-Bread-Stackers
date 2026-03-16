@@ -16,7 +16,7 @@
     "author": "",
     "license": "ISC",
     "scripts": {
-        "test": "jest --runInBand --detectOpenHandles",
+        "test": "jest",
         "lint": "eslint '**/*.{ts,js}'",
         "lint-fix": "eslint --fix '**/*.{ts,js}'",
         "coverage": "jest --coverage"
