@@ -58,6 +58,10 @@ export const updateOrderHandler = async (event: APIGatewayProxyEvent) => {
         body: JSON.stringify({ error: err.message })
       };
     }
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: 'INTERNAL SERVER ERROR' })
+    };
 
   }
 };

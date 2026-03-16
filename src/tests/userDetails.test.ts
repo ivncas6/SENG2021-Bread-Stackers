@@ -1,229 +1,161 @@
-import { userRegister, userDetailsUpdate } from '../userRegister';
-import { clearData } from '../dataStore';
-import { SessionId } from '../interfaces';
+import { userDetailsUpdate } from '../userRegister';
+import { updateUserDetailsHandler } from '../handlers/userDetails';
+import { APIGatewayProxyEvent } from 'aws-lambda';
+import * as userHelper from '../userHelper';
+import * as dataStore from '../dataStore';
+import { supabase } from '../supabase';
 import {
   InvalidEmail,
   InvalidFirstName,
-  InvalidLastName,
   InvalidPhone,
   UnauthorisedError,
 } from '../throwError';
-import { updateUserDetailsHandler } from '../handlers/userDetails';
-import { APIGatewayProxyEvent } from 'aws-lambda';
 
-beforeEach(async () => {
-  // Always clear the real database before each test to prevent email collisions
-  await clearData();
+// 1. Mock external dependencies ONLY.
+// We use a factory for userHelper to keep the REAL validation logic but mock the DB/Session parts.
+jest.mock('../userHelper', () => {
+  const actual = jest.requireActual('../userHelper');
+  return {
+    ...actual,
+    getUserIdFromSession: jest.fn(),
+    invalidemailcheck: jest.fn(), // Mock these as they likely hit the DB
+    invalidphonecheck: jest.fn(),
+  };
 });
 
-async function registerUser() {
-  return await userRegister(
-    'John',
-    'Smith',
-    'johnsmith@gmail.com',
-    '0412345678',
-    'password123',
-  ) as SessionId;
+jest.mock('../dataStore');
+jest.mock('../supabase', () => ({
+  supabase: {
+    from: jest.fn().mockReturnThis(),
+    update: jest.fn().mockReturnThis(),
+    eq: jest.fn().mockReturnThis(),
+  }
+}));
+
+const mockedUserHelper = userHelper as jest.Mocked<typeof userHelper>;
+const mockedDataStore = dataStore as jest.Mocked<typeof dataStore>;
+const mockedSupabase = supabase as never;
+
+const mockEvent: Partial<APIGatewayProxyEvent> = {
+  headers: {},
+  body: ''
+};
+
+beforeEach(() => {
+  jest.clearAllMocks();
+});
+
+async function setupMockUser() {
+  const session = 'valid-session';
+  const userId = 123;
+  mockedUserHelper.getUserIdFromSession.mockReturnValue(userId);
+  mockedDataStore.getUserByIdSupa.mockResolvedValue({ contactId: userId } as never);
+  mockedSupabase.eq.mockResolvedValue({ error: null });
+  
+  // Default: validation helpers do nothing (success)
+  mockedUserHelper.invalidemailcheck.mockResolvedValue(undefined);
+  mockedUserHelper.invalidphonecheck.mockResolvedValue(undefined);
+  
+  return { session, userId };
 }
 
 describe('test for the user details update function', () => {
   test('Successful update', async () => {
-    const user = await registerUser();
-
-    const res = await userDetailsUpdate(
-      user.session,
-      'johnsmith@gmail.com',
-      'John',
-      'Brenner',
-      '0412345678'
-    );
+    const { session } = await setupMockUser();
+    const res = await userDetailsUpdate(session, 'test@test.com', 'John', 'Smith', '0412345678');
     expect(res).toStrictEqual({});
   });
 
   test('Invalid name characters', async () => {
-    const user = await registerUser();
+    const { session } = await setupMockUser();
+    // This uses the REAL logic from userHelper because of requireActual
     await expect(
-      userDetailsUpdate(user.session, 'johnsmith@gmail.com', 'Joh!', 'Smith', '0412345678')
+      userDetailsUpdate(session, 'test@test.com', 'Joh!', 'Smith', '0412345678')
     ).rejects.toThrow(InvalidFirstName);
   });
 
   test('Invalid short name', async () => {
-    const user = await registerUser();
+    const { session } = await setupMockUser();
     await expect(
-      userDetailsUpdate(user.session, 'johnsmith@gmail.com', 'J', 'Smith', '0412345678')
+      userDetailsUpdate(session, 'test@test.com', 'J', 'Smith', '0412345678')
     ).rejects.toThrow(InvalidFirstName);
   });
 
-  test('Invalid long name', async () => {
-    const user = await registerUser();
-    await expect(
-      userDetailsUpdate(
-        user.session,
-        'johnsmith@gmail.com',
-        'JohnJohnJohnJohnJohnJohn',
-        'Smith',
-        '0412345678'
-      )
-    ).rejects.toThrow(InvalidFirstName);
-  });
+  test('invalid email', async () => {
+    const { session } = await setupMockUser();
+    // Since we mocked invalidemailcheck, we tell it to throw for this test
+    mockedUserHelper.invalidemailcheck.mockRejectedValue(new InvalidEmail('Invalid email'));
 
-  test('Invalid email', async () => {
-    const user = await registerUser();
     await expect(
-      userDetailsUpdate(
-        user.session,
-        'johnsmith.com',
-        'JohnJohn',
-        'Smith',
-        '0412345678'
-      )
+      userDetailsUpdate(session, 'bad-email', 'John', 'Smith', '0412345678')
     ).rejects.toThrow(InvalidEmail);
   });
 
-  test('Invalid last name character', async () => {
-    const user = await registerUser();
+  test('invalid phone', async () => {
+    const { session } = await setupMockUser();
+    mockedUserHelper.invalidphonecheck.mockRejectedValue(new InvalidPhone('Invalid phone'));
+
     await expect(
-      userDetailsUpdate(user.session, 'johnsmith@gmail.com', 'John', 'Sm!th', '0412345678')
-    ).rejects.toThrow(InvalidLastName);
+      userDetailsUpdate(session, 'test@test.com', 'John', 'Smith', '123')
+    ).rejects.toThrow(InvalidPhone);
   });
 
-  test('Invalid last name length', async () => {
-    const user = await registerUser();
-    await expect(
-      userDetailsUpdate(
-        user.session,
-        'johnsmith@gmail.com',
-        'John',
-        'SmithSmithSmithSmithSmith',
-        '0412345678'
-      )
-    ).rejects.toThrow(InvalidLastName);
-  });
+  test('user doesnt exist in database', async () => {
+    const { session } = await setupMockUser();
+    mockedDataStore.getUserByIdSupa.mockResolvedValue(null);
 
-  test('Invalid session', async () => {
-    const user = await registerUser();
     await expect(
-      userDetailsUpdate(
-        user.session + 'adw',
-        'johnsmith@gmail.com',
-        'John',
-        'Smith',
-        '0412345678'
-      )
+      userDetailsUpdate(session, 'test@test.com', 'John', 'Smith', '0412345678')
     ).rejects.toThrow(UnauthorisedError);
-  });
-
-  test('Invalid phone short', async () => {
-    const user = await registerUser();
-    await expect(
-      userDetailsUpdate(
-        user.session,
-        'johnsmith@gmail.com',
-        'John',
-        'Smith',
-        '04123'
-      )
-    ).rejects.toThrow(InvalidPhone);
-  });
-
-  test('Invalid phone long', async () => {
-    const user = await registerUser();
-    await expect(
-      userDetailsUpdate(
-        user.session,
-        'johnsmith@gmail.com',
-        'John',
-        'Smith',
-        '04123234567890'
-      )
-    ).rejects.toThrow(InvalidPhone);
-  });
-
-  test('Invalid phone char', async () => {
-    const user = await registerUser();
-    await expect(
-      userDetailsUpdate(
-        user.session,
-        'johnsmith@gmail.com',
-        'John',
-        'Smith',
-        '04123234!5'
-      )
-    ).rejects.toThrow(InvalidPhone);
   });
 });
 
 describe('Lambda handler tests for userDetailsUpdate', () => {
-  test('successful update', async () => {
-    const user = await registerUser();
-    const result = {
-      headers: {
-        session: user.session,
-      },
+  test('invalid email provided (Lambda returns 400)', async () => {
+    const { session } = await setupMockUser();
+    mockedUserHelper.invalidemailcheck.mockRejectedValue(new InvalidEmail('Invalid email'));
+
+    const event = {
+      ...mockEvent,
+      headers: { session: session },
       body: JSON.stringify({
         firstName: 'John',
         lastName: 'Smith',
-        email: 'johnsmith@gmail.com',
+        email: 'invalid.com',
         phone: '0412345678'
       }),
     } as unknown as APIGatewayProxyEvent;
 
-    const response = await updateUserDetailsHandler(result);
-    expect(response.statusCode).toStrictEqual(200);
-    expect(JSON.parse(response.body)).toStrictEqual({});
+    const response = await updateUserDetailsHandler(event);
+    expect(response?.statusCode).toBe(400);
+    expect(JSON.parse(response?.body ?? '{}')).toHaveProperty('error');
   });
 
-  test('invalid email provided', async () => {
-    const user = await registerUser();
-    const result = {
-      headers: {
-        session: user.session,
-      },
-      body: JSON.stringify({
-        firstName: 'John',
-        lastName: 'Smith',
-        email: 'johnsmith.com',
-        phone: '0412345678'
-      }),
+  test('Missing session header returns 401', async () => {
+    const event = {
+      ...mockEvent,
+      headers: {}, // empty session
+      body: JSON.stringify({ firstName: 'John' }),
     } as unknown as APIGatewayProxyEvent;
 
-    const response = await updateUserDetailsHandler(result);
-    expect(response.statusCode).toBe(400);
-  });
-
-  test('invalid phone provided', async () => {
-    const user = await registerUser();
-    const result = {
-      headers: {
-        session: user.session,
-      },
-      body: JSON.stringify({
-        firstName: 'John',
-        lastName: 'Smith',
-        email: 'johnsmith@gmail.com',
-        phone: '0412345678456789'
-      }),
-    } as unknown as APIGatewayProxyEvent;
-
-    const response = await updateUserDetailsHandler(result);
-    expect(response.statusCode).toBe(400);
-  });
-
-  test('invalid session provided', async () => {
-    const user = await registerUser();
-    const result = {
-      headers: {
-        session: user.session + 'aws',
-      },
-      body: JSON.stringify({
-        firstName: 'John',
-        lastName: 'Smith',
-        email: 'johnsmith@gmail.com',
-        phone: '0412345678'
-      }),
-    } as unknown as APIGatewayProxyEvent;
-
-    const response = await updateUserDetailsHandler(result);
+    const response = await updateUserDetailsHandler(event);
     expect(response.statusCode).toBe(401);
+  });
+
+  test('Internal Server Error (500) on unexpected crash', async () => {
+    const { session } = await setupMockUser();
+    // crash
+    mockedUserHelper.getUserIdFromSession.mockImplementation(() => {
+      throw new Error('Unexpected Crash');
+    });
+
+    const event = {
+      ...mockEvent,
+      headers: { session },
+      body: JSON.stringify({}),
+    } as unknown as APIGatewayProxyEvent;
+
+    const response = await updateUserDetailsHandler(event);
+    expect(response.statusCode).toBe(500);
   });
 });

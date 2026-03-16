@@ -29,10 +29,10 @@ async function createTemplateOrderAndUser() {
   const mockOrgId = testIdx * 10;
   const mockOrderId = `order-uuid-${testIdx}`;
 
-  // the default successful mock responses for this user/order
+  // default successful mock res for user/order
   mockedUserHelper.getUserIdFromSession.mockReturnValue(mockUserId);
   
-  // 'as never' skips strict Supabase response linting
+  // 'never' skips Supabase response lint
   mockedDataStore.getOrgByUserId.mockResolvedValue({ 
     data: { orgId: mockOrgId }, error: null 
   } as never);
@@ -57,14 +57,14 @@ test('cancel a single order', async () => {
   const res = await cancelOrder(details.order.orderId, 'reason here', details.session.session);
   
   expect(res).toStrictEqual({ reason: 'reason here' });
-  // verify the delete function was called correctly instead of checking db
+  // verify delete func was called correctly instead of checking db
   expect(mockedDataStore.deleteOrderSupa).toHaveBeenCalledWith(details.order.orderId);
 });
 
 test('Invalid orderId on backend', async () => {
   const details = await createTemplateOrderAndUser();
   
-  // override the happy path to simulate a missing order
+  // override og path to simulate a missing order
   mockedDataStore.getOrderByIdSupa.mockResolvedValue(null);
 
   await expect(
@@ -75,7 +75,7 @@ test('Invalid orderId on backend', async () => {
 test('Invalid session on backend', async () => {
   const details = await createTemplateOrderAndUser();
   
-  // override to simulate an invalid token throwing an error
+  // override to simulate invalid token
   mockedUserHelper.getUserIdFromSession.mockImplementation(() => {
     throw new UnauthorisedError('Invalid session');
   });
@@ -88,7 +88,7 @@ test('Invalid session on backend', async () => {
 test('Wrong user session (Order belongs to someone else)', async () => {
   const details = await createTemplateOrderAndUser();
   
-  // override the order mock to belong to a different Org ID
+  // override order mock to belong to different Org ID
   const wrongOrder: Partial<Order> = { buyerOrgID: 9999, orderId: details.order.orderId };
   mockedDataStore.getOrderByIdSupa.mockResolvedValue(wrongOrder as Order);
 
