@@ -291,9 +291,15 @@ paths:
       description: Takes details from the user and updates it in the system
       parameters:
         - in: header
+          name: x-api-key
+          required: true
+          type: string
+          description: abc123your-secret-key-here
+        - in: header
           name: session
           required: true
           type: string
+          description: JWT-token
         - in: body
           name: body
           required: true
@@ -329,9 +335,15 @@ paths:
       description: Logs the user out of the system
       parameters:
         - in: header
+          name: x-api-key
+          required: true
+          type: string
+          description: abc123your-secret-key-here
+        - in: header
           name: session
           required: true
           type: string
+          description: JWT-token
       responses:
         200:
           description: "**SUCCESS**"
@@ -352,9 +364,15 @@ paths:
       description: Creates an order by taking details from user 
       parameters:
         - in: header
+          name: x-api-key
+          required: true
+          type: string
+          description: abc123your-secret-key-here
+        - in: header
           name: session
           required: true
           type: string
+          description: JWT-token
         - in: body
           name: body
           required: true
@@ -393,9 +411,15 @@ paths:
           required: true
           type: string
         - in: header
+          name: x-api-key
+          required: true
+          type: string
+          description: abc123your-secret-key-here
+        - in: header
           name: session
           required: true
           type: string
+          description: JWT-token
       responses:
         200:
           description: "**SUCCESS**"
@@ -423,9 +447,15 @@ paths:
           required: true
           type: string
         - in: header
+          name: x-api-key
+          required: true
+          type: string
+          description: abc123your-secret-key-here
+        - in: header
           name: session
           required: true
           type: string
+          description: JWT-token
         - in: body
           name: body
           required: true
@@ -456,9 +486,15 @@ paths:
           required: true
           type: string
         - in: header
+          name: x-api-key
+          required: true
+          type: string
+          description: abc123your-secret-key-here
+        - in: header
           name: session
           required: true
           type: string
+          description: JWT-token
         - in: body
           name: body
           required: true
@@ -486,9 +522,15 @@ paths:
       description: Display the list with information about multiple orders.
       parameters:
         - in: header
+          name: x-api-key
+          required: true
+          type: string
+          description: abc123your-secret-key-here
+        - in: header
           name: session
           required: true
           type: string
+          description: JWT-token
       responses:
         200:
           description: "**SUCCESS**"
