@@ -231,6 +231,11 @@ paths:
       summary: Register a new user 
       description: Takes required details from the user to register them to the system
       parameters:
+        - in: header
+          name: x-api-key
+          required: true
+          type: string
+          description: abc123your-secret-key-here
         - in: body
           name: body
           required: true
@@ -260,6 +265,11 @@ paths:
       summary: Login an existing user
       description: Takes required details from the user to log them into the system
       parameters:
+        - in: header
+          name: x-api-key
+          required: true
+          type: string
+          description: abc123your-secret-key-here
         - in: body
           name: body
           required: true
