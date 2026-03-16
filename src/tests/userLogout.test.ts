@@ -1,39 +1,43 @@
 import { clearData } from '../dataStore';
 import { userRegister, userLogout } from '../userRegister';
-import { Session } from '../interfaces';
+import { SessionId } from '../interfaces';
 import { UnauthorisedError } from '../throwError';
 import { userLogoutHandler } from '../handlers/userLogout';
 import { APIGatewayProxyEvent } from 'aws-lambda';
+import { randomUUID } from 'node:crypto';
 
-beforeEach(() => {
-  clearData();
+beforeEach(async () => {
+  await clearData();
+  jest.clearAllMocks();
 });
 
-function registerUser() {
-  const session = userRegister(
+
+async function registerUser() {
+  const session = await userRegister(
     'John',
     'Smith',
     'johnsmith@gmail.com',
+    '0412345678',
     'password123',
-  ) as Session;
+  ) as SessionId;
   return session;
 }
 
 describe('user logout test', () => {
-  test('sucessful logout', () => {
-    const user = registerUser();
-    const res = userLogout(user.session);
+  test('sucessful logout', async () => {
+    const user = await registerUser();
+    const res = await userLogout(user.session);
     expect(res).toStrictEqual({});
   });
-  test('invalid session provided', () => {
-    const user = registerUser();
-    expect(() => userLogout(user.session + 'aswd')).toThrow(UnauthorisedError);
+  test('invalid session provided', async () => {
+    await registerUser();
+    await expect(() => userLogout(randomUUID())).rejects.toThrow(UnauthorisedError);
   });
 });
 
 describe('user logout handler test', () => {
   test('sucessful logout', async () => {
-    const user = registerUser();
+    const user = await registerUser();
     const result = {
       headers: {
         session: user.session,
@@ -45,7 +49,7 @@ describe('user logout handler test', () => {
     expect(JSON.parse(response.body)).toStrictEqual({});
   });
   test('sucessful logout', async () => {
-    const user = registerUser();
+    const user = await registerUser();
     const result = {
       headers: {
         session: user.session + 'awsd',

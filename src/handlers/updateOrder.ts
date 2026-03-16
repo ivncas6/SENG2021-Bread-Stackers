@@ -11,8 +11,22 @@ export const updateOrderHandler = async (event: APIGatewayProxyEvent) => {
     const body = JSON.parse(event.body ?? '{}');
     const session = event.headers.session || event.headers.Session;
 
+    if (!session) {
+      return {
+        statusCode: 401,
+        body: JSON.stringify({ error: 'JWT session token is missing' })
+      };
+    }
+
+    if (!orderId) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: 'Order ID is missing from path' })
+      };
+    }
+
     // Call updateOrder function
-    const result = updateOrder(
+    const result = await updateOrder(
       session as string,
       orderId,
       body.deliveryAddress,
@@ -44,6 +58,10 @@ export const updateOrderHandler = async (event: APIGatewayProxyEvent) => {
         body: JSON.stringify({ error: err.message })
       };
     }
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: 'INTERNAL SERVER ERROR' })
+    };
 
   }
 };

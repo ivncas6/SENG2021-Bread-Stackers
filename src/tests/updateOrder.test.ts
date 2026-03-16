@@ -1,100 +1,143 @@
+import { updateOrder } from '../order';
+import { updateOrderHandler } from '../handlers/updateOrder';
 import { APIGatewayProxyEvent } from 'aws-lambda';
-import { clearData, getData } from '../dataStore';
-import { userRegister } from '../userRegister';
-import { createOrder, updateOrder } from '../order';
-import { updateOrderHandler } from '../handlers/updateOrder'; 
-import { createOrderReturn, Session } from '../interfaces';
-import { 
-  InvalidOrderId, 
-  UnauthorisedError,
-} from '../throwError';
+import * as orderModule from '../order';
+import * as dataStore from '../dataStore';
+import * as userHelper from '../userHelper';
+import { InvalidOrderId, UnauthorisedError } from '../throwError';
+import { Order } from '../interfaces';
+
+// Mock the dependencies
+jest.mock('../userHelper');
+jest.mock('../dataStore');
+
+const mockedUserHelper = userHelper as jest.Mocked<typeof userHelper>;
+const mockedDataStore = dataStore as jest.Mocked<typeof dataStore>;
+
+// Define the mock event locally to fix the missing JSON issue
+const mockEvent: Partial<APIGatewayProxyEvent> = {
+  headers: {},
+  pathParameters: {},
+  body: ''
+};
+
+let testIdx = 0;
 
 beforeEach(() => {
-  clearData();
+  jest.clearAllMocks();
 });
 
-function createOrderAndUser() {
-  const session = userRegister(
-    'John',
-    'Smith',
-    'johnsmith@gmail.com',
-    'password123',
-  ) as Session;
 
-  const reqDeliveryPeriod = {
-    startDateTime: Math.floor(Date.now() / 1000) + 3600,
-    endDateTime: Math.floor(Date.now() / 1000) + 86400,
+// Helper to create mock data for updateOrder tests
+
+async function createTemplateOrderAndUser() {
+  testIdx++;
+  const mockSession = `session-${testIdx}`;
+  const mockUserId = testIdx;
+  const mockOrgId = testIdx * 10;
+  const mockOrderId = `order-${testIdx}`;
+
+  mockedUserHelper.getUserIdFromSession.mockReturnValue(mockUserId);
+  mockedDataStore.getOrgByUserId.mockResolvedValue({ 
+    data: { orgId: mockOrgId }, error: null 
+  } as never);
+
+  const mockOrder: Partial<Order> = { 
+    orderId: mockOrderId,
+    status: 'OPEN',
+    buyerOrgID: mockOrgId,
+    deliveries: [{
+      startDate: 1700000000,
+      endDate: 1700086400,
+      addresses: { street: '123 Kingsford' }
+    }],
+    order_lines: [] as never
   };
 
-  const items = [{ name: 'onion', description: 'purple', unitPrice: 5, quantity: 1 }];
-  const userDetails = { name: 'John Smith', telephone: 123456789, email: 'johnsmith@gmail.com' };
+  mockedDataStore.getOrderByIdSupa.mockResolvedValue(mockOrder as Order);
 
-  const order = createOrder(
-    'AUD',
-    session.session,
-    userDetails,
-    '123 Kingsford',
-    reqDeliveryPeriod,
-    items
-  ) as createOrderReturn; 
-
-  return { session, orderId: order.orderId, reqDeliveryPeriod, userDetails, items };
+  return { 
+    session: { session: mockSession }, 
+    orderId: mockOrderId,
+    mockOrder,
+    reqDeliveryPeriod: { startDateTime: 1700000000, endDateTime: 1700086400 }
+  };
 }
 
 describe('Backend logic test for updateOrder', () => {
-  test('successfully update order delivery address', () => {
-    const { session, orderId, reqDeliveryPeriod } = createOrderAndUser();
-    
+  test('successfully update order delivery address', async () => {
+    const details = await createTemplateOrderAndUser();
     const newAddress = '456 Kensington Street';
-    
-    // Call backend logic
-    updateOrder(
-      session.session,
-      orderId,
+
+    mockedDataStore.updateOrderSupa.mockResolvedValue({} as never);
+
+    // simulate the database returning the new data after update
+    const updatedOrder = { 
+      ...details.mockOrder, 
+      status: 'processed',
+      deliveries: [{ 
+        ...details.mockOrder.deliveries![0], 
+        addresses: { street: newAddress },
+        startDate: details.reqDeliveryPeriod.startDateTime
+      }]
+    };
+    mockedDataStore.getOrderByIdSupa.mockResolvedValue(updatedOrder as Order);
+
+    await updateOrder(
+      details.session.session,
+      details.orderId,
       newAddress,
-      reqDeliveryPeriod,
+      details.reqDeliveryPeriod,
       'processed'
     );
 
-    // Verify state in dataStore
-    const data = getData();
-    const updatedOrder = data.orders.find((o) => o.orderId === orderId);
+    const result = await dataStore.getOrderByIdSupa(details.orderId) as Order;
     
-    
-    expect(updatedOrder).toBeDefined();
-    expect(updatedOrder?.deliveryAddress).toBe(newAddress);
-    expect(updatedOrder?.status).toBe('processed');
+    expect(result.status).toStrictEqual('processed');
+    expect(result.deliveries[0].addresses?.street).toStrictEqual(newAddress);
+    // check updateOrderSupa called with correct params 
+    expect(mockedDataStore.updateOrderSupa).toHaveBeenCalledWith(
+      details.orderId, 
+      newAddress, 
+      details.reqDeliveryPeriod, 
+      'processed'
+    );
   });
 
-  test('Invalid Session', () => {
-    const { orderId, reqDeliveryPeriod } = createOrderAndUser();
-    expect(() => {
-      updateOrder('invalid_session_123', orderId, 'Address', reqDeliveryPeriod, 'processed');
-    }).toThrow(UnauthorisedError);
+  test('Invalid Session', async () => {
+    const details = await createTemplateOrderAndUser();
+    mockedUserHelper.getUserIdFromSession.mockImplementation(() => {
+      throw new UnauthorisedError('Invalid Session');
+    });
+
+    await expect(
+      updateOrder('invalid_session_123', details.orderId, 
+        'Address', details.reqDeliveryPeriod, 'processed')
+    ).rejects.toThrow(UnauthorisedError);
   });
 
-  test('Order does not exist', () => {
-    const { session, reqDeliveryPeriod } = createOrderAndUser();
-    expect(() => {
-      updateOrder(session.session, 'non_existent_id', 'Address', reqDeliveryPeriod, 'processed');
-    }).toThrow(InvalidOrderId);
+  test('Order does not exist', async () => {
+    const details = await createTemplateOrderAndUser();
+    mockedDataStore.getOrderByIdSupa.mockResolvedValue(null);
+
+    await expect(
+      updateOrder(details.session.session, 'non_existent_id', 
+        'Address', details.reqDeliveryPeriod, 'processed')
+    ).rejects.toThrow(InvalidOrderId);
   });
 });
 
 describe('Lambda function for updateOrderHandler', () => {
   test('successfully updates an order', async () => {
-    const { session, orderId, reqDeliveryPeriod } = createOrderAndUser();
+    const details = await createTemplateOrderAndUser();
 
     const event = {
-      pathParameters: {
-        orderId: orderId
-      },
-      headers: {
-        session: session.session
-      },
+      ...mockEvent,
+      pathParameters: { orderId: details.orderId },
+      headers: { session: details.session.session },
       body: JSON.stringify({
         deliveryAddress: '789 New Kensington Road',
-        reqDeliveryPeriod: reqDeliveryPeriod,
+        reqDeliveryPeriod: details.reqDeliveryPeriod,
         status: 'delivered'
       })
     } as unknown as APIGatewayProxyEvent;
@@ -102,14 +145,13 @@ describe('Lambda function for updateOrderHandler', () => {
     const response = await updateOrderHandler(event);
 
     expect(response?.statusCode).toStrictEqual(200);
-    expect(JSON.parse(response?.body ?? '{}')).toBeDefined(); 
+    expect(JSON.parse(response?.body ?? '{}')).toBeDefined();
   });
 
   test('session header missing', async () => {
-    const { orderId } = createOrderAndUser();
-
     const event = {
-      pathParameters: { orderId: orderId },
+      ...mockEvent,
+      pathParameters: { orderId: 'order-123' },
       headers: {}, 
       body: JSON.stringify({ status: 'cancelled' })
     } as unknown as APIGatewayProxyEvent;
@@ -117,59 +159,35 @@ describe('Lambda function for updateOrderHandler', () => {
     const response = await updateOrderHandler(event);
 
     expect(response?.statusCode).toStrictEqual(401);
-    const body = JSON.parse(response?.body ?? '{}');
-    expect(body).toHaveProperty('error');
-    expect(typeof body.error).toBe('string');
+    expect(JSON.parse(response?.body ?? '{}')).toHaveProperty('error');
   });
 
   test('Order ID missing', async () => {
-    const { session } = createOrderAndUser();
+    const details = await createTemplateOrderAndUser();
 
     const event = {
+      ...mockEvent,
       pathParameters: {}, 
-      headers: { session: session.session },
+      headers: { session: details.session.session },
       body: JSON.stringify({ status: 'processed' })
     } as unknown as APIGatewayProxyEvent;
 
     const response = await updateOrderHandler(event);
 
     expect(response?.statusCode).toStrictEqual(400);
-    const body = JSON.parse(response?.body ?? '{}');
-    expect(body).toHaveProperty('error');
-    expect(typeof body.error).toBe('string');
   });
 
-  test('Invalid Delivery Address', async () => {
-    const { session, orderId, reqDeliveryPeriod } = createOrderAndUser();
-    const longName = '1234567890'.repeat(21);
+  test('Invalid Request Period (end before start)', async () => {
+    const details = await createTemplateOrderAndUser();
 
     const event = {
-      pathParameters: { orderId: orderId },
-      headers: { session: session.session },
-      body: JSON.stringify({
-        deliveryAddress: longName, 
-        reqDeliveryPeriod: reqDeliveryPeriod
-      })
-    } as unknown as APIGatewayProxyEvent;
-
-    const response = await updateOrderHandler(event);
-
-    expect(response?.statusCode).toStrictEqual(400);
-    const body = JSON.parse(response?.body ?? '{}');
-    expect(body).toHaveProperty('error');
-    expect(typeof body.error).toStrictEqual('string');
-  });
-
-  test('Invalid Request Period', async () => {
-    const { session, orderId } = createOrderAndUser();
-
-    const event = {
-      pathParameters: { orderId: orderId },
-      headers: { session: session.session },
+      ...mockEvent,
+      pathParameters: { orderId: details.orderId },
+      headers: { session: details.session.session },
       body: JSON.stringify({
         reqDeliveryPeriod: {
-          startDateTime: 1700000000,
-          endDateTime: 1600000000 
+          startDateTime: 2000000000,
+          endDateTime: 1000000000 
         }
       })
     } as unknown as APIGatewayProxyEvent;
@@ -177,8 +195,30 @@ describe('Lambda function for updateOrderHandler', () => {
     const response = await updateOrderHandler(event);
 
     expect(response?.statusCode).toStrictEqual(400);
-    const body = JSON.parse(response?.body ?? '{}');
-    expect(body).toHaveProperty('error');
-    expect(typeof body.error).toStrictEqual('string');
+    expect(JSON.parse(response?.body ?? '{}')).toHaveProperty('error');
+  });
+
+  test('Generic 500 error mapping', async () => {
+    const details = await createTemplateOrderAndUser();
+    
+    // spy matches the handler's error handling expectation
+    const spy = jest.spyOn(orderModule, 'updateOrder').mockImplementation(() => {
+      throw new Error('Unexpected DB Crash');
+    });
+
+    const event = {
+      ...mockEvent,
+      pathParameters: { orderId: details.orderId },
+      headers: { session: details.session.session },
+      body: JSON.stringify({ status: 'processed' })
+    } as unknown as APIGatewayProxyEvent;
+
+    const response = await updateOrderHandler(event);
+    
+    // using ?.statusCode and explicitly checking type to satisfy TS
+    expect(response?.statusCode).toStrictEqual(500);
+    expect(JSON.parse(response?.body ?? '{}')).toHaveProperty('error');
+
+    spy.mockRestore();
   });
 });

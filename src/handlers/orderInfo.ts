@@ -29,7 +29,7 @@ export const getOrderInfoHandler = async (event: APIGatewayProxyEvent) => {
     }
 
     // call the backend function
-    const res = getOrderInfo(session, orderId);
+    const res = await getOrderInfo(session, orderId);
 
     return {
       statusCode: 200,

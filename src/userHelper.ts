@@ -1,13 +1,18 @@
-import { ErrorObject, Session, UserInfo, SessionId } from './interfaces';
-import { Data, getData } from './dataStore';
+import { ErrorObject, SessionId } from './interfaces';
 import {
   InvalidEmail,
   InvalidFirstName,
   InvalidLastName,
+  InvalidPhone,
 } from './throwError';
 import * as crypto from 'crypto';
-import { v4 as uuidv4 } from 'uuid';
 import validator from 'validator';
+import jwt from 'jsonwebtoken';
+import { UnauthorisedError } from './throwError';
+import 'dotenv/config';
+import { supabase } from './supabase';
+
+const secretKey = process.env.JWT_SECRET || 'fallback-key-get-your-own-in-env-file';
 
 /**
  * Given a registered userId the function will create a new session.
@@ -16,23 +21,28 @@ import validator from 'validator';
  */
 // helper function for creating a new session
 export function createNewSession(userId:number): SessionId {
-  const data = getData();
-
-  // generate random session id
-  const sessionId = uuidv4();
-
-  // create a new session object
-  const session = {
-    session: sessionId,
-    userId: userId
-  };
-
-  // push  object in session array and return session id
-  data.sessions.push(session);
-
-  return { session: sessionId };
+  // generate JWT
+  const token = jwt.sign({ userId: userId }, secretKey, { expiresIn: '2h' });
+  return { session: token };
 }
 
+export function getUserIdFromSession(token: string): number {
+  try {
+    const decode = jwt.verify(token, secretKey) as { userId: number};
+
+    if (typeof decode.userId !== 'number') {
+      throw new UnauthorisedError('Invalid token payload');
+    }
+
+    return decode.userId;
+  } catch (e) {
+    if (e instanceof Error) {
+      throw new UnauthorisedError(e.message);
+    }
+
+    throw new UnauthorisedError('Invalid or expired session token');
+  }
+}
 
 export function invalidnameFirst(nameFirst: string): null | ErrorObject {
   const charRange: RegExp = /^[a-zA-Z\s\-']+$/;
@@ -63,22 +73,45 @@ export function invalidnameLast(nameLast: string): ErrorObject | null {
   return null;
 }
 
-export function invalidemailcheck(sessionId: string, email: string): ErrorObject | null {
-  const data: Data = getData();
-  const sessionEntry = data.sessions.find((s: Session) => s.session === sessionId);
-
-  if (!sessionEntry) return null;
-  const userId = sessionEntry.userId;
+export async function invalidemailcheck(sessionId: string, 
+  email: string): Promise<ErrorObject | null> {
+  const userId = getUserIdFromSession(sessionId);
 
   if (!validator.isEmail(email)) {
     throw new InvalidEmail('This email is not valid');
   }
 
-  const otherUsersEmail = data.users.some(
-    (user: UserInfo) => user.email === email && user.userId !== userId
-  );
-  if (otherUsersEmail) {
+  const { data: existingUser } = await supabase
+    .from('contacts')
+    .select('contactId')
+    .eq('email', email)
+    .neq('contactId', userId) // Check everyone EXCEPT the current user
+    .maybeSingle();
+
+  if (existingUser) {
     throw new InvalidEmail('Email is already used by another user');
+  }
+
+  return null;
+}
+
+export async function invalidphonecheck(sessionId: string, 
+  telephone: string): Promise<ErrorObject | null> {
+  const isAllDigits = /^\d+$/.test(telephone);
+  if (!isAllDigits || telephone.length < 8 || telephone.length > 12) {
+    throw new InvalidPhone('The telephone number is incorrect');
+  }
+
+  const userId = getUserIdFromSession(sessionId);
+  const { data: existingUser } = await supabase
+    .from('contacts')
+    .select('contactId')
+    .eq('telephone', telephone)
+    .neq('contactId', userId)
+    .maybeSingle();
+
+  if (existingUser) {
+    throw new InvalidPhone('Phone number is already used by another user');
   }
 
   return null;

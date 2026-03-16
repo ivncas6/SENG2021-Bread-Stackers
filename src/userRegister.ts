@@ -1,28 +1,41 @@
 import { EmptyObject, ErrorObject, SessionId } from './interfaces';
-import { getData } from './dataStore';
+import { createOrganisationSupa, getUserByIdSupa } from './dataStore';
 import {
   InvalidEmail,
+  InvalidPhone,
   InvalidLogin,
   InvalidPassword,
   UnauthorisedError
 } from './throwError';
 import { invalidnameFirst, invalidnameLast, getHashOf, checkPassword, 
-  createNewSession, invalidemailcheck,
+  createNewSession, invalidemailcheck, invalidphonecheck,
+  getUserIdFromSession,
 } from './userHelper';
 import validator from 'validator';
+import { supabase } from './supabase';
 
-export function userRegister(nameFirst: string, nameLast: string, email: string, 
-  password: string): SessionId | ErrorObject {
-  const data = getData();
-
-  // Check if the user has already registered an email
-  if (data.users.some(user => user.email === email)) {
-    throw new InvalidEmail('User already exists.');
-  }
+export async function userRegister(nameFirst: string, nameLast: string, email: string, 
+  telephone: string, password: string): Promise<SessionId> {
 
   // Check if the email is valid using the validator.isEmail function
   if (!validator.isEmail(email)) {
     throw new InvalidEmail('Invalid email format.');
+  }
+
+  const { data: existingUser } = await supabase
+    .from('contacts')
+    .select('email')
+    .eq('email', email)
+    .maybeSingle();
+
+  // Check if the user has already registered an email
+  if (existingUser) {
+    throw new InvalidEmail('User already exists.');
+  }
+
+  const digitsCheck = /^\d+$/.test(telephone);
+  if (!digitsCheck || telephone.length < 8 || telephone.length > 12) {
+    throw new InvalidPhone('Invalid phone format');
   }
 
   invalidnameFirst(nameFirst);
@@ -34,27 +47,47 @@ export function userRegister(nameFirst: string, nameLast: string, email: string,
   }
 
   const hashPassword = getHashOf(password);
-  // Create user object
-  const userId = data.users.length;
-  const user = {
-    userId,
-    name: nameFirst + ' ' + nameLast,
-    email,
-    nameFirst,
-    nameLast,
-    password: hashPassword
-  };
 
   // Store user object into database
-  data.users.push(user);
-  return createNewSession(user.userId);
+  const { data: newUser, error } = await supabase 
+    .from('contacts')
+    .insert([{
+      firstName: nameFirst,
+      lastName: nameLast,
+      email,
+      telephone,
+      password: hashPassword
+    }])
+    .select()
+    .single();
+  
+  if (error) throw new Error(error.message);
+
+  try {
+    const org = await createOrganisationSupa(newUser.contactId, `${nameFirst} ${nameLast}`);
+    if (!org) {
+      throw new Error('Database returned no data for organization creation');
+    }
+  } catch (e: unknown) {
+    // We pass the original error 'e' into the 'cause' property
+    throw new Error(`User created, but Org failed: ${e instanceof Error ? 
+      e.message : String(e)}`, { 
+      cause: e 
+    });
+  }
+
+  return createNewSession(newUser.contactId);
 }
 
-export function userLogin(email: string, password: string): SessionId | ErrorObject {
-  const data = getData();
+export async function userLogin(email: string, password: string): Promise<SessionId | ErrorObject> {
 
-  // search through the users array in the data object to find a user with matching email to input
-  const user = data.users.find(user => user.email === email);
+  const { data: user, error } = await supabase
+    .from('contacts')
+    .select('contactId, password')
+    .eq('email', email)
+    .maybeSingle();
+
+  if (error) throw error;
 
   // if the user was not found
   if (!user) {
@@ -66,46 +99,51 @@ export function userLogin(email: string, password: string): SessionId | ErrorObj
   }
   // Resets to 0 after successful login
 
-  return createNewSession(user.userId);
+  return createNewSession(user.contactId);
 }
 
 // Given the userId and set of user properties update the properties of the logged in adminUser
-export function userDetailsUpdate(session: string, email: string,
-  nameFirst: string, nameLast: string): EmptyObject | ErrorObject {
-  const data = getData();
-  const ses = data.sessions.find(s => s.session === session);
-  if (!ses) {
-    throw new UnauthorisedError('Not a valid session');
-  }
-  const userId = ses.userId;
-  const user = data.users.find((u) => u.userId === userId);
+export async function userDetailsUpdate(
+  session: string, 
+  email: string,
+  nameFirst: string, 
+  nameLast: string,
+  phone: string
+): Promise<EmptyObject | ErrorObject> {
 
-  invalidemailcheck(ses.session, email);
   invalidnameFirst(nameFirst);
   invalidnameLast(nameLast);
+ 
+  const userId = getUserIdFromSession(session);
+  const u = await getUserByIdSupa(userId);
 
-  if (!user) {
+  if (!u) {
     throw new UnauthorisedError('User does not exist');
   }
+  
+  await invalidemailcheck(session, email);
+  await invalidphonecheck(session, phone);
 
-  user.email = email;
-  user.nameFirst = nameFirst;
-  user.nameLast = nameLast;
+  const { error } = await supabase
+    .from('contacts')
+    .update({
+      firstName: nameFirst,
+      lastName: nameLast,
+      email: email,
+      telephone: phone
+    })
+    .eq('contactId', userId);
+  
+  if (error) throw error;
 
   return { };
 }
 
-export function userLogout(sessionId: string): EmptyObject | ErrorObject {
-  const data = getData();
+export async function userLogout(sessionId: string): Promise<EmptyObject | ErrorObject> {
 
-  const sessionEntry = data.sessions.find(s => s.session === sessionId);
+  /* Use for any live or self hosted server implementations in the future */
 
-  if (!sessionEntry) {
-    throw new UnauthorisedError('Session is empty or not valid');
-  }
-
-  data.sessions = data.sessions.filter(s => s.session !== sessionId);
-
+  getUserIdFromSession(sessionId);
   return {};
 }
 

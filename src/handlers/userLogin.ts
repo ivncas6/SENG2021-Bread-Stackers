@@ -14,7 +14,7 @@ export const userLoginHandler = async (event: APIGatewayProxyEvent) => {
     const password = body.password;
 
     // call the backend function
-    const session = userLogin(email, password);
+    const session = await userLogin(email, password);
 
     return {
       statusCode: 200,

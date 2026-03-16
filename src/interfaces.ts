@@ -1,49 +1,79 @@
-export interface Session {
-    session: string,
-    userId: number
+// PK = Primary Key, FK = Foreign Key
+
+export interface Contact {
+  contactId: number; // PK
+  firstName: string;
+  lastName: string;
+  telephone: string;
+  email: string;
+  password?: string
 }
 
-export interface UserInfo {
-    userId: number;
-    name: string;
-    email: string;
+export interface Address {
+  addressID: number;
+  street: string;
+  city: string;
+  postcode: string;
+  country: string;
 }
 
-export interface Users extends UserInfo {
-  nameFirst: string;
-  nameLast: string;
-  password: string;
+export interface Organisation {
+  orgId: number; // PK
+  orgName: string;
+  addressId: number; // FK
+  contactId:  number; // FK
 }
 
 export interface Order {
-  orderId?: string;
-  orderDate: number,
+  orderId: string; // PK
+  issuedDate: string;
+  issuedTime: string;
   currency: string;
-  totalAmount: number;
-  userId: number;
-  user: User;
-  deliveryAddress: string;
-  reqDeliveryPeriod: ReqDeliveryPeriod;
-  items: Item[];
   status: string; 
+  unitPrice?: number;
+  buyerOrgID: number; // FK
+  sellerOrgID: number; //FK
+  taxExclusive: number;
+  taxInclusive: number;
+  finalPrice: number;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  deliveries?: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  organisations?: any;
+  order_lines?: never[];
 }
 
+export interface Delivery {
+  deliveryID: number; // PK
+  orderID: string; // FK
+  deliveryAddressID: number; // FK
+  deliveryTerms: string;
+  startDate: string;
+  endDate: string;
+}
 
-export interface OrderInfo {
-  orderId: string;
+export interface OrderLine {
+  orderLineID: number; // PK
+  orderID: string; // FK
+  itemID: number; // FK
+  quantity: number;
   status: string;
-  orderDateTime: number;
-  currency: string;
-  deliveryAddress: string;
-  userDetails: User;
-  reqDeliveryPeriod: ReqDeliveryPeriod;
-  items: Item[];
 }
 
-export interface User {
-  name: string,
-  telephone: number;
-  email: string;
+export interface Item {
+  itemId: number; // PK
+  name: string;
+  price: number;
+  description: string;
+  buyerItemId?: number;
+  sellerItemId?: number;
+}
+
+export interface ReqItem {
+  name: string;
+  description: string;
+  unitPrice: number;
+  quantity: number;
 }
 
 export interface ReqDeliveryPeriod {
@@ -51,11 +81,26 @@ export interface ReqDeliveryPeriod {
   endDateTime: number;
 }
 
-export interface Item {
-  name: string;
-  description: string;
-  unitPrice: number;
-  quantity: number;
+export interface ReqUser {
+  firstName: string;
+  lastName: string
+  telephone: string;
+  email: string;
+}
+
+export interface OrderLineWithItem extends OrderLine {
+  items: Item;
+}
+
+export interface SupabaseMock {
+  from: jest.Mock;
+  select: jest.Mock;
+  insert: jest.Mock;
+  update: jest.Mock;
+  delete: jest.Mock;
+  eq: jest.Mock;
+  single: jest.Mock;
+  maybeSingle: jest.Mock;
 }
 
 export interface OrderId {

@@ -1,27 +1,34 @@
-import  { createOrderReturn, EmptyObject, ErrorObject, Item, Order, 
-  OrderInfo, 
-  ReqDeliveryPeriod, Session, User } from './interfaces';
+import  { createOrderReturn, EmptyObject, 
+  Order, ReqDeliveryPeriod, ReqItem, ReqUser, 
+  OrderLineWithItem } from './interfaces';
 import { v4 as uuidv4 } from 'uuid';
-import { getData } from './dataStore';
+import { createOrderSupaPush, 
+  getOrderByIdSupa, 
+  updateOrderSupa,
+  deleteOrderSupa,
+  getUserByIdSupa,
+  getOrgByUserId} from './dataStore';
 import { createOrderUBLXML } from './generateUBL';
 import { InvalidDeliveryAddr, InvalidEmail, InvalidInput,
   InvalidOrderId,
+  InvalidPhone,
   InvalidRequestPeriod, UnauthorisedError } from './throwError';
+import { getUserIdFromSession } from './userHelper';
+import { supabase } from './supabase';
 
 
-export function createOrder(currency: string, session: string, 
-  user: User, 
+export async function createOrder(
+  currency: string, 
+  session: string, 
+  user: ReqUser, 
   deliveryAddress: string, 
   reqDeliveryPeriod: ReqDeliveryPeriod,
-  items: Item[]): createOrderReturn | ErrorObject {
+  items: ReqItem[]
+): Promise<createOrderReturn> {
   
-  const data = getData();
-  const ses = data.sessions.find(s => s.session === session);
-  if (!ses) {
-    throw new UnauthorisedError('Not a valid session');
-  }
-  const userId = ses.userId;
-  const u = data.users.find((u) => u.userId === userId);
+  const userId = Number(getUserIdFromSession(session));
+  const u = await getUserByIdSupa(userId);
+
   if (!u) {
     throw new UnauthorisedError('User does not exist');
   }
@@ -30,9 +37,10 @@ export function createOrder(currency: string, session: string,
     throw new InvalidEmail('This email does not belong to the user.');
   }
 
-  const phone = Math.abs(user.telephone).toString();
-  if (phone.length !== 9) {
-    throw new InvalidInput('The telephone number is incorrect');
+  const phone = user.telephone;
+  const isAllDigits = /^\d+$/.test(phone);
+  if (!isAllDigits || phone.length < 8 || phone.length > 12) {
+    throw new InvalidPhone('The telephone number is incorrect');
   }
   
   if(deliveryAddress.length > 200) {
@@ -42,117 +50,147 @@ export function createOrder(currency: string, session: string,
   if (reqDeliveryPeriod.endDateTime <= reqDeliveryPeriod.startDateTime) {
     throw new InvalidRequestPeriod('The requested delivery period is invalid.');
   } 
-  let totalAmount = 0;
-  for (const i of items) {
-    totalAmount += i.unitPrice * i.quantity;
+
+  const { data: orgData } = await getOrgByUserId(userId);
+  if (!orgData) {
+    throw new Error('User does not have an associated organization');
   }
+
+  let taxExclusive = 0;
+  for (const i of items) {
+    taxExclusive += i.unitPrice * i.quantity;
+  }
+  // assuming it's 10% for GST
+  const taxInclusive = taxExclusive * 1.1;
   const orderId: string = uuidv4();
+  const currTime = new Date();
     
-  const orderDate: number = Math.floor(Date.now()/1000);
   const order: Order = {
     orderId: orderId,
-    orderDate: orderDate,
+    issuedDate: currTime.toISOString().slice(0, 10),
+    issuedTime: currTime.toLocaleTimeString('en-AU'),
     currency: currency,
-    totalAmount: totalAmount,
-    userId: userId,
-    user: user,
-    deliveryAddress: deliveryAddress,
-    reqDeliveryPeriod: reqDeliveryPeriod,
-    items: items,
-    status: 'OPEN'
+    status: 'OPEN',
+    buyerOrgID: orgData.orgId,
+    sellerOrgID: 1,
+    taxExclusive: taxExclusive,
+    taxInclusive: taxInclusive,
+    finalPrice: taxInclusive
   };
 
-  data.orders.push(order);
-  createOrderUBLXML(order);
+  await createOrderSupaPush(order, deliveryAddress, reqDeliveryPeriod, items);
+  createOrderUBLXML(order, items, user, deliveryAddress);
 
   return { orderId: orderId };
 }
 
-export function cancelOrder(orderId: string, reason: string, session: string) {
-
-  const data = getData();
-  const foundOrder = data.orders.find(order => order.orderId === orderId);
-
-  // find existing sesh
-  const ses = data.sessions.find((s) => s.session === session);
-  if (!ses) {
-    throw new UnauthorisedError('Not a valid session');
-  }
+export async function cancelOrder(orderId: string, reason: string, session: string) {
 
   // find if user for sesh exists
-  const userId = ses.userId;
-  const u = data.users.find((u) => u.userId === userId);
-  if (!u) {
-    throw new UnauthorisedError('User does not exist');
+  const userId = getUserIdFromSession(session);
+
+  const { data: orgData } = await getOrgByUserId(userId);
+
+  if (!orgData) {
+    throw new UnauthorisedError('User has no associated organization');
   }
+
+  // get order
+  const foundOrder = await getOrderByIdSupa(orderId);
 
   // error check
   if (foundOrder == null) {
     throw new InvalidInput('error: Invalid orderId');
   }
 
-  if (foundOrder.userId != userId) {
-    throw new UnauthorisedError('User does not exist');
+  if (foundOrder.buyerOrgID !== orgData.orgId) {
+    throw new UnauthorisedError('You do not have permission to cancel this order');
   }
 
-  data.orders.splice(data.orders.indexOf(foundOrder), 1);
+  // if not hard delete just change status
+  // await updateOrderStatus(orderId, 'CANCELLED');
+
+  await deleteOrderSupa(orderId);
+
+  // in case we want to logging deletes
+  /*console.log('Order ' + orderId + ' cancelled by userId ' 
+    + userId + '. Reason: ' + reason);*/
 
   // uses reason
   return { reason: reason };
 }
 
-export function getOrderInfo(session: string, orderId: string): OrderInfo | ErrorObject {
-  const data = getData();
-  const ses = data.sessions.find((s) => s.session === session);
-  if (!ses) {
-    throw new UnauthorisedError('Not a valid session');
+export async function getOrderInfo(session: string, orderId: string) {
+  const userId = getUserIdFromSession(session);
+
+  const { data: orgData } = await getOrgByUserId(Number(userId));
+  if (!orgData) {
+    throw new UnauthorisedError('User has no associated organization');
   }
+
   // find the order
-  const order = data.orders.find((order) => order.orderId === orderId);
+  const order = await getOrderByIdSupa(orderId);
+
   if (!order) {
     throw new InvalidOrderId(
       'Provided orderId doesnot correspond to any existing order',
     );
   }
-  if (order.userId !== ses.userId) {
+  if (String(order.buyerOrgID) !== String(orgData.orgId)) {
     throw new InvalidOrderId(
       'Order with the provided orderId does not belong to this user.',
     );
   }
+
+  const delivery = order.deliveries?.[0];
+  const address = delivery?.addresses;
+  const contact = order.organisations?.contacts;
+
   return {
     orderId: orderId,
-    orderDateTime: order.orderDate,
     status: order.status,
+    issuedDate: order.issuedDate,
+    issuedTime: order.issuedTime,
     currency: order.currency,
-    deliveryAddress: order.deliveryAddress,
-    userDetails: order.user,
-    reqDeliveryPeriod: order.reqDeliveryPeriod,
-    items: order.items,
+    taxExclusive: Number(order.taxExclusive || 0),
+    taxInclusive: Number(order.taxInclusive || 0),
+    finalPrice: Number(order.finalPrice || 0),
+    address: address?.street || '',
+    deliveryDetails: {
+      startDateTime: Number(delivery?.startDate || 0),
+      endDateTime: Number(delivery?.endDate || 0),
+    },
+    userDetails: {
+      firstName: contact?.firstName || '',
+      lastName: contact?.lastName || '',
+      telephone: contact?.telephone || '',
+      email: contact?.email || '',
+    },
+    items: (order.order_lines || []).map((line: OrderLineWithItem) => ({
+      name: line.items?.name || 'Unknown',
+      description: line.items?.description || '',
+      unitPrice: Number(line.items?.price || 0),
+      quantity: line.quantity
+    }))
   };
 }
 
-export function listOrders(session: string): { orders: OrderInfo[] } {
-  const data = getData();
+export async function listOrders(session: string) {
 
   // validates the session, tells us who is making the request
-  const sessionEntry = data.sessions.find(s => s.session === session);
-  if (!sessionEntry) {
-    throw new UnauthorisedError('Invalid or expired session');
+  const userId = getUserIdFromSession(session);
+
+  const { data: orgData } = await getOrgByUserId(Number(userId));
+  if (!orgData) {
+    return { orders: [] };
   }
 
-  // filters and maps orders belonging to the logged-in user
-  const orders: OrderInfo[] = data.orders
-    .filter(order => order.userId === sessionEntry.userId)
-    .map(order => ({
-      orderId: order.orderId ?? '',
-      status: 'active',
-      orderDateTime: order.orderDate,
-      currency: order.currency,
-      deliveryAddress: order.deliveryAddress,
-      userDetails: order.user,
-      reqDeliveryPeriod: order.reqDeliveryPeriod,
-      items: order.items,
-    }));
+  const { data: orders, error } = await supabase
+    .from('orders')
+    .select('orderId, status, issuedDate, finalPrice, currency')
+    .eq('buyerOrgID', orgData.orgId);
+
+  if (error) throw error;
 
   return { orders };
 }
@@ -167,29 +205,29 @@ export function listOrders(session: string): { orders: OrderInfo[] } {
  * @returns {EmptyObject}
  */
 
-export function updateOrder(
+export async function updateOrder(
   session: string,
   orderId: string,
   deliveryAddress: string,
   reqDeliveryPeriod: ReqDeliveryPeriod,
   status: string
-): EmptyObject {
-  const data = getData();
+): Promise<EmptyObject> {
 
   // Check the current session 
-  const sessionEntry = data.sessions.find((s: Session) => s.session === session);
-  if (!sessionEntry) {
-    throw new UnauthorisedError('Not a valid session');
+  const userId = getUserIdFromSession(session);
+
+  const { data: orgData } = await getOrgByUserId(Number(userId));
+  if (!orgData) {
+    throw new UnauthorisedError('User has no associated organization');
   }
 
   // Check order exist 
-  const order = data.orders.find(o => o.orderId === orderId);
+  const order = await getOrderByIdSupa(orderId);
   if (!order) {
     throw new InvalidOrderId('Order ID does not exist');
   }
 
-  // Check access 
-  if (order.userId !== sessionEntry.userId) {
+  if (order.buyerOrgID !== orgData.orgId) {
     throw new UnauthorisedError('You do not have permission to update this order');
   }
 
@@ -206,10 +244,7 @@ export function updateOrder(
     throw new InvalidRequestPeriod('The requested delivery period is invalid.');
   }
 
-  // Update Order
-  order.deliveryAddress = deliveryAddress;
-  order.reqDeliveryPeriod = reqDeliveryPeriod;
-  order.status = status;
+  await updateOrderSupa(orderId, deliveryAddress, reqDeliveryPeriod, status);
 
   // Return empty 
   return {};

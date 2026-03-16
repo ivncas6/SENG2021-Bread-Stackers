@@ -14,7 +14,7 @@ export const userLogoutHandler = async (event: APIGatewayProxyEvent) => {
     }
 
     // call the backend function
-    const res = userLogout(session);
+    const res = await userLogout(session);
 
     return {
       statusCode: 200,

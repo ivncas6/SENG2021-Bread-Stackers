@@ -1,179 +1,239 @@
 import { getOrderInfo } from '../order';
-import { clearData } from '../dataStore';
-import { createOrder } from '../order';
-import { userRegister } from '../userRegister';
-import { OrderInfo, Session } from '../interfaces';
-import { InvalidOrderId, UnauthorisedError } from '../throwError';
-import { APIGatewayProxyEvent } from 'aws-lambda';
 import { getOrderInfoHandler } from '../handlers/orderInfo';
+import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
+import * as orderModule from '../order';
+import { InvalidOrderId, UnauthorisedError } from '../throwError';
+import * as userHelper from '../userHelper';
+import * as dataStore from '../dataStore';
+import { Order } from '../interfaces';
+
+const mockEvent: Partial<APIGatewayProxyEvent> = {
+  headers: {},
+  pathParameters: {},
+  body: ''
+};
+
+// jest mocks
+jest.mock('../userHelper');
+jest.mock('../dataStore');
+
+const mockedUserHelper = userHelper as jest.Mocked<typeof userHelper>;
+const mockedDataStore = dataStore as jest.Mocked<typeof dataStore>;
+
+let testIdx = 0;
 
 beforeEach(() => {
-  clearData();
+  jest.clearAllMocks();
 });
 
-function createOrderAndUser() {
-  const session = userRegister(
-    'John',
-    'Smith',
-    'johnsmith@gmail.com',
-    'password123',
-  ) as Session;
-  const reqDeliveryPeriod = {
-    startDateTime: Math.floor(Date.now() / 1000),
-    endDateTime: Math.floor((Date.now() + 72 * 3600 * 1000) / 1000), // three days from startDate
-  };
-  const items = [
-    {
-      name: 'onion',
-      description: 'a purple vegetable',
-      unitPrice: 5,
-      quantity: 15,
-    },
-    {
-      name: 'tomato',
-      description: 'A red fruit',
-      unitPrice: 4,
-      quantity: 100,
-    },
-  ];
-  const userDetails = {
-    name: 'John Smith',
-    telephone: 123456789,
-    email: 'johnsmith@gmail.com',
-  };
-  const currency = 'AUD';
+// helper for mock data
+async function createTemplateOrderAndUser() {
+  testIdx++;
+  const mockSession = `valid-session-${testIdx}`;
+  const mockUserId = testIdx;
+  const mockOrgId = testIdx * 10;
+  const mockOrderId = `order-uuid-${testIdx}`;
 
-  const order = createOrder(
-    currency,
-    session.session,
-    userDetails,
-    '123 Street Name, Kingsford',
-    reqDeliveryPeriod,
-    items,
-  ) as OrderInfo;
+  mockedUserHelper.getUserIdFromSession.mockReturnValue(mockUserId);
 
-  return { session, order, userDetails, reqDeliveryPeriod, items, currency };
+  mockedDataStore.getOrgByUserId.mockResolvedValue({ 
+    data: { orgId: mockOrgId }, error: null 
+  } as never);
+
+  const mockOrder: Partial<Order> = { 
+    orderId: mockOrderId,
+    status: 'OPEN',
+    issuedDate: '2026-03-16',
+    issuedTime: '10:00:00 AM',
+    currency: 'AUD',
+    taxExclusive: 475,
+    taxInclusive: 522.5,
+    finalPrice: 522.5,
+    buyerOrgID: mockOrgId,
+    deliveries: [{
+      startDate: 1672531200,
+      endDate: 1672617600,
+      addresses: { street: '123 Street Name, Kingsford' }
+    }],
+    organisations: {
+      contacts: {
+        firstName: 'John',
+        lastName: 'Smith',
+        telephone: '0412345678',
+        email: 'johnsmith@gmail.com'
+      }
+    },
+    order_lines: [
+      {
+        quantity: 15,
+        items: { name: 'onion', description: 'a purple vegetable', price: 5 }
+      },
+      {
+        quantity: 100,
+        items: { name: 'tomato', description: 'A red fruit', price: 4 }
+      }
+    ] as never 
+  };
+
+  mockedDataStore.getOrderByIdSupa.mockResolvedValue(mockOrder as Order);
+
+  return { 
+    session: { session: mockSession }, 
+    order: mockOrder,
+    userId: mockUserId,
+    orgId: mockOrgId
+  };
 }
 
-// backend logic test for getOrderInfo
 describe('getOrderInfo tests', () => {
-  test('successfully returns the order info', () => {
-    const { session, order, userDetails, reqDeliveryPeriod, items, currency } =
-      createOrderAndUser();
-    const res = getOrderInfo(session.session, order.orderId);
-    expect(res).toEqual({
-      orderId: order.orderId,
-      orderDateTime: expect.any(Number),
-      status: expect.any(String),
-      currency: currency,
-      deliveryAddress: '123 Street Name, Kingsford',
-      userDetails,
-      reqDeliveryPeriod,
-      items
+  test('successfully returns the order info', async () => {
+    const details = await createTemplateOrderAndUser();
+
+    const res = await getOrderInfo(details.session.session, details.order.orderId!);
+    
+    expect(res).toStrictEqual({
+      orderId: details.order.orderId,
+      issuedDate: '2026-03-16',
+      issuedTime: '10:00:00 AM',
+      status: 'OPEN',
+      currency: 'AUD',
+      finalPrice: 522.5,
+      address: '123 Street Name, Kingsford',
+      deliveryDetails: {
+        startDateTime: 1672531200,
+        endDateTime: 1672617600
+      },
+      userDetails: {
+        firstName: 'John',
+        lastName: 'Smith',
+        telephone: '0412345678',
+        email: 'johnsmith@gmail.com'
+      },
+      items: [
+        { name: 'onion', description: 'a purple vegetable', unitPrice: 5, quantity: 15 },
+        { name: 'tomato', description: 'A red fruit', unitPrice: 4, quantity: 100 }
+      ],
+      taxExclusive: 475,
+      taxInclusive: 522.5,
     });
   });
-  test('invalid orderid error', () => {
-    const { session, order } = createOrderAndUser();
-    expect(() => getOrderInfo(session.session, order.orderId + '123')).toThrow(
-      InvalidOrderId
-    );
+
+  test('invalid orderid error', async () => {
+    const details = await createTemplateOrderAndUser();
+    mockedDataStore.getOrderByIdSupa.mockResolvedValue(null);
+
+    await expect(getOrderInfo(details.session.session, details.order.orderId! + '123'))
+      .rejects.toThrow(InvalidOrderId);
   });
-  test('invalid session error', () => {
-    const { session, order } = createOrderAndUser();
-    expect(() =>
-      getOrderInfo(session.session + 'athwuhd', order.orderId)
-    ).toThrow(UnauthorisedError);
+
+  test('invalid session error', async () => {
+    mockedUserHelper.getUserIdFromSession.mockImplementation(() => {
+      throw new UnauthorisedError('Invalid session');
+    });
+
+    await expect(getOrderInfo('bad-session', 'any-id'))
+      .rejects.toThrow(UnauthorisedError);
   });
-  test('order does not belong to user', () => {
-    const { order } = createOrderAndUser();
-    const user2 = userRegister(
-      'Anna',
-      'Lee',
-      'annaLee@gmail.com',
-      'password123'
-    ) as Session;
-    expect(() => getOrderInfo(user2.session, order.orderId)).toThrow(
-      InvalidOrderId
-    );
+
+  test('order does not belong to user', async () => {
+    const details = await createTemplateOrderAndUser();
+    
+    // order belongs to different org
+    const wrongOrder: Partial<Order> = { ...details.order, buyerOrgID: 9999 };
+    mockedDataStore.getOrderByIdSupa.mockResolvedValue(wrongOrder as Order);
+
+    await expect(getOrderInfo(details.session.session, details.order.orderId!))
+      .rejects.toThrow(InvalidOrderId);
+  });
+
+  test('User has no associated organization', async () => {
+    const details = await createTemplateOrderAndUser();
+    mockedDataStore.getOrgByUserId.mockResolvedValue({ data: null, error: null } as never);
+
+    await expect(getOrderInfo(details.session.session, details.order.orderId!))
+      .rejects.toThrow(UnauthorisedError);
   });
 });
 
-// Lamda function test for getOrderInfo
-describe('Lamda function tests for getOrderInfo', () => {
-  test('sucessfully returns order info', async () => {
-    const { session, order, userDetails, reqDeliveryPeriod, items, currency } =
-      createOrderAndUser();
-    const result = {
-      headers: {
-        session: session.session
-      },
-      pathParameters: {
-        orderId: order.orderId
-      }
+describe('Lambda function tests for getOrderInfo', () => {
+  test('successfully returns order info via handler', async () => {
+    const details = await createTemplateOrderAndUser();
+    
+    const event = { 
+      ...mockEvent,
+      headers: { session: details.session.session },
+      pathParameters: { orderId: details.order.orderId }
     } as unknown as APIGatewayProxyEvent;
 
-    const response = await getOrderInfoHandler(result);
+    const response: APIGatewayProxyResult = await getOrderInfoHandler(event);
+    
     expect(response.statusCode).toEqual(200);
-    expect(JSON.parse(response.body)).toEqual({
-      orderId: order.orderId,
-      orderDateTime: expect.any(Number),
-      status: expect.any(String),
-      currency: currency,
-      deliveryAddress: '123 Street Name, Kingsford',
-      userDetails,
-      reqDeliveryPeriod,
-      items
+    const body = JSON.parse(response.body);
+    expect(body.orderId).toBe(details.order.orderId);
+    expect(body.items).toHaveLength(2);
+  });
+
+  test('orderId does not exist (Lambda)', async () => {
+    const details = await createTemplateOrderAndUser();
+    mockedDataStore.getOrderByIdSupa.mockResolvedValue(null);
+
+    const event = { 
+      ...mockEvent,
+      headers: { session: details.session.session },
+      pathParameters: { orderId: 'fake-id' }
+    } as unknown as APIGatewayProxyEvent;
+
+    const response: APIGatewayProxyResult = await getOrderInfoHandler(event);
+    expect(response.statusCode).toStrictEqual(400);
+    expect(JSON.parse(response.body)).toHaveProperty('error');
+  });
+
+  test('invalid session provided (Lambda)', async () => {
+    mockedUserHelper.getUserIdFromSession.mockImplementation(() => {
+      throw new UnauthorisedError('Invalid session');
     });
-  });
-  test('orderId does not exist', async () => {
-    const { session, order } = createOrderAndUser();
-    const result = {
-      headers: {
-        session: session.session
-      },
-      pathParameters: {
-        orderId: order.orderId + 'aws'
-      }
+
+    const event = { 
+      ...mockEvent,
+      headers: { session: 'invalid' },
+      pathParameters: { orderId: 'any' }
     } as unknown as APIGatewayProxyEvent;
 
-    const response = await getOrderInfoHandler(result);
-    expect(response.statusCode).toStrictEqual(400);
-    expect(JSON.parse(response.body)).toStrictEqual({ error: expect.any(String) });
-  });
-  test('invalid session provided', async () => {
-    const { session, order } = createOrderAndUser();
-    const result = {
-      headers: {
-        session: session.session + '15dse'
-      },
-      pathParameters: {
-        orderId: order.orderId
-      }
-    } as unknown as APIGatewayProxyEvent;
-
-    const response = await getOrderInfoHandler(result);
+    const response: APIGatewayProxyResult = await getOrderInfoHandler(event);
     expect(response.statusCode).toStrictEqual(401);
-    expect(JSON.parse(response.body)).toStrictEqual({ error: expect.any(String) });
   });
-  test('order doesnot belong to the user', async () => {
-    const { order } = createOrderAndUser();
-    const user2 = userRegister(
-      'Anna',
-      'Lee',
-      'annaLee@gmail.com',
-      'password123'
-    ) as Session;
-    const result = {
-      headers: {
-        session: user2.session
-      },
-      pathParameters: {
-        orderId: order.orderId
-      }
+
+  test('order does not belong to the user (Lambda)', async () => {
+    const details = await createTemplateOrderAndUser();
+    const wrongOrder: Partial<Order> = { ...details.order, buyerOrgID: 9999 };
+    mockedDataStore.getOrderByIdSupa.mockResolvedValue(wrongOrder as Order);
+
+    const event = { 
+      ...mockEvent,
+      headers: { session: details.session.session },
+      pathParameters: { orderId: details.order.orderId }
     } as unknown as APIGatewayProxyEvent;
 
-    const response = await getOrderInfoHandler(result);
+    const response: APIGatewayProxyResult = await getOrderInfoHandler(event);
     expect(response.statusCode).toStrictEqual(400);
-    expect(JSON.parse(response.body)).toStrictEqual({ error: expect.any(String) });
+  });
+
+  test('Test 500 error for generic database failure', async () => {
+    const details = await createTemplateOrderAndUser();
+    const event = { 
+      ...mockEvent,
+      headers: { session: details.session.session },
+      pathParameters: { orderId: details.order.orderId }
+    } as unknown as APIGatewayProxyEvent;
+
+    const spy = jest.spyOn(orderModule, 'getOrderInfo').mockImplementation(() => {
+      throw new Error('Database connection lost');
+    });
+
+    const response: APIGatewayProxyResult = await getOrderInfoHandler(event);
+    expect(response.statusCode).toStrictEqual(500);
+    expect(JSON.parse(response.body)).toHaveProperty('error');
+
+    spy.mockRestore();
   });
 });

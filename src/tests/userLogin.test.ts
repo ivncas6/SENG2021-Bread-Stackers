@@ -1,34 +1,36 @@
 import { clearData } from '../dataStore';
 import { userRegister, userLogout, userLogin } from '../userRegister';
-import { Session } from '../interfaces';
+import { SessionId } from '../interfaces';
 /*import { UnauthorisedError } from '../throwError';
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import { userLoginHandler } from '../handlers/userLogin';*/
 
-beforeEach(() => {
-  clearData();
+beforeEach(async () => {
+  await clearData();
+  jest.clearAllMocks();
 });
 
-function createUser() {
-  const session = userRegister(
+async function createUser() {
+  const session = await userRegister(
     'sample',
     'user',
     'sample@gmail.com',
+    '0412345678',
     'password98'
-  ) as Session;
+  ) as SessionId;
 
   return { session };
 }
 
 describe('Backend logic tests for userLogin', () => {
 
-  test('successfully login a user', () => {
-    const { session } = createUser();
-    const res = userLogout(session.session);
+  test('successfully login a user', async () => {
+    const { session } = await createUser();
+    const res = await userLogout(session.session);
     expect(res).toEqual({});
 
-    const newSession = userLogin('sample@gmail.com', 'password98');
-    expect(newSession).toStrictEqual({session: expect.any(String)});
+    const newSession = await userLogin('sample@gmail.com', 'password98');
+    await expect(newSession).toStrictEqual({session: expect.any(String)});
   });
 
   /*test('invalid email provided', () => {

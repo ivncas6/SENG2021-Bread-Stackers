@@ -8,6 +8,14 @@ export class InvalidEmail extends Error {
   }
 }
 
+// for invalid phone (statusCode: 400)
+export class InvalidPhone extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'INVALID_PHONE';
+  }
+}
+
 // for invalid first name (statusCode: 400)
 export class InvalidFirstName extends Error {
   constructor(message: string) {
