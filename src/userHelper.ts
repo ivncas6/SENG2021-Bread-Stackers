@@ -14,6 +14,14 @@ import { JWTsecretKey } from './config';
 
 const secretKey = JWTsecretKey as string;
 
+// deletes tokens that have expired
+export async function jwtClean() {
+  await supabase
+  .from('jwt_blacklist')
+  .delete()
+  .lt('expires_at', new Date().toISOString());
+}
+
 /**
  * Given a registered userId the function will create a new session.
  * @param {number} userId
@@ -21,18 +29,37 @@ const secretKey = JWTsecretKey as string;
  */
 // helper function for creating a new session
 export function createNewSession(userId:number): SessionId {
+  // clean expired JWT tokens
+  jwtClean();
   // generate JWT
   const token = jwt.sign({ 
     userId: userId, jti: crypto.randomUUID() }, secretKey, { expiresIn: '2h' });
   return { session: token };
 }
 
-export function getUserIdFromSession(token: string): number {
+export async function isTokenBlacklisted(jti: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('jwt_blacklist')
+    .select('jti')
+    .eq('jti', jti)
+    .maybeSingle();
+
+  if (error) throw error;
+
+  return Boolean(data);
+}
+
+export async function getUserIdFromSession(token: string): Promise<number> {
   try {
-    const decode = jwt.verify(token, secretKey) as { userId: number};
+    const decode = jwt.verify(token, secretKey) as { userId: number, jti: string };
 
     if (typeof decode.userId !== 'number') {
       throw new UnauthorisedError('Invalid token payload');
+    }
+
+    const blacklisted = await isTokenBlacklisted(decode.jti);
+    if (blacklisted) {
+      throw new UnauthorisedError('Token has been revoked');
     }
 
     return decode.userId;
@@ -40,7 +67,6 @@ export function getUserIdFromSession(token: string): number {
     if (e instanceof Error) {
       throw new UnauthorisedError(e.message);
     }
-
     throw new UnauthorisedError('Invalid or expired session token');
   }
 }

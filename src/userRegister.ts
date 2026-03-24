@@ -114,7 +114,7 @@ export async function userDetailsUpdate(
   invalidnameFirst(nameFirst);
   invalidnameLast(nameLast);
  
-  const userId = getUserIdFromSession(session);
+  const userId = await getUserIdFromSession(session);
   const u = await getUserByIdSupa(userId);
 
   if (!u) {
@@ -140,13 +140,8 @@ export async function userDetailsUpdate(
 }
 
 export async function userLogout(sessionId: string): Promise<EmptyObject | ErrorObject> {
-
-  /* Use for any live or self hosted server implementations in the future */
   
-  const userId = getUserIdFromSession(sessionId);
-
-  // add JWT token to supabase blacklist and logout user
-
+  const userId = await getUserIdFromSession(sessionId);
   const user = await getUserByIdSupa(userId);
 
   // if the user was not found
@@ -154,15 +149,9 @@ export async function userLogout(sessionId: string): Promise<EmptyObject | Error
     throw new InvalidLogin('Email address does not exist');
   }
 
-  const { data: error } = await supabase
-    .from('contacts')
-    .select('contactId, password')
-    .eq('email', user.email)
-    .maybeSingle();
-
-  if (error) throw error;
-
-
+  // add JWT token to supabase blacklist and logout user
+  await supabase
+    .from('jwt_blacklist').insert(sessionId);
 
   return {};
 }
