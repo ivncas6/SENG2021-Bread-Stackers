@@ -142,8 +142,28 @@ export async function userDetailsUpdate(
 export async function userLogout(sessionId: string): Promise<EmptyObject | ErrorObject> {
 
   /* Use for any live or self hosted server implementations in the future */
+  
+  const userId = getUserIdFromSession(sessionId);
 
-  getUserIdFromSession(sessionId);
+  // add JWT token to supabase blacklist and logout user
+
+  const user = await getUserByIdSupa(userId);
+
+  // if the user was not found
+  if (!user) {
+    throw new InvalidLogin('Email address does not exist');
+  }
+
+  const { data: error } = await supabase
+    .from('contacts')
+    .select('contactId, password')
+    .eq('email', user.email)
+    .maybeSingle();
+
+  if (error) throw error;
+
+
+
   return {};
 }
 

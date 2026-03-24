@@ -9,10 +9,10 @@ import * as crypto from 'crypto';
 import validator from 'validator';
 import jwt from 'jsonwebtoken';
 import { UnauthorisedError } from './throwError';
-import 'dotenv/config';
 import { supabase } from './supabase';
+import { JWTsecretKey } from './config'
 
-const secretKey = process.env.JWT_SECRET || 'fallback-key-get-your-own-in-env-file';
+const secretKey = JWTsecretKey as string;
 
 /**
  * Given a registered userId the function will create a new session.
@@ -22,7 +22,7 @@ const secretKey = process.env.JWT_SECRET || 'fallback-key-get-your-own-in-env-fi
 // helper function for creating a new session
 export function createNewSession(userId:number): SessionId {
   // generate JWT
-  const token = jwt.sign({ userId: userId }, secretKey, { expiresIn: '2h' });
+  const token = jwt.sign({ userId: userId, jti: crypto.randomUUID() }, secretKey, { expiresIn: '2h' });
   return { session: token };
 }
 
