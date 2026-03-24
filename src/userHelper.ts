@@ -10,7 +10,7 @@ import validator from 'validator';
 import jwt from 'jsonwebtoken';
 import { UnauthorisedError } from './throwError';
 import { supabase } from './supabase';
-import { JWTsecretKey } from './config'
+import { JWTsecretKey } from './config';
 
 const secretKey = JWTsecretKey as string;
 
@@ -22,7 +22,8 @@ const secretKey = JWTsecretKey as string;
 // helper function for creating a new session
 export function createNewSession(userId:number): SessionId {
   // generate JWT
-  const token = jwt.sign({ userId: userId, jti: crypto.randomUUID() }, secretKey, { expiresIn: '2h' });
+  const token = jwt.sign({ 
+    userId: userId, jti: crypto.randomUUID() }, secretKey, { expiresIn: '2h' });
   return { session: token };
 }
 
