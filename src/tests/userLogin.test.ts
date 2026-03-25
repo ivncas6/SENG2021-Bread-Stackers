@@ -1,65 +1,65 @@
 import { clearData } from '../dataStore';
-import { userRegister, userLogout, userLogin } from '../userRegister';
-import { SessionId } from '../interfaces';
-// import { InvalidEmail } from '../throwError'; // Or whichever error you throw for bad emails
+import { userLogin } from '../userRegister';
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import { userLoginHandler } from '../handlers/userLogin';
+import { InvalidLogin } from '../throwError';
+import { getHashOf } from '../userHelper';
+import { supabase } from '../supabase';
+
+// replace mock with std one in tests/mocks
+jest.mock('../supabase', () => require('./mocks/supabaseMock'));
+const mockedSupabase = supabase as any; 
 
 beforeEach(async () => {
   await clearData();
   jest.clearAllMocks();
 });
 
-async function createUser() {
-  const session = await userRegister(
-    'sample',
-    'user',
-    'sample@gmail.com',
-    '0412345678',
-    'password98'
-  ) as SessionId;
-
-  return { session };
-}
-
 describe('Backend logic tests for userLogin', () => {
 
   test('successfully login a user', async () => {
-    const { session } = await createUser();
-    const res = await userLogout(session.session);
-    expect(res).toEqual({});
+    // pretend found user in the database & getHashof pw to match
+    mockedSupabase.maybeSingle.mockResolvedValueOnce({ 
+      data: { contactId: 1, password: getHashOf('password98') }, 
+      error: null 
+    });
 
     const newSession = await userLogin('sample@gmail.com', 'password98');
+    
     expect(newSession).toStrictEqual({ session: expect.any(String) });
+    expect(mockedSupabase.from).toHaveBeenCalledWith('contacts');
   });
 
-  test('invalid email provided', async () => {
+  test('invalid email provided / user does not exist', async () => {
+    // no user found
+    mockedSupabase.maybeSingle.mockResolvedValueOnce({ 
+      data: null, 
+      error: null 
+    });
+
     await expect(userLogin('wrong@gmail.com', 'password98'))
-      .rejects.toThrow(); // Add your specific Error class here if you want
+      .rejects.toThrow(InvalidLogin);
   });
 
-  test('login with multiple users in system', async () => {
-    await createUser();
+  test('incorrect password provided', async () => {
+    // mock user exits but pw diff
+    mockedSupabase.maybeSingle.mockResolvedValueOnce({ 
+      data: { contactId: 1, password: getHashOf('realpassword123') }, 
+      error: null 
+    });
 
-    // create second user
-    await userRegister(
-      'random',
-      'user',
-      'random@gmail.com',
-      '0412345679',
-      'password12'
-    );
-
-    const res = await userLogin('random@gmail.com', 'password12');
-    expect(res).toStrictEqual({ session: expect.any(String) });
+    await expect(userLogin('sample@gmail.com', 'wrongpassword'))
+      .rejects.toThrow(InvalidLogin);
   });
 
 });
 
 describe('Lambda tests for userLoginHandler', () => {
-
   test('successful login via Lambda', async () => {
-    await createUser();
+    mockedSupabase.maybeSingle.mockResolvedValueOnce({ 
+      data: { contactId: 1, password: getHashOf('password98') }, 
+      error: null 
+    });
 
     const event = {
       body: JSON.stringify({
@@ -77,15 +77,25 @@ describe('Lambda tests for userLoginHandler', () => {
   });
 
   test('missing or invalid credentials', async () => {
+
+    jest.resetAllMocks;
+    // fail to find a user
+    mockedSupabase.maybeSingle.mockResolvedValueOnce({ 
+      data: null, 
+      error: null 
+    });
+
     const event = {
       body: JSON.stringify({
-        email: 'wrong@gmail.com',
-        password: 'wrongpassword'
+        email: 'defwrong@gmail.com',
+        password: 'defwrongpassword'
       })
     } as unknown as APIGatewayProxyEvent;
 
     const response = await userLoginHandler(event);
 
+    // Because it throws an InvalidLogin error (not handled in the 400 block of your handler currently), 
+    // it will drop to your 500 error block or need to be added to your 400 block!
     expect(response.statusCode).not.toBe(200); 
     expect(JSON.parse(response.body)).toHaveProperty('error');
   });

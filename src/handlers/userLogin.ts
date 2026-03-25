@@ -1,6 +1,7 @@
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import {
   InvalidEmail,
+  InvalidLogin,
   InvalidPassword
 } from '../throwError';
 import { userLogin } from '../userRegister';
@@ -21,7 +22,9 @@ export const userLoginHandler = async (event: APIGatewayProxyEvent) => {
       body: JSON.stringify(session),
     };
   } catch (e) {
-    if (e instanceof InvalidEmail || e instanceof InvalidPassword) {
+    if (e instanceof InvalidEmail || 
+      e instanceof InvalidPassword || 
+      e instanceof InvalidLogin) {
       return {
         statusCode: 400,
         body: JSON.stringify({ error: e.message })

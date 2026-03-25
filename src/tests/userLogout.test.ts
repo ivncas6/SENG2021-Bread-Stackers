@@ -6,7 +6,7 @@ import { supabase } from '../supabase';
 import jwt from 'jsonwebtoken';
 import { SupabaseMock } from '../interfaces';
 
-// Mock the dependencies
+// mock dependencies
 jest.mock('../supabase');
 jest.mock('jsonwebtoken');
 
@@ -21,10 +21,10 @@ beforeEach(() => {
 
 describe('Backend logic test for userLogout', () => {
   test('Successful logout', async () => {
-    // Mock the JWT verification to return a valid payload
+    // JWT verification to return valid payload
     mockedJwt.verify.mockReturnValue({ jti: 'mock-uuid-jti', exp: 1234567890 } as any);
     
-    // Mock Supabase to successfully insert into the blacklist
+    // insert into mock Supabase
     mockedSupabase.insert.mockResolvedValueOnce({ data: null, error: null } as never);
 
     const res = await userLogout(MOCK_SESSION);
@@ -35,7 +35,7 @@ describe('Backend logic test for userLogout', () => {
   });
 
   test('Testing Invalid Session - Fails Verification', async () => {
-    // Mock JWT to throw an error (simulating an invalid/tampered token)
+    //simulating invalid/tampered token
     mockedJwt.verify.mockImplementation(() => {
       throw new Error('jwt malformed');
     });
@@ -61,7 +61,8 @@ describe('Lambda function for userLogout', () => {
 
   test('Missing session header', async () => {
     const event = {
-      headers: {}, // No session provided
+      // empty sesh
+      headers: {},
     } as unknown as APIGatewayProxyEvent;
 
     const response = await userLogoutHandler(event);

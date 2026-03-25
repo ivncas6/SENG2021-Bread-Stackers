@@ -17,18 +17,18 @@ const config = {
 
   // Coverage Settings
   // use 'ctrl' + '/' to uncomment later
-  // collectCoverage: true,
-  // collectCoverageFrom: [
-  //   'src/**/*.ts', 
-  //   '!src/tests/**',
-  // ],
-  // coverageDirectory: 'coverage',
-  // coverageThreshold: {
-  //   global: {
-  //     branches: 85,
-  //     lines: 85,
-  //   },
-  // },
+  collectCoverage: true,
+  collectCoverageFrom: [
+    'src/**/*.ts', 
+    '!src/tests/**',
+  ],
+  coverageDirectory: 'coverage',
+  coverageThreshold: {
+    global: {
+      branches: 85,
+      functions: 85,
+    },
+  },
 
   // A path to a custom dependency extractor
   // dependencyExtractor: undefined,
