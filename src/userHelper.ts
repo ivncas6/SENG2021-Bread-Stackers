@@ -33,7 +33,7 @@ export function createNewSession(userId:number): SessionId {
   jwtClean();
   // generate JWT
   const token = jwt.sign({ 
-    userId: userId, jti: crypto.randomUUID() }, secretKey, { expiresIn: '2h' });
+    userId: userId, jti: crypto.randomUUID() }, secretKey, { expiresIn: '5h' });
   return { session: token };
 }
 

@@ -13,6 +13,7 @@ import { invalidnameFirst, invalidnameLast, getHashOf, checkPassword,
 } from './userHelper';
 import validator from 'validator';
 import { supabase } from './supabase';
+import jwt from 'jsonwebtoken';
 
 export async function userRegister(nameFirst: string, nameLast: string, email: string, 
   telephone: string, password: string): Promise<SessionId> {
@@ -140,18 +141,20 @@ export async function userDetailsUpdate(
 }
 
 export async function userLogout(sessionId: string): Promise<EmptyObject | ErrorObject> {
-  
-  const userId = await getUserIdFromSession(sessionId);
-  const user = await getUserByIdSupa(userId);
 
-  // if the user was not found
-  if (!user) {
-    throw new InvalidLogin('Email address does not exist');
+  const decode = jwt.decode(sessionId) as { jti: string; exp: number } | null;
+
+  if (!decode || !decode.jti || !decode.exp) {
+    throw new UnauthorisedError('Invalid token');
   }
-
+  
   // add JWT token to supabase blacklist and logout user
   await supabase
-    .from('jwt_blacklist').insert(sessionId);
+    .from('jwt_blacklist')
+    .insert({
+      jti: decode.jti,
+      expires_at: new Date(decode.exp * 1000)
+    });
 
   return {};
 }
