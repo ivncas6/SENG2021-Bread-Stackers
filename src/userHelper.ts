@@ -28,9 +28,9 @@ export async function jwtClean() {
  * @returns {Session}
  */
 // helper function for creating a new session
-export function createNewSession(userId:number): SessionId {
+export async function createNewSession(userId:number): Promise<SessionId> {
   // clean expired JWT tokens
-  jwtClean();
+  await jwtClean();
   // generate JWT
   const token = jwt.sign({ 
     userId: userId, jti: crypto.randomUUID() }, secretKey, { expiresIn: '5h' });

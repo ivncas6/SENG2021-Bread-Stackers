@@ -14,6 +14,7 @@ import { invalidnameFirst, invalidnameLast, getHashOf, checkPassword,
 import validator from 'validator';
 import { supabase } from './supabase';
 import jwt from 'jsonwebtoken';
+import { JWTsecretKey } from './config';
 
 export async function userRegister(nameFirst: string, nameLast: string, email: string, 
   telephone: string, password: string): Promise<SessionId> {
@@ -77,7 +78,7 @@ export async function userRegister(nameFirst: string, nameLast: string, email: s
     });
   }
 
-  return createNewSession(newUser.contactId);
+  return await createNewSession(newUser.contactId);
 }
 
 export async function userLogin(email: string, password: string): Promise<SessionId | ErrorObject> {
@@ -100,7 +101,7 @@ export async function userLogin(email: string, password: string): Promise<Sessio
   }
   // Resets to 0 after successful login
 
-  return createNewSession(user.contactId);
+  return await createNewSession(user.contactId);
 }
 
 // Given the userId and set of user properties update the properties of the logged in adminUser
@@ -141,22 +142,28 @@ export async function userDetailsUpdate(
 }
 
 export async function userLogout(sessionId: string): Promise<EmptyObject | ErrorObject> {
+  const secretKey = JWTsecretKey as string;
 
-  const decode = jwt.decode(sessionId) as { jti: string; exp: number } | null;
+  try {
+    const decode = jwt.verify(sessionId, secretKey) as { jti: string; exp: number };
+    
+    if (!decode.jti || !decode.exp) {
+      throw new UnauthorisedError('Invalid token');
+    }
+    
+    // add JWT token to supabase blacklist and logout user
+    await supabase
+      .from('jwt_blacklist')
+      .insert({
+        jti: decode.jti,
+        expires_at: new Date(decode.exp * 1000)
+      });
 
-  if (!decode || !decode.jti || !decode.exp) {
+    return {};
+
+  } catch (e) {
     throw new UnauthorisedError('Invalid token');
   }
-  
-  // add JWT token to supabase blacklist and logout user
-  await supabase
-    .from('jwt_blacklist')
-    .insert({
-      jti: decode.jti,
-      expires_at: new Date(decode.exp * 1000)
-    });
-
-  return {};
 }
 
 
