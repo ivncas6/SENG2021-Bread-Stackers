@@ -1,9 +1,9 @@
 import { clearData } from '../dataStore';
 import { userRegister, userLogout, userLogin } from '../userRegister';
 import { SessionId } from '../interfaces';
-/*import { UnauthorisedError } from '../throwError';
+// import { InvalidEmail } from '../throwError'; // Or whichever error you throw for bad emails
 import { APIGatewayProxyEvent } from 'aws-lambda';
-import { userLoginHandler } from '../handlers/userLogin';*/
+import { userLoginHandler } from '../handlers/userLogin';
 
 beforeEach(async () => {
   await clearData();
@@ -30,90 +30,64 @@ describe('Backend logic tests for userLogin', () => {
     expect(res).toEqual({});
 
     const newSession = await userLogin('sample@gmail.com', 'password98');
-    await expect(newSession).toStrictEqual({session: expect.any(String)});
+    expect(newSession).toStrictEqual({ session: expect.any(String) });
   });
 
-  /*test('invalid email provided', () => {
-    expect(() =>
-      userLogin('wrong@gmail.com', 'password98');
-    ).toThrow(UnauthorisedError);
+  test('invalid email provided', async () => {
+    await expect(userLogin('wrong@gmail.com', 'password98'))
+      .rejects.toThrow(); // Add your specific Error class here if you want
   });
 
-  test('logout with multiple users in system', () => {
+  test('login with multiple users in system', async () => {
+    await createUser();
 
-    userRegister(
-      'sample',
-      'user',
-      'sample@gmail.com',
-      'password98'
-    );
-
-    const user2 = userRegister(
+    // create second user
+    await userRegister(
       'random',
       'user',
       'random@gmail.com',
+      '0412345679',
       'password12'
-    ) as Session;
+    );
 
-    const res = userLogin(user2.session);
-
-    expect(res).toStrictEqual({});
-  });*/
+    const res = await userLogin('random@gmail.com', 'password12');
+    expect(res).toStrictEqual({ session: expect.any(String) });
+  });
 
 });
 
+describe('Lambda tests for userLoginHandler', () => {
 
-/*describe('Lambda tests for userLoginHandler', () => {
-
-  test('session header missing', async () => {
-
-    const event = {
-      headers: {}
-    } as unknown as APIGatewayProxyEvent;
-
-    const response = await userLoginHandler(event);
-
-    expect(response.statusCode).toStrictEqual(400);
-    expect(JSON.parse(response.body)).toStrictEqual({
-      error: 'provided session is not valid'
-    });
-  });
-
-  test('invalid session provided', async () => {
+  test('successful login via Lambda', async () => {
+    await createUser();
 
     const event = {
-      headers: {
-        session: 'randomsession'
-      }
-    } as unknown as APIGatewayProxyEvent;
-
-    const response = await userLoginHandler(event);
-
-    expect(response.statusCode).toStrictEqual(401);
-    expect(JSON.parse(response.body)).toEqual({
-      error: expect.any(String)
-    });
-  });
-
-  test('successful logout', async () => {
-
-    const session = userRegister(
-      'sample',
-      'user',
-      'sample@gmail.com',
-      'password98'
-    ) as Session;
-
-    const event = {
-      headers: {
-        session: session.session
-      }
+      body: JSON.stringify({
+        email: 'sample@gmail.com',
+        password: 'password98'
+      })
     } as unknown as APIGatewayProxyEvent;
 
     const response = await userLoginHandler(event);
 
     expect(response.statusCode).toStrictEqual(200);
-    expect(JSON.parse(response.body)).toStrictEqual({});
+    expect(JSON.parse(response.body)).toStrictEqual({
+      session: expect.any(String)
+    });
   });
 
-});*/
+  test('missing or invalid credentials', async () => {
+    const event = {
+      body: JSON.stringify({
+        email: 'wrong@gmail.com',
+        password: 'wrongpassword'
+      })
+    } as unknown as APIGatewayProxyEvent;
+
+    const response = await userLoginHandler(event);
+
+    expect(response.statusCode).not.toBe(200); 
+    expect(JSON.parse(response.body)).toHaveProperty('error');
+  });
+
+});
