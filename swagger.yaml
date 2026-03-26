@@ -28,33 +28,33 @@ definitions:
       email:
         type: string
         example: anna123@gmail.com
+      telephone:
+        type: string
+        example: "0412345678"
       password: 
         type: string
         example: h3llow0rld
+
   error400:
     type: object
     properties:
-      errorCode:
-        type: integer
-        example: 400
-      errorMsg:
+      error:
         type: string
-        example: "Error Message goes here"
+        example: "INVALID_EMAIL"
+
   error401:
     type: object
     properties:
-      errorCode:
-        type: integer
-        example: 401
-      errorMsg:
+      error:
         type: string
-        example: "Error Message goes here"
+        example: "Unauthorised access"
+
   session:
     type: object
     properties:
       session: 
         type: string
-        example: "23457"
+        example: "eyJhbGciOiJIUzI1NiIsInR5c..."
   
   userLogIn:
     type: object
@@ -82,13 +82,16 @@ definitions:
       lastName:
         type: string
         example: Lee
+      telephone:
+        type: string
+        example: "0412345678"
   
   orderId:
     type: object
     properties:
       orderId:
         type: string
-        example: or1939
+        example: "550e8400-e29b-41d4-a716-446655440000"
   
   orderItem: 
     type: object
@@ -118,12 +121,15 @@ definitions:
       user:
         type: object
         properties:
-          name:
+          firstName:
             type: string
-            example: Anna Smith
+            example: Anna
+          lastName:
+            type: string
+            example: Smith
           telephone:
-            type: number
-            example: 0412345678
+            type: string
+            example: "0412345678"
           email: 
             type: string
             example: anna123@gmail.com
@@ -136,7 +142,7 @@ definitions:
           endDateTime:
             type: number
             example: 1773619200000
-      itemList:
+      items:
         type: array
         items:
             $ref: '#/definitions/orderItem'
@@ -146,38 +152,44 @@ definitions:
     properties:
       orderId:
         type: string
-        example: or123
-      orderDateTime:
-        type: number
-        example: 1773100800000
+        example: "550e8400-e29b-41d4-a716-446655440000"
+      status:
+        type: string
+        example: OPEN
+      issuedDate:
+        type: string
+        example: "2026-03-16"
+      issuedTime:
+        type: string
+        example: "16:10:05"
       currency:
         type: string
         example: AUD
-      deliveryAddress:
+      taxExclusive:
+        type: number
+        example: 100
+      taxInclusive:
+        type: number
+        example: 110
+      finalPrice:
+        type: number
+        example: 110
+      address:
         type: string
         example: 123 Street Name, Kensington
-      user:
+      userDetails:
         type: object
         properties: 
-          name:
-            type: string
-            example: Anna Smith
-          telephone:
-            type: string
-            example: 0412345678
-          email: 
-            type: string
-            example: anna123@gmail.com
-      reqDeliveryPeriod:
+          firstName: { type: string, example: "Anna" }
+          lastName: { type: string, example: "Smith" }
+          telephone: { type: string, example: "0412345678" }
+          email: { type: string, example: "anna123@gmail.com" }
+      deliveryDetails:
         type: object
         properties: 
-          startDateTime: 
-            type: number
-            example: 1773100800000
-          endDateTime:
-            type: number
-            example: 1773619200000
-      itemList:
+          startDateTime: { type: number, example: 1773100800000 }
+          endDateTime: { type: number, example: 1773619200000 }
+      items:
         type: array
         items:
             $ref: '#/definitions/orderItem'
@@ -198,12 +210,11 @@ definitions:
       reqDeliveryPeriod:
         type: object
         properties: 
-          startDateTime: 
-            type: number
-            example: 1773100800000
-          endDateTime:
-            type: number
-            example: 1773619200000
+          startDateTime: { type: number, example: 1773100800000 }
+          endDateTime: { type: number, example: 1773619200000 }
+      status:
+        type: string
+        example: "UPDATED"
   
   orderList:
     type: object
@@ -213,24 +224,22 @@ definitions:
         items:
           type: object
           properties:
-            orderId:
-              type: string
-              example: or123
-            orderDateTime:
-              type: number
-              example: 1773100800000
-            status:
-              type: string
-              example: COMPLETED
+            orderId: { type: string, example: "550e8400-e29b-41d4-a716-446655440000" }
+            status: { type: string, example: "OPEN" }
+            issuedDate: { type: string, example: "2026-03-16" }
+            finalPrice: { type: number, example: 110 }
+            currency: { type: string, example: "AUD" }
 
 paths:
   /v0/user/register:
     post:
-      tags:
-        - Users
+      tags: [Users]
       summary: Register a new user 
-      description: Takes required details from the user to register them to the system
       parameters:
+        - in: header
+          name: x-api-key
+          required: true
+          type: string
         - in: body
           name: body
           required: true
@@ -239,13 +248,11 @@ paths:
       responses:
         200:
           description: "**SUCCESS**"
-
           schema:
             $ref: '#/definitions/session'
         400:
           description: |
             **INVALID INPUT**
-            Can be any of the following:
             - INVALID_FIRST_NAME
             - INVALID_LAST_NAME
             - INVALID_EMAIL
@@ -255,11 +262,13 @@ paths:
 
   /v0/user/login:
     post:
-      tags:
-        - Users
+      tags: [Users]
       summary: Login an existing user
-      description: Takes required details from the user to log them into the system
       parameters:
+        - in: header
+          name: x-api-key
+          required: true
+          type: string
         - in: body
           name: body
           required: true
@@ -273,7 +282,6 @@ paths:
         400:
           description: |
             **INVALID USER DETAILS**
-            Can be any of the following:
             - INVALID_EMAIL
             - INCORRECT_PASSWORD
           schema:
@@ -285,21 +293,13 @@ paths:
   
   /v0/user/details:
     put:
-      tags:
-        - Users
+      tags: [Users]
       summary: Update user details
-      description: Takes details from the user and updates it in the system
       parameters:
-        - in: header
-          name: x-api-key
-          required: true
-          type: string
-          description: abc123your-secret-key-here
         - in: header
           name: session
           required: true
           type: string
-          description: JWT-token
         - in: body
           name: body
           required: true
@@ -311,68 +311,42 @@ paths:
           schema:
             $ref: '#/definitions/emptyObj'
         400:
-          description: |
-            "**INVALID INPUT**"
-            Can be any of the following:
-            - INVALID_FIRST_NAME
-            - INVALID_LAST_NAME
-            - INVALID_EMAIL
-            - INVALID_PASSWORD_FORMAT
+          description: "**INVALID INPUT**"
           schema:
             $ref: '#/definitions/error400'
         401:
-          description: |
-            "**UNAUTHORISED**"
-            Provided userId does not correspond to a valid user.
+          description: "**UNAUTHORISED**"
           schema: 
             $ref: '#/definitions/error401'
   
   /v0/user/logout:
     post:
-      tags:
-        - Users
+      tags: [Users]
       summary: Logs out an existing user
-      description: Logs the user out of the system
       parameters:
-        - in: header
-          name: x-api-key
-          required: true
-          type: string
-          description: abc123your-secret-key-here
         - in: header
           name: session
           required: true
           type: string
-          description: JWT-token
       responses:
         200:
           description: "**SUCCESS**"
           schema:
             $ref: '#/definitions/emptyObj'
         401:
-          description: |
-            "**UNAUTHORISED**"
-            Provided userId does not correspond to a valid user.
+          description: "**UNAUTHORISED**"
           schema: 
             $ref: '#/definitions/error401'
   
   /v0/order:
     post:
-      tags:
-        - Orders
+      tags: [Orders]
       summary: Creates an Order
-      description: Creates an order by taking details from user 
       parameters:
-        - in: header
-          name: x-api-key
-          required: true
-          type: string
-          description: abc123your-secret-key-here
         - in: header
           name: session
           required: true
           type: string
-          description: JWT-token
         - in: body
           name: body
           required: true
@@ -385,41 +359,30 @@ paths:
             $ref: '#/definitions/orderId'
         400:
           description: |
-            "**INVALID INPUT**"
-            Can be any of the following:
-              - INVALID_EMAIL
-              - INVALID_MOBILE_NO
-              - INVALID_ITEM
+             "**INVALID INPUT**"
+             - INVALID_EMAIL
+             - INVALID_MOBILE_NO
+             - INVALID_ITEM
           schema:
             $ref: '#/definitions/error400'
         401:
-          description: |
-            "**UNAUTHORISED**"
-            Provided userId does not correspond to a valid user.
+          description: "**UNAUTHORISED**"
           schema: 
             $ref: '#/definitions/error401'
 
   /v0/order/{orderId}:
     get:
-      tags:
-        - Orders
+      tags: [Orders]
       summary: View order information 
-      description: View the information of the order with the given orderId
       parameters:
         - in: path
           name: orderId
           required: true
           type: string
         - in: header
-          name: x-api-key
-          required: true
-          type: string
-          description: abc123your-secret-key-here
-        - in: header
           name: session
           required: true
           type: string
-          description: JWT-token
       responses:
         200:
           description: "**SUCCESS**"
@@ -430,32 +393,22 @@ paths:
           schema:
             $ref: '#/definitions/error400'
         401:
-          description: |
-            "**UNAUTHORISED**"
-            Order is not placed by the user.
+          description: "**UNAUTHORISED**"
           schema: 
             $ref: '#/definitions/error401'
 
     delete:
-      tags:
-        - Orders
+      tags: [Orders]
       summary: Cancel an order 
-      description: Cancel the order with the given orderId
       parameters:
         - in: path
           name: orderId
           required: true
           type: string
         - in: header
-          name: x-api-key
-          required: true
-          type: string
-          description: abc123your-secret-key-here
-        - in: header
           name: session
           required: true
           type: string
-          description: JWT-token
         - in: body
           name: body
           required: true
@@ -471,30 +424,22 @@ paths:
           schema:
             $ref: '#/definitions/error400'
         401:
-          description: |
-            "**UNAUTHORISED**"
+          description: "**UNAUTHORISED**"
           schema: 
             $ref: '#/definitions/error401'
+            
     put:
-      tags:
-        - Orders
+      tags: [Orders]
       summary: Update an order 
-      description: Update the order with the given orderId
       parameters:
         - in: path
           name: orderId
           required: true
           type: string
         - in: header
-          name: x-api-key
-          required: true
-          type: string
-          description: abc123your-secret-key-here
-        - in: header
           name: session
           required: true
           type: string
-          description: JWT-token
         - in: body
           name: body
           required: true
@@ -516,30 +461,18 @@ paths:
 
   /v0/order/list:
     get:
-      tags:
-        - Orders
+      tags: [Orders]
       summary: Get the list of all orders
-      description: Display the list with information about multiple orders.
       parameters:
-        - in: header
-          name: x-api-key
-          required: true
-          type: string
-          description: abc123your-secret-key-here
         - in: header
           name: session
           required: true
           type: string
-          description: JWT-token
       responses:
         200:
           description: "**SUCCESS**"
           schema:
             $ref: '#/definitions/orderList'
-        400:
-          description: "**INVALID INPUT**"
-          schema:
-            $ref: '#/definitions/error400'
         401:
           description: "**UNAUTHORISED**"
           schema: 
@@ -547,12 +480,10 @@ paths:
   
   /v0/clear:
     delete:
-      tags:
-        - Other
+      tags: [Other]
       summary: "Clears all the orders."
-      description: Deletes all the orders that are currently in the data store
       responses:
         200:
           description:  "**Successfully removed all orders**"
           schema:
-              $ref: '#/definitions/emptyObj' 
+              $ref: '#/definitions/emptyObj'
