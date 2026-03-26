@@ -23,7 +23,7 @@ export const updateUserDetailsHandler = async (
     const email = body.email;
     const firstName = body.firstName;
     const lastName = body.lastName;
-    const telephone = body.phone;
+    const telephone = body.telephone;
 
     const res = await userDetailsUpdate(
       session, email, firstName, lastName, telephone
