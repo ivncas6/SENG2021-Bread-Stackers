@@ -9,10 +9,18 @@ import * as crypto from 'crypto';
 import validator from 'validator';
 import jwt from 'jsonwebtoken';
 import { UnauthorisedError } from './throwError';
-import 'dotenv/config';
 import { supabase } from './supabase';
+import { JWTsecretKey } from './config';
 
-const secretKey = process.env.JWT_SECRET || 'fallback-key-get-your-own-in-env-file';
+const secretKey = JWTsecretKey as string;
+
+// deletes tokens that have expired
+export async function jwtClean() {
+  await supabase
+    .from('jwt_blacklist')
+    .delete()
+    .lt('expires_at', new Date().toISOString());
+}
 
 /**
  * Given a registered userId the function will create a new session.
@@ -20,18 +28,38 @@ const secretKey = process.env.JWT_SECRET || 'fallback-key-get-your-own-in-env-fi
  * @returns {Session}
  */
 // helper function for creating a new session
-export function createNewSession(userId:number): SessionId {
+export async function createNewSession(userId:number): Promise<SessionId> {
+  // clean expired JWT tokens
+  await jwtClean();
   // generate JWT
-  const token = jwt.sign({ userId: userId }, secretKey, { expiresIn: '2h' });
+  const token = jwt.sign({ 
+    userId: userId, jti: crypto.randomUUID() }, secretKey, { expiresIn: '5h' });
   return { session: token };
 }
 
-export function getUserIdFromSession(token: string): number {
+export async function isTokenBlacklisted(jti: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('jwt_blacklist')
+    .select('jti')
+    .eq('jti', jti)
+    .maybeSingle();
+
+  if (error) throw error;
+
+  return Boolean(data);
+}
+
+export async function getUserIdFromSession(token: string): Promise<number> {
   try {
-    const decode = jwt.verify(token, secretKey) as { userId: number};
+    const decode = jwt.verify(token, secretKey) as { userId: number, jti: string };
 
     if (typeof decode.userId !== 'number') {
       throw new UnauthorisedError('Invalid token payload');
+    }
+
+    const blacklisted = await isTokenBlacklisted(decode.jti);
+    if (blacklisted) {
+      throw new UnauthorisedError('Token has been revoked');
     }
 
     return decode.userId;
@@ -39,7 +67,6 @@ export function getUserIdFromSession(token: string): number {
     if (e instanceof Error) {
       throw new UnauthorisedError(e.message);
     }
-
     throw new UnauthorisedError('Invalid or expired session token');
   }
 }
@@ -85,7 +112,7 @@ export async function invalidemailcheck(sessionId: string,
     .from('contacts')
     .select('contactId')
     .eq('email', email)
-    .neq('contactId', userId) // Check everyone EXCEPT the current user
+    .neq('contactId', userId)
     .maybeSingle();
 
   if (existingUser) {

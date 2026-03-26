@@ -26,7 +26,7 @@ export async function createOrder(
   items: ReqItem[]
 ): Promise<createOrderReturn> {
   
-  const userId = Number(getUserIdFromSession(session));
+  const userId = await getUserIdFromSession(session);
   const u = await getUserByIdSupa(userId);
 
   if (!u) {
@@ -87,7 +87,7 @@ export async function createOrder(
 export async function cancelOrder(orderId: string, reason: string, session: string) {
 
   // find if user for sesh exists
-  const userId = getUserIdFromSession(session);
+  const userId = await getUserIdFromSession(session);
 
   const { data: orgData } = await getOrgByUserId(userId);
 
@@ -121,7 +121,7 @@ export async function cancelOrder(orderId: string, reason: string, session: stri
 }
 
 export async function getOrderInfo(session: string, orderId: string) {
-  const userId = getUserIdFromSession(session);
+  const userId = await getUserIdFromSession(session);
 
   const { data: orgData } = await getOrgByUserId(Number(userId));
   if (!orgData) {
@@ -178,7 +178,7 @@ export async function getOrderInfo(session: string, orderId: string) {
 export async function listOrders(session: string) {
 
   // validates the session, tells us who is making the request
-  const userId = getUserIdFromSession(session);
+  const userId = await getUserIdFromSession(session);
 
   const { data: orgData } = await getOrgByUserId(Number(userId));
   if (!orgData) {
@@ -214,7 +214,7 @@ export async function updateOrder(
 ): Promise<EmptyObject> {
 
   // Check the current session 
-  const userId = getUserIdFromSession(session);
+  const userId = await getUserIdFromSession(session);
 
   const { data: orgData } = await getOrgByUserId(Number(userId));
   if (!orgData) {

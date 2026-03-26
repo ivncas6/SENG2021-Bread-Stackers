@@ -31,7 +31,6 @@ testing:
   script:
     - echo "Running unit tests..."
     - npm test
-    # TODO
 
 # Deploys everything in the main branch to serverless endpoint
 deploying:
@@ -40,4 +39,4 @@ deploying:
     - main
   script:
     - echo "Deploying application to AWS Lambda..."
-    # TODO
+    # Left for later, want to deploy manually atm

@@ -1,9 +1,34 @@
-// soon to be jest test file for testing files in src
+import { createOrderSupaPush } from '../dataStore';
+import { SupabaseMock } from '../interfaces';
+import { supabase } from '../supabase';
 
-// dummy test --> NPM test needs at least one test
-import { getData } from '../dataStore';
+jest.mock('../supabase', () => ({
+  supabase: {
+    from: jest.fn().mockReturnThis(),
+    insert: jest.fn().mockReturnThis(),
+    select: jest.fn().mockReturnThis(),
+    single: jest.fn(),
+    maybeSingle: jest.fn()
+  }
+}));
 
-test('dataStore dummy test', () => {
-  const data = getData();
-  expect(data).toHaveProperty('users');
+const mockedSupabase = supabase as unknown as SupabaseMock;
+
+describe('DataStore Supabase Error Coverage', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('createOrderSupaPush throws when address insert fails', async () => {
+    // Force the mock to return an error for the address insertion
+    mockedSupabase.single.mockResolvedValueOnce({
+      data: null,
+      error: { message: 'Database connection lost' }
+    });
+
+    // We expect the function to crash and throw the error we just simulated
+    await expect(
+      createOrderSupaPush({} as never, '123 Fake St', {} as never, [])
+    ).rejects.toEqual({ message: 'Database connection lost' });
+  });
 });

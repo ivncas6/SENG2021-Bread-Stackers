@@ -1,119 +1,114 @@
 import { clearData } from '../dataStore';
-import { userRegister, userLogout, userLogin } from '../userRegister';
-import { SessionId } from '../interfaces';
-/*import { UnauthorisedError } from '../throwError';
+import { userLogin } from '../userRegister';
 import { APIGatewayProxyEvent } from 'aws-lambda';
-import { userLoginHandler } from '../handlers/userLogin';*/
+import { userLoginHandler } from '../handlers/userLogin';
+import { InvalidLogin } from '../throwError';
+import { getHashOf } from '../userHelper';
+import { supabase } from '../supabase';
+import { SupabaseMock } from '../interfaces';
+
+// copy of supabase.ts, for some reason it doesn't work when imported
+jest.mock('../supabase', () => ({
+  supabase: {
+    from: jest.fn().mockReturnThis(),
+    select: jest.fn().mockReturnThis(),
+    insert: jest.fn().mockReturnThis(),
+    update: jest.fn().mockReturnThis(),
+    delete: jest.fn().mockReturnThis(),
+    eq: jest.fn().mockReturnThis(),
+    neq: jest.fn().mockReturnThis(),
+    lt: jest.fn().mockResolvedValue({ data: null, error: null }),
+    single: jest.fn().mockResolvedValue({ data: null, error: null }),
+    maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
+  }
+}));
+const mockedSupabase = supabase as unknown as SupabaseMock;
 
 beforeEach(async () => {
   await clearData();
   jest.clearAllMocks();
 });
 
-async function createUser() {
-  const session = await userRegister(
-    'sample',
-    'user',
-    'sample@gmail.com',
-    '0412345678',
-    'password98'
-  ) as SessionId;
-
-  return { session };
-}
-
 describe('Backend logic tests for userLogin', () => {
 
   test('successfully login a user', async () => {
-    const { session } = await createUser();
-    const res = await userLogout(session.session);
-    expect(res).toEqual({});
+    // pretend found user in the database & getHashof pw to match
+    mockedSupabase.maybeSingle.mockResolvedValueOnce({ 
+      data: { contactId: 1, password: getHashOf('password98') }, 
+      error: null 
+    });
 
     const newSession = await userLogin('sample@gmail.com', 'password98');
-    await expect(newSession).toStrictEqual({session: expect.any(String)});
+    
+    expect(newSession).toStrictEqual({ session: expect.any(String) });
+    expect(mockedSupabase.from).toHaveBeenCalledWith('contacts');
   });
 
-  /*test('invalid email provided', () => {
-    expect(() =>
-      userLogin('wrong@gmail.com', 'password98');
-    ).toThrow(UnauthorisedError);
+  test('invalid email provided / user does not exist', async () => {
+    // no user found
+    mockedSupabase.maybeSingle.mockResolvedValueOnce({ 
+      data: null, 
+      error: null 
+    });
+
+    await expect(userLogin('wrong@gmail.com', 'password98'))
+      .rejects.toThrow(InvalidLogin);
   });
 
-  test('logout with multiple users in system', () => {
+  test('incorrect password provided', async () => {
+    // mock user exits but pw diff
+    mockedSupabase.maybeSingle.mockResolvedValueOnce({ 
+      data: { contactId: 1, password: getHashOf('realpassword123') }, 
+      error: null 
+    });
 
-    userRegister(
-      'sample',
-      'user',
-      'sample@gmail.com',
-      'password98'
-    );
-
-    const user2 = userRegister(
-      'random',
-      'user',
-      'random@gmail.com',
-      'password12'
-    ) as Session;
-
-    const res = userLogin(user2.session);
-
-    expect(res).toStrictEqual({});
-  });*/
+    await expect(userLogin('sample@gmail.com', 'wrongpassword'))
+      .rejects.toThrow(InvalidLogin);
+  });
 
 });
 
-
-/*describe('Lambda tests for userLoginHandler', () => {
-
-  test('session header missing', async () => {
-
-    const event = {
-      headers: {}
-    } as unknown as APIGatewayProxyEvent;
-
-    const response = await userLoginHandler(event);
-
-    expect(response.statusCode).toStrictEqual(400);
-    expect(JSON.parse(response.body)).toStrictEqual({
-      error: 'provided session is not valid'
+describe('Lambda tests for userLoginHandler', () => {
+  test('successful login via Lambda', async () => {
+    mockedSupabase.maybeSingle.mockResolvedValueOnce({ 
+      data: { contactId: 1, password: getHashOf('password98') }, 
+      error: null 
     });
-  });
-
-  test('invalid session provided', async () => {
 
     const event = {
-      headers: {
-        session: 'randomsession'
-      }
-    } as unknown as APIGatewayProxyEvent;
-
-    const response = await userLoginHandler(event);
-
-    expect(response.statusCode).toStrictEqual(401);
-    expect(JSON.parse(response.body)).toEqual({
-      error: expect.any(String)
-    });
-  });
-
-  test('successful logout', async () => {
-
-    const session = userRegister(
-      'sample',
-      'user',
-      'sample@gmail.com',
-      'password98'
-    ) as Session;
-
-    const event = {
-      headers: {
-        session: session.session
-      }
+      body: JSON.stringify({
+        email: 'sample@gmail.com',
+        password: 'password98'
+      })
     } as unknown as APIGatewayProxyEvent;
 
     const response = await userLoginHandler(event);
 
     expect(response.statusCode).toStrictEqual(200);
-    expect(JSON.parse(response.body)).toStrictEqual({});
+    expect(JSON.parse(response.body)).toStrictEqual({
+      session: expect.any(String)
+    });
   });
 
-});*/
+  test('missing or invalid credentials', async () => {
+
+    // fail to find a user
+    mockedSupabase.maybeSingle.mockResolvedValueOnce({ 
+      data: null, 
+      error: null 
+    });
+
+    const event = {
+      body: JSON.stringify({
+        email: 'defwrong@gmail.com',
+        password: 'defwrongpassword'
+      })
+    } as unknown as APIGatewayProxyEvent;
+
+    const response = await userLoginHandler(event);
+    
+    expect(response.statusCode).toStrictEqual(400); 
+    expect(JSON.parse(response.body)).toHaveProperty('error');
+  });
+
+});

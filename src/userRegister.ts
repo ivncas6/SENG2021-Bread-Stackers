@@ -13,6 +13,8 @@ import { invalidnameFirst, invalidnameLast, getHashOf, checkPassword,
 } from './userHelper';
 import validator from 'validator';
 import { supabase } from './supabase';
+import jwt from 'jsonwebtoken';
+import { JWTsecretKey } from './config';
 
 export async function userRegister(nameFirst: string, nameLast: string, email: string, 
   telephone: string, password: string): Promise<SessionId> {
@@ -76,7 +78,7 @@ export async function userRegister(nameFirst: string, nameLast: string, email: s
     });
   }
 
-  return createNewSession(newUser.contactId);
+  return await createNewSession(newUser.contactId);
 }
 
 export async function userLogin(email: string, password: string): Promise<SessionId | ErrorObject> {
@@ -99,7 +101,7 @@ export async function userLogin(email: string, password: string): Promise<Sessio
   }
   // Resets to 0 after successful login
 
-  return createNewSession(user.contactId);
+  return await createNewSession(user.contactId);
 }
 
 // Given the userId and set of user properties update the properties of the logged in adminUser
@@ -114,7 +116,7 @@ export async function userDetailsUpdate(
   invalidnameFirst(nameFirst);
   invalidnameLast(nameLast);
  
-  const userId = getUserIdFromSession(session);
+  const userId = await getUserIdFromSession(session);
   const u = await getUserByIdSupa(userId);
 
   if (!u) {
@@ -140,11 +142,28 @@ export async function userDetailsUpdate(
 }
 
 export async function userLogout(sessionId: string): Promise<EmptyObject | ErrorObject> {
+  const secretKey = JWTsecretKey as string;
 
-  /* Use for any live or self hosted server implementations in the future */
+  try {
+    const decode = jwt.verify(sessionId, secretKey) as { jti: string; exp: number };
+    
+    if (!decode.jti || !decode.exp) {
+      throw new UnauthorisedError('Invalid token');
+    }
+    
+    // add JWT token to supabase blacklist and logout user
+    await supabase
+      .from('jwt_blacklist')
+      .insert({
+        jti: decode.jti,
+        expires_at: new Date(decode.exp * 1000)
+      });
 
-  getUserIdFromSession(sessionId);
-  return {};
+    return {};
+
+  } catch {
+    throw new UnauthorisedError('Invalid token');
+  }
 }
 
 
