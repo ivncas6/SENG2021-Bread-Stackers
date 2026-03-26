@@ -7,8 +7,21 @@ import { getHashOf } from '../userHelper';
 import { supabase } from '../supabase';
 import { SupabaseMock } from '../interfaces';
 
-// replace mock with std one in tests/mocks
-jest.mock('../supabase', () => require('./mocks/supabaseMock'));
+// copy of supabase.ts, for some reason it doesn't work when imported
+jest.mock('../supabase', () => ({
+  supabase: {
+    from: jest.fn().mockReturnThis(),
+    select: jest.fn().mockReturnThis(),
+    insert: jest.fn().mockReturnThis(),
+    update: jest.fn().mockReturnThis(),
+    delete: jest.fn().mockReturnThis(),
+    eq: jest.fn().mockReturnThis(),
+    neq: jest.fn().mockReturnThis(),
+    lt: jest.fn().mockResolvedValue({ data: null, error: null }),
+    single: jest.fn().mockResolvedValue({ data: null, error: null }),
+    maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
+  }
+}));
 const mockedSupabase = supabase as unknown as SupabaseMock;
 
 beforeEach(async () => {
@@ -79,7 +92,6 @@ describe('Lambda tests for userLoginHandler', () => {
 
   test('missing or invalid credentials', async () => {
 
-    jest.resetAllMocks();
     // fail to find a user
     mockedSupabase.maybeSingle.mockResolvedValueOnce({ 
       data: null, 
@@ -94,10 +106,8 @@ describe('Lambda tests for userLoginHandler', () => {
     } as unknown as APIGatewayProxyEvent;
 
     const response = await userLoginHandler(event);
-
-    // Because it throws an InvalidLogin error (not handled in the 400 block of your handler currently), 
-    // it will drop to your 500 error block or need to be added to your 400 block!
-    expect(response.statusCode).not.toBe(200); 
+    
+    expect(response.statusCode).toStrictEqual(400); 
     expect(JSON.parse(response.body)).toHaveProperty('error');
   });
 

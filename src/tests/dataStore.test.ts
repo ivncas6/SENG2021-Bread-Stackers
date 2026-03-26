@@ -1,4 +1,5 @@
 import { createOrderSupaPush } from '../dataStore';
+import { SupabaseMock } from '../interfaces';
 import { supabase } from '../supabase';
 
 jest.mock('../supabase', () => ({
@@ -11,7 +12,7 @@ jest.mock('../supabase', () => ({
   }
 }));
 
-const mockedSupabase = supabase as any;
+const mockedSupabase = supabase as unknown as SupabaseMock;
 
 describe('DataStore Supabase Error Coverage', () => {
   beforeEach(() => {
@@ -27,7 +28,7 @@ describe('DataStore Supabase Error Coverage', () => {
 
     // We expect the function to crash and throw the error we just simulated
     await expect(
-      createOrderSupaPush({} as any, '123 Fake St', {} as any, [])
+      createOrderSupaPush({} as never, '123 Fake St', {} as never, [])
     ).rejects.toEqual({ message: 'Database connection lost' });
   });
 });
