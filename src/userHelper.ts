@@ -112,7 +112,7 @@ export async function invalidemailcheck(sessionId: string,
     .from('contacts')
     .select('contactId')
     .eq('email', email)
-    .neq('contactId', userId) // Check everyone EXCEPT the current user
+    .neq('contactId', userId)
     .maybeSingle();
 
   if (existingUser) {
