@@ -1,4 +1,4 @@
-import { createOrderSupaPush, getOrderByIdSupa } from '../dataStore';
+import { createOrderSupaPush } from '../dataStore';
 import { supabase } from '../supabase';
 
 jest.mock('../supabase', () => ({

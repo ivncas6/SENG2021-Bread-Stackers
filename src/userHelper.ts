@@ -17,9 +17,9 @@ const secretKey = JWTsecretKey as string;
 // deletes tokens that have expired
 export async function jwtClean() {
   await supabase
-  .from('jwt_blacklist')
-  .delete()
-  .lt('expires_at', new Date().toISOString());
+    .from('jwt_blacklist')
+    .delete()
+    .lt('expires_at', new Date().toISOString());
 }
 
 /**

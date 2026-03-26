@@ -22,7 +22,7 @@ beforeEach(() => {
 describe('Backend logic test for userLogout', () => {
   test('Successful logout', async () => {
     // JWT verification to return valid payload
-    mockedJwt.verify.mockReturnValue({ jti: 'mock-uuid-jti', exp: 1234567890 } as any);
+    mockedJwt.verify.mockReturnValue({ jti: 'mock-uuid-jti', exp: 1234567890 } as unknown as never);
     
     // insert into mock Supabase
     mockedSupabase.insert.mockResolvedValueOnce({ data: null, error: null } as never);
@@ -46,7 +46,7 @@ describe('Backend logic test for userLogout', () => {
 
 describe('Lambda function for userLogout', () => {
   test('successfully logs out', async () => {
-    mockedJwt.verify.mockReturnValue({ jti: 'mock-uuid-jti', exp: 1234567890 } as any);
+    mockedJwt.verify.mockReturnValue({ jti: 'mock-uuid-jti', exp: 1234567890 } as unknown as never);
     mockedSupabase.insert.mockResolvedValueOnce({ data: null, error: null } as never);
 
     const event = {

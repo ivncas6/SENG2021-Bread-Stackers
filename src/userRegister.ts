@@ -161,7 +161,7 @@ export async function userLogout(sessionId: string): Promise<EmptyObject | Error
 
     return {};
 
-  } catch (e) {
+  } catch {
     throw new UnauthorisedError('Invalid token');
   }
 }

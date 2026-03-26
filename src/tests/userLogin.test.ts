@@ -5,10 +5,11 @@ import { userLoginHandler } from '../handlers/userLogin';
 import { InvalidLogin } from '../throwError';
 import { getHashOf } from '../userHelper';
 import { supabase } from '../supabase';
+import { SupabaseMock } from '../interfaces';
 
 // replace mock with std one in tests/mocks
 jest.mock('../supabase', () => require('./mocks/supabaseMock'));
-const mockedSupabase = supabase as any; 
+const mockedSupabase = supabase as unknown as SupabaseMock;
 
 beforeEach(async () => {
   await clearData();
@@ -78,7 +79,7 @@ describe('Lambda tests for userLoginHandler', () => {
 
   test('missing or invalid credentials', async () => {
 
-    jest.resetAllMocks;
+    jest.resetAllMocks();
     // fail to find a user
     mockedSupabase.maybeSingle.mockResolvedValueOnce({ 
       data: null, 
