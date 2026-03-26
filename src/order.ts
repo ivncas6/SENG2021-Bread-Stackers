@@ -26,7 +26,7 @@ export async function createOrder(
   items: ReqItem[]
 ): Promise<createOrderReturn> {
   
-  const userId = await Number(getUserIdFromSession(session));
+  const userId = await getUserIdFromSession(session);
   const u = await getUserByIdSupa(userId);
 
   if (!u) {
