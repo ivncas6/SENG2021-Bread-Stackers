@@ -1,11 +1,22 @@
 swagger: "2.0"
 info:
   title: Order Creation Service
-  description: Important operations required to manage order creation data effectively by letting the user to create, retrieve, list, update and cancel (delete) orders when needed.
+  description: Important operations required to manage order creation data effectively by letting the user to create, retrieve, list, update and cancel (delete) orders when needed. Please ensure to input your api key on the "Authorize" field.
   version: 1.0.0
 
+host: "tx12cup9z0.execute-api.ap-southeast-2.amazonaws.com"
+basePath: "/Sprint2Final"
 schemes:
   - https
+
+securityDefinitions:
+  ApiKeyAuth:
+    type: apiKey
+    in: header
+    name: x-api-key
+
+security:
+  - ApiKeyAuth: []
 
 tags:
   - name: PHASE 1
@@ -236,10 +247,6 @@ paths:
       tags: [Users]
       summary: Register a new user 
       parameters:
-        - in: header
-          name: x-api-key
-          required: true
-          type: string
         - in: body
           name: body
           required: true
@@ -265,10 +272,6 @@ paths:
       tags: [Users]
       summary: Login an existing user
       parameters:
-        - in: header
-          name: x-api-key
-          required: true
-          type: string
         - in: body
           name: body
           required: true
