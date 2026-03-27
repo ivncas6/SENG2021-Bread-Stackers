@@ -1,7 +1,7 @@
 swagger: "2.0"
 info:
   title: Order Creation Service
-  description: Important operations required to manage order creation data effectively by letting the user to create, retrieve, list, update and cancel (delete) orders when needed.
+  description: Important operations required to manage order creation data effectively by letting the user to create, retrieve, list, update and cancel (delete) orders when needed. Please ensure to input your api key on the "Authorize" field.
   version: 1.0.0
 
 host: "tx12cup9z0.execute-api.ap-southeast-2.amazonaws.com"
