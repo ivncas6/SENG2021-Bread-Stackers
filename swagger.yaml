@@ -9,6 +9,15 @@ basePath: "/Sprint2Final"
 schemes:
   - https
 
+securityDefinitions:
+  ApiKeyAuth:
+    type: apiKey
+    in: header
+    name: x-api-key
+
+security:
+  - ApiKeyAuth: []
+
 tags:
   - name: PHASE 1
   - name: Users
@@ -238,10 +247,6 @@ paths:
       tags: [Users]
       summary: Register a new user 
       parameters:
-        - in: header
-          name: x-api-key
-          required: true
-          type: string
         - in: body
           name: body
           required: true
@@ -267,10 +272,6 @@ paths:
       tags: [Users]
       summary: Login an existing user
       parameters:
-        - in: header
-          name: x-api-key
-          required: true
-          type: string
         - in: body
           name: body
           required: true
