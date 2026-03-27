@@ -23,6 +23,10 @@ Resources:
     Type: AWS::Serverless::Api
     Properties:
       StageName: finalAPISprint2Release
+      Cors:
+        AllowMethods: "'OPTIONS,GET,POST,PUT,DELETE'"
+        AllowHeaders: "'Content-Type,x-api-key,session'"
+        AllowOrigin: "'*'"
       Auth:
         ApiKeyRequired: true
         UsagePlan:
