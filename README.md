@@ -3,6 +3,21 @@
 ## SOFTWARE ARCHITECTURE DIAGRAM 
 ![Container Diagram](images/C4.png)
 
+## Frontend Prototype
+
+A static frontend proof of concept for Sprint 3 is available in [`frontend/index.html`](frontend/index.html).
+
+To demo it locally:
+
+1. Serve the repository root with a simple static server, for example `python3 -m http.server 8000`
+2. Open `http://localhost:8000/frontend/`
+3. Enter your deployed API base URL and `x-api-key`
+4. Use the forms to register, login, create orders, list orders, inspect details, update, and cancel
+
+Notes:
+- The frontend is intentionally lightweight and uses plain HTML, CSS, and JavaScript so it can be demoed without adding a framework.
+- It expects the deployed backend to be reachable and to allow browser requests from your demo origin.
+
 ## TODO:
 - Need to add instructions for adding '.env' and an API key from AWS
 - Need setup instructions like npm install
