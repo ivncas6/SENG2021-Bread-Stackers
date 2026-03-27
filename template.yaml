@@ -29,6 +29,7 @@ Resources:
         AllowOrigin: "'*'"
       Auth:
         ApiKeyRequired: true
+        AddApiKeyRequiredToCorsPreflight: false
         UsagePlan:
           CreateUsagePlan: PER_API
           UsagePlanName: BreadStackersPlan
