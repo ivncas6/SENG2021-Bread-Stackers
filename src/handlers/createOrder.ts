@@ -7,6 +7,7 @@ import {
   InvalidPhone,
   InvalidRequestPeriod,
   UnauthorisedError } from '../throwError';
+import { jsonResponse } from './response';
 
 export const createOrderHandler = async (
   event: APIGatewayProxyEvent
@@ -35,31 +36,19 @@ export const createOrderHandler = async (
       items
     );
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify(result),
-    };
+    return jsonResponse(200, result);
 
   } catch (err: unknown) {
     if (err instanceof UnauthorisedError) {
-      return {
-        statusCode: 401,
-        body: JSON.stringify({ error: err.message })
-      };
+      return jsonResponse(401, { error: err.message });
     }
     if (err instanceof InvalidInput || 
       err instanceof InvalidRequestPeriod ||
       err instanceof InvalidEmail || 
       err instanceof InvalidPhone) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: err.message })
-      };
+      return jsonResponse(400, { error: err.message });
     }
     // internal server error, server doesnot know how to handle the error
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: 'INTERNAL SERVER ERROR' }),
-    };
+    return jsonResponse(500, { error: 'INTERNAL SERVER ERROR' });
   }
 };

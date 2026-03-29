@@ -1,36 +1,25 @@
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import { UnauthorisedError } from '../throwError';
 import { userLogout } from '../userRegister';
+import { jsonResponse } from './response';
 
 export const userLogoutHandler = async (event: APIGatewayProxyEvent) => {
   try {
     // get the session from the header
     const session = event.headers.session;
     if (!session) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: 'provided session is not valid' }),
-      };
+      return jsonResponse(400, { error: 'provided session is not valid' });
     }
 
     // call the backend function
     const res = await userLogout(session);
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify(res),
-    };
+    return jsonResponse(200, res);
   } catch (e) {
     if (e instanceof UnauthorisedError) {
-      return {
-        statusCode: 401,
-        body: JSON.stringify({ error: e.message }),
-      };
+      return jsonResponse(401, { error: e.message });
     }
     // internal server error, server doesnot know how to handle the error
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: 'INTERNAL SERVER ERROR' }),
-    };
+    return jsonResponse(500, { error: 'INTERNAL SERVER ERROR' });
   }
 };

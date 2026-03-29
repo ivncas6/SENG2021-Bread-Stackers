@@ -1,6 +1,7 @@
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import { listOrders } from '../order';
 import { UnauthorisedError } from '../throwError';
+import { jsonResponse } from './response';
 
 export const listOrderHandler = async (event: APIGatewayProxyEvent) => {
   try {
@@ -11,21 +12,12 @@ export const listOrderHandler = async (event: APIGatewayProxyEvent) => {
 
     const result = await listOrders(session);
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify(result),
-    };
+    return jsonResponse(200, result);
 
   } catch (err: unknown) {
     if (err instanceof UnauthorisedError) {
-      return {
-        statusCode: 401,
-        body: JSON.stringify({ error: err.message }),
-      };
+      return jsonResponse(401, { error: err.message });
     }
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: String(err) })
-    };
+    return jsonResponse(500, { error: String(err) });
   }
 };
