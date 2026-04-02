@@ -1,6 +1,9 @@
-import { Order, ReqItem, ReqUser } from './interfaces';
+import { Session } from 'node:inspector';
+import { getUserByIdSupa } from './dataStore';
+import { Order, ReqItem, ReqUser, SessionId } from './interfaces';
+import { getUserIdFromSession } from './userHelper';
 
-function generateItemXML(items: ReqItem[]): string {
+async function generateItemXML(items: ReqItem[]): Promise<string> {
   return items.map(i => `
     <cac:LineItem>
         <cbc:Quantity>${i.quantity}</cbc:Quantity>
@@ -14,9 +17,11 @@ function generateItemXML(items: ReqItem[]): string {
     </cac:LineItem>`).join('');
 }
 
-export function createOrderUBLXML(
-  order: Order, items: ReqItem[], user: ReqUser, deliveryAddress: string): string {
-  const itemList = generateItemXML(items);
+export async function createOrderUBLXML(
+  order: Order, session: string, items: ReqItem[], deliveryAddress: string): Promise<string> {
+  const itemList = await generateItemXML(items);
+  const userId = await getUserIdFromSession(session);
+  const user = await getUserByIdSupa(userId as number);
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Order xmlns="urn:oasis:names:specification:ubl:schema:xsd:Order-2"
