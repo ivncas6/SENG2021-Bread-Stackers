@@ -4,6 +4,7 @@ import { InvalidLastName,
   InvalidPhone
 } from '../throwError';
 import { userDetailsUpdate } from '../userRegister';
+import { jsonResponse } from './response';
 
 export const updateUserDetailsHandler = async (
   event: APIGatewayProxyEvent
@@ -12,10 +13,7 @@ export const updateUserDetailsHandler = async (
     // get the session from the header
     const session = event.headers.session;
     if (!session) {
-      return {
-        statusCode: 401,
-        body: JSON.stringify({ error: 'provided session is not valid'})
-      };
+      return jsonResponse(401, { error: 'provided session is not valid'});
     }
     // retrieve the parameters from the body
     const body = JSON.parse(event.body ?? '{}');
@@ -29,10 +27,7 @@ export const updateUserDetailsHandler = async (
       session, email, firstName, lastName, telephone
     );
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify(res),
-    };
+    return jsonResponse(200, res);
 
   } catch (e) {
     if (e instanceof InvalidLastName ||
@@ -40,21 +35,12 @@ export const updateUserDetailsHandler = async (
         e instanceof InvalidEmail ||
         e instanceof InvalidPhone
     ) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: e.message })
-      };
+      return jsonResponse(400, { error: e.message });
     }
     if (e instanceof UnauthorisedError) {
-      return {
-        statusCode: 401,
-        body: JSON.stringify({ error: e.message })
-      };
+      return jsonResponse(401, { error: e.message });
     }
     // internal server error, server doesnot know how to handle the error
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: 'INTERNAL SERVER ERROR' }),
-    };
+    return jsonResponse(500, { error: 'INTERNAL SERVER ERROR' });
   }
 };

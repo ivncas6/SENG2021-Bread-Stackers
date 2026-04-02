@@ -2,6 +2,7 @@ import { APIGatewayProxyEvent } from 'aws-lambda';
 import { InvalidLastName, InvalidFirstName, 
   InvalidEmail, InvalidPassword, InvalidPhone } from '../throwError';
 import { userRegister } from '../userRegister';
+import { jsonResponse } from './response';
 
 export const registerUserHandler = async (
   event: APIGatewayProxyEvent
@@ -18,10 +19,7 @@ export const registerUserHandler = async (
 
     const user = await userRegister(firstName, lastName, email, telephone, password);
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify(user),
-    };
+    return jsonResponse(200, user);
 
   } catch (e) {
     if (e instanceof InvalidLastName ||
@@ -30,15 +28,9 @@ export const registerUserHandler = async (
         e instanceof InvalidPassword ||
         e instanceof InvalidPhone
     ) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: e.message })
-      };
+      return jsonResponse(400, { error: e.message });
     }
     // internal server error, server doesnot know how to handle the error
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: 'INTERNAL SERVER ERROR' }),
-    };
+    return jsonResponse(500, { error: 'INTERNAL SERVER ERROR' });
   }
 };

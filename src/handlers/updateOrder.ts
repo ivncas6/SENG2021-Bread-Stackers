@@ -3,6 +3,7 @@ import { InvalidOrderId, UnauthorisedError,
   InvalidDeliveryAddr, InvalidRequestPeriod, 
   InvalidInput } from '../throwError';
 import { updateOrder } from '../order';
+import { jsonResponse } from './response';
 
 // Update Order
 export const updateOrderHandler = async (event: APIGatewayProxyEvent) => {
@@ -12,17 +13,11 @@ export const updateOrderHandler = async (event: APIGatewayProxyEvent) => {
     const session = event.headers.session || event.headers.Session;
 
     if (!session) {
-      return {
-        statusCode: 401,
-        body: JSON.stringify({ error: 'JWT session token is missing' })
-      };
+      return jsonResponse(401, { error: 'JWT session token is missing' });
     }
 
     if (!orderId) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: 'Order ID is missing from path' })
-      };
+      return jsonResponse(400, { error: 'Order ID is missing from path' });
     }
 
     // Call updateOrder function
@@ -34,17 +29,11 @@ export const updateOrderHandler = async (event: APIGatewayProxyEvent) => {
       body.status
     );
     // Sucess returns 200
-    return {
-      statusCode: 200,
-      body: JSON.stringify(result),
-    };
+    return jsonResponse(200, result);
   // Unathorised access must return 401
   } catch (err: unknown) {
     if (err instanceof UnauthorisedError) {
-      return {
-        statusCode: 401,
-        body: JSON.stringify({ error: err.message })
-      };
+      return jsonResponse(401, { error: err.message });
     }
     // Validation errors must return 400
     if (
@@ -53,15 +42,9 @@ export const updateOrderHandler = async (event: APIGatewayProxyEvent) => {
       err instanceof InvalidRequestPeriod ||
       err instanceof InvalidInput
     ) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: err.message })
-      };
+      return jsonResponse(400, { error: err.message });
     }
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: 'INTERNAL SERVER ERROR' })
-    };
+    return jsonResponse(500, { error: 'INTERNAL SERVER ERROR' });
 
   }
 };

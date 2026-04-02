@@ -5,6 +5,7 @@ import {
   InvalidPassword
 } from '../throwError';
 import { userLogin } from '../userRegister';
+import { jsonResponse } from './response';
 
 export const userLoginHandler = async (event: APIGatewayProxyEvent) => {
   try {
@@ -17,23 +18,14 @@ export const userLoginHandler = async (event: APIGatewayProxyEvent) => {
     // call the backend function
     const session = await userLogin(email, password);
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify(session),
-    };
+    return jsonResponse(200, session);
   } catch (e) {
     if (e instanceof InvalidEmail || 
       e instanceof InvalidPassword || 
       e instanceof InvalidLogin) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: e.message })
-      };
+      return jsonResponse(400, { error: e.message });
     }
     // internal server error, server doesnot know how to handle the error
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: 'INTERNAL SERVER ERROR' })
-    };
+    return jsonResponse(500, { error: 'INTERNAL SERVER ERROR' });
   }
 };

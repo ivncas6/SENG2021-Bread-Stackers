@@ -480,13 +480,3 @@ paths:
           description: "**UNAUTHORISED**"
           schema: 
             $ref: '#/definitions/error401'
-  
-  /v0/clear:
-    delete:
-      tags: [Other]
-      summary: "Clears all the orders."
-      responses:
-        200:
-          description:  "**Successfully removed all orders**"
-          schema:
-              $ref: '#/definitions/emptyObj'
