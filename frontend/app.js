@@ -4,7 +4,7 @@ const storageKeys = {
   session: 'breadstackers.session',
 };
 
-let elements = {
+const elements = {
   apiBaseUrl: document.getElementById('apiBaseUrl'),
   apiKey: document.getElementById('apiKey'),
   saveConfigButton: document.getElementById('saveConfigButton'),
@@ -30,7 +30,7 @@ function getConfig() {
   };
 }
 
-function setSession(session: string) {
+function setSession(session) {
   if (session) {
     localStorage.setItem(storageKeys.session, session);
   } else {

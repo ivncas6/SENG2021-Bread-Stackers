@@ -230,7 +230,7 @@ Resources:
 Outputs:
   WebEndpoint:
     Description: API Gateway endpoint URL for final sprint2 stage
-    Value: !Sub "https://${BreadStackersApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/Prod/"
+    Value: !Sub "https://${BreadStackersApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/https://tx12cup9z0.execute-api.ap-southeast-2.amazonaws.com/Sprint2Final/"
 
 
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
