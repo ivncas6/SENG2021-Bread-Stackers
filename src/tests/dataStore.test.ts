@@ -10,17 +10,17 @@ import { InvalidSupabase } from '../throwError';
 jest.mock('../supabase', () => ({
   supabase: {
     from: jest.fn().mockReturnThis(),
-    insert: jest.fn().mockReturnThis(),
     select: jest.fn().mockReturnThis(),
-    single: jest.fn().mockReturnThis(),
-    maybeSingle: jest.fn().mockReturnThis(),
-    eq: jest.fn().mockReturnThis(),
-    neq: jest.fn().mockReturnThis(),
+    insert: jest.fn().mockReturnThis(),
     update: jest.fn().mockReturnThis(),
     delete: jest.fn().mockReturnThis(),
+    eq: jest.fn().mockReturnThis(),
+    neq: jest.fn().mockReturnThis(),
+    single: jest.fn(),
+    maybeSingle: jest.fn(),
     storage: {
       from: jest.fn().mockReturnThis(),
-      remove: jest.fn().mockReturnThis()
+      remove: jest.fn(),
     }
   }
 }));
@@ -31,7 +31,7 @@ jest.mock('../generateUBL', () => ({
   generateUBLOrderFilePath: jest.fn().mockResolvedValue('UBLOrders/test-uuid')
 }));
 
-const mockSupabase = supabase as any;
+const mockSupabase = supabase as never;
 
 describe('DataStore Methods', () => {
   beforeEach(() => {
@@ -60,33 +60,40 @@ describe('DataStore Methods', () => {
     const mockItems = [{ name: 'Bread', unitPrice: 5, description: 'Loaf', quantity: 1 }];
 
     test('successfully pushes an order sequence', async () => {
-      // Address insert, Order insert (no data needed), Delivery insert (no data), Item insert
-      mockSupabase.single
-        .mockResolvedValueOnce({ data: { addressID: 1 }, error: null }) // address
-        .mockResolvedValueOnce({ data: { itemId: 101 }, error: null }); // item
-      
       mockSupabase.insert
-        .mockResolvedValueOnce({ error: null }) // address
-        .mockResolvedValueOnce({ error: null }) // order
-        .mockResolvedValueOnce({ error: null }) // delivery
-        .mockResolvedValueOnce({ error: null }); // item
+        .mockReturnValueOnce(mockSupabase) 
+        .mockResolvedValueOnce({ error: null }) 
+        .mockResolvedValueOnce({ error: null }) 
+        .mockReturnValueOnce(mockSupabase) 
+        .mockResolvedValueOnce({ error: null });
 
-      await expect(createOrderSupaPush(mockOrder, '123 Fake St', mockPeriod, mockItems)).resolves.not.toThrow();
+      mockSupabase.single
+        .mockResolvedValueOnce({ data: { addressID: 1 }, error: null })
+        .mockResolvedValueOnce({ data: { itemId: 101 }, error: null });
+
+      await expect(createOrderSupaPush(
+        mockOrder, '123 Fake St', mockPeriod, mockItems)).resolves.not.toThrow();
     });
 
     test('throws if address insertion fails', async () => {
-      mockSupabase.single.mockResolvedValueOnce({ data: null, error: { message: 'Address error' } });
+      mockSupabase.insert.mockReturnValueOnce(mockSupabase);
+      mockSupabase.single.mockResolvedValueOnce(
+        { data: null, error: { message: 'Address error' } });
+      
       await expect(createOrderSupaPush(mockOrder, '123 Fake St', mockPeriod, mockItems)).rejects.toEqual({ message: 'Address error' });
     });
 
     test('throws if order insertion fails', async () => {
-      mockSupabase.single.mockResolvedValueOnce({ data: { addressID: 1 }, error: null });
-      // Supabase insert chain for order returns error
       mockSupabase.insert
-        .mockReturnThis() // address
-        .mockResolvedValueOnce({ error: { message: 'Order DB Error' } }); // order
-
-      await expect(createOrderSupaPush(mockOrder, '123 Fake St', mockPeriod, mockItems)).rejects.toThrow('Order Table Error: Order DB Error');
+        .mockReturnValueOnce(mockSupabase)
+        .mockResolvedValueOnce({ error: { message: 'Order DB Error' } });
+        
+      mockSupabase.single.mockResolvedValueOnce(
+        { data: { addressID: 1 }, error: null });
+      
+      await expect(createOrderSupaPush(
+        mockOrder, '123 Fake St', mockPeriod, mockItems))
+        .rejects.toThrow('Order Table Error: Order DB Error');
     });
   });
 
@@ -97,8 +104,11 @@ describe('DataStore Methods', () => {
     });
 
     test('returns an order on success', async () => {
-      const mockOrderData = { orderId: '550e8400-e29b-41d4-a716-446655440000', status: 'OPEN' };
-      mockSupabase.maybeSingle.mockResolvedValueOnce({ data: mockOrderData, error: null });
+      const mockOrderData = { 
+        orderId: '550e8400-e29b-41d4-a716-446655440000', status: 'OPEN' 
+      };
+      mockSupabase.maybeSingle.mockResolvedValueOnce(
+        { data: mockOrderData, error: null });
 
       const result = await getOrderByIdSupa('550e8400-e29b-41d4-a716-446655440000');
       expect(result).toEqual(mockOrderData);
@@ -151,17 +161,25 @@ describe('DataStore Methods', () => {
     });
 
     test('updateOrderSupa updates order, delivery, and address', async () => {
-      // Mock Promise.all returns (orderRes, deliveryRes)
-      mockSupabase.eq.mockResolvedValueOnce({ data: {}, error: null }); // order update
-      mockSupabase.single.mockResolvedValueOnce({ data: { deliveryAddressID: 99 }, error: null }); // delivery update
-      mockSupabase.eq.mockResolvedValueOnce({ data: {}, error: null }); // address update
+      // Promise.all contains: order (awaited eq), delivery (chained eq to select)
+      // Then address update (awaited eq)
+      mockSupabase.eq
+        .mockResolvedValueOnce({ data: {}, error: null }) // order awaits
+        .mockReturnValueOnce(mockSupabase) // delivery chains to select
+        .mockResolvedValueOnce({ data: {}, error: null }); // address awaits
+
+      mockSupabase.single.mockResolvedValueOnce({ data: { deliveryAddressID: 99 }, error: null });
 
       await expect(updateOrderSupa('uuid', 'New St', { startDateTime: 1, endDateTime: 2 }, 'CLOSED')).resolves.not.toThrow();
     });
 
     test('updateOrderSupa throws if order update fails', async () => {
-      mockSupabase.eq.mockResolvedValueOnce({ error: { message: 'Order update fail' } }); // order update
-      mockSupabase.single.mockResolvedValueOnce({ data: { deliveryAddressID: 99 }, error: null }); // delivery
+      mockSupabase.eq
+        .mockResolvedValueOnce({ error: { message: 'Order update fail' } })
+        .mockReturnValueOnce(mockSupabase);
+
+      mockSupabase.single.mockResolvedValueOnce({ data: { deliveryAddressID: 99 }, error: null }); 
+
       await expect(updateOrderSupa('uuid', 'New St', { startDateTime: 1, endDateTime: 2 }, 'CLOSED')).rejects.toEqual({ message: 'Order update fail' });
     });
   });
