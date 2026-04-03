@@ -79,8 +79,6 @@ export async function createOrder(
   };
 
   await createOrderSupaPush(order, deliveryAddress, reqDeliveryPeriod, items);
-  createOrderUBLXML(order, items, user, deliveryAddress);
-
   return { orderId: orderId };
 }
 

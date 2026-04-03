@@ -1,8 +1,8 @@
-import { Session } from 'node:inspector';
-import { getOrderByIdSupa, getUserByIdSupa } from './dataStore';
-import { Order, OrderLineWithItem, ReqItem, ReqUser, SessionId } from './interfaces';
+import { getOrderByIdSupa, getOrgByUserId, getUserByIdSupa } from './dataStore';
+import { OrderLineWithItem, ReqItem, ReqUser, SessionId } from './interfaces';
 import { getUserIdFromSession } from './userHelper';
-import { InvalidOrderId } from './throwError';
+import { InvalidOrderId, UnauthorisedError } from './throwError';
+import { supabase } from './supabase';
 
 async function generateItemXML(items: ReqItem[]): Promise<string> {
   return items.map(i => `
@@ -21,13 +21,24 @@ async function generateItemXML(items: ReqItem[]): Promise<string> {
 export async function createOrderUBLXML(orderId: string,
   session: string): Promise<string> {
 
+  const userId = await getUserIdFromSession(session);
+  const { data: orgData } = await getOrgByUserId(userId);
+  if (!orgData) {
+    throw new UnauthorisedError('User has no associated organization');
+  }
+  const user = await getUserByIdSupa(userId);
+
   const order = await getOrderByIdSupa(orderId);
-  
   // if order doesn't exist
   if (!order) {
     throw new InvalidOrderId(
       'Provided orderId doesnot correspond to any existing order',
     );
+  }
+
+  // wrong acc
+  if (order.buyerOrgID !== orgData.orgId) {
+    throw new UnauthorisedError('You do not have permission to cancel this order');
   }
 
   const items = (order.order_lines || []).map((line: OrderLineWithItem) => ({
@@ -43,10 +54,10 @@ export async function createOrderUBLXML(orderId: string,
   const deliveryAddress = delivery?.addresses;
   
   await generateItemXML(items);
-  const userId = await getUserIdFromSession(session);
-  const user = await getUserByIdSupa(userId as number);
 
-  return `<?xml version="1.0" encoding="UTF-8"?>
+  // make this save to database instead and then return url
+
+  const doc = `<?xml version="1.0" encoding="UTF-8"?>
     <Order xmlns="urn:oasis:names:specification:ubl:schema:xsd:Order-2"
         xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
         xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">
@@ -94,4 +105,25 @@ export async function createOrderUBLXML(orderId: string,
 
         ${itemList}
     </Order>`;
+
+    const filePath = `UBLOrders/${order.orderId}`;
+    await supabase.storage.from('UBL Order Documents').upload(filePath, doc, {
+      cacheControl: '3600',
+      upsert: false,
+      contentType: 'application/xml'
+    });
+
+    const { data, error } = await supabase
+      .storage
+      .from('UBL Order Documents')
+      .createSignedUrl(filePath, 60);
+
+    if (error) throw error;
+
+    if (!data) {
+      throw new Error('supabase failed to save UBL order document');
+    }
+
+    // return a signed url
+    return data.signedUrl;
 }

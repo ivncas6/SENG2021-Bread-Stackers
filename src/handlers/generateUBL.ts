@@ -10,11 +10,11 @@ export const generateUBLHandler = async (
 ) => {
   try {
     const orderId = event.pathParameters!.orderId!;
-    const order = await getOrderByIdSupa(orderId);
-    const session = event.headers.session;
-    const items = order?.order_lines
+    const session = event.headers.session as string;
     
-    const result = await createOrderUBLXML(order, session, items, )
+    const result = await createOrderUBLXML(orderId, session);
+
+    return { result };
 
   } catch (e: unknown) {
     return jsonResponse(500, { error: 'INTERNAL SERVER ERROR' });
