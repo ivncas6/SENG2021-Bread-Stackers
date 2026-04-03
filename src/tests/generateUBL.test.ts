@@ -1,11 +1,11 @@
-import { createOrderUBLXML, getOrderUBLXML, generateUBLOrderFilePath, UBLBucket } from '../generateUBL';
+import { createOrderUBLXML, getOrderUBLXML, 
+  generateUBLOrderFilePath, UBLBucket } from '../generateUBL';
 import { generateUBLHandler } from '../handlers/generateUBL';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import * as dataStore from '../dataStore';
 import * as userHelper from '../userHelper';
 import { supabase } from '../supabase';
 import { InvalidOrderId, InvalidSupabase, UnauthorisedError } from '../throwError';
-import { SupabaseMock } from '../interfaces';
 
 // mock deps
 jest.mock('../dataStore');
