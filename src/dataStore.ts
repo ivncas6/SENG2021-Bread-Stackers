@@ -3,6 +3,7 @@ import { Address, Contact, Delivery, generateUBLOrderFilePath, Item, Order,
   OrderLine, ReqDeliveryPeriod, ReqItem, 
   UBLBucket} from './interfaces';
 import { supabase } from './supabase';
+import { InvalidSupabase } from './throwError';
 
 // local for testing
 
@@ -157,7 +158,7 @@ export async function updateOrderStatus(orderId: string, newStatus: string) {
     .update({ status: newStatus })
     .eq('orderId', orderId);
 
-  if (error) throw error;
+  if (error) throw new InvalidSupabase(error.message);
   return data;
 }
 
@@ -241,6 +242,6 @@ export async function createOrganisationSupa(contactId: number, ownerName: strin
     .select()
     .single();
 
-  if (error) throw new Error(`Org Creation Failed: ${error.message}`);
+  if (error) throw new InvalidSupabase(`Org Creation Failed: ${error.message}`);
   return data;
 }

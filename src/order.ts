@@ -11,9 +11,10 @@ import { createOrderSupaPush,
 import { InvalidDeliveryAddr, InvalidEmail, InvalidInput,
   InvalidOrderId,
   InvalidPhone,
-  InvalidRequestPeriod, UnauthorisedError } from './throwError';
+  InvalidRequestPeriod, InvalidSupabase, UnauthorisedError } from './throwError';
 import { getUserIdFromSession } from './userHelper';
 import { supabase } from './supabase';
+import { createOrderUBLXML } from './generateUBL';
 
 
 export async function createOrder(
@@ -78,6 +79,7 @@ export async function createOrder(
   };
 
   await createOrderSupaPush(order, deliveryAddress, reqDeliveryPeriod, items);
+  await createOrderUBLXML(orderId, session);
   return { orderId: orderId };
 }
 
@@ -187,7 +189,7 @@ export async function listOrders(session: string) {
     .select('orderId, status, issuedDate, finalPrice, currency')
     .eq('buyerOrgID', orgData.orgId);
 
-  if (error) throw error;
+  if (error) throw new InvalidSupabase(error.message);
 
   return { orders };
 }
@@ -242,6 +244,7 @@ export async function updateOrder(
   }
 
   await updateOrderSupa(orderId, deliveryAddress, reqDeliveryPeriod, status);
+  await createOrderUBLXML(orderId, session);
 
   // Return empty 
   return {};

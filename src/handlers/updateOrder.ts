@@ -1,7 +1,8 @@
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import { InvalidOrderId, UnauthorisedError, 
   InvalidDeliveryAddr, InvalidRequestPeriod, 
-  InvalidInput } from '../throwError';
+  InvalidInput, 
+  InvalidSupabase} from '../throwError';
 import { updateOrder } from '../order';
 import { jsonResponse } from './response';
 
@@ -43,6 +44,9 @@ export const updateOrderHandler = async (event: APIGatewayProxyEvent) => {
       err instanceof InvalidInput
     ) {
       return jsonResponse(400, { error: err.message });
+    }
+    if (err instanceof InvalidSupabase) {
+      return jsonResponse(500, { error: err.message });
     }
     return jsonResponse(500, { error: 'INTERNAL SERVER ERROR' });
 

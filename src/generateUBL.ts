@@ -1,7 +1,7 @@
 import { getOrderByIdSupa, getOrgByUserId, getUserByIdSupa } from './dataStore';
 import { generateUBLOrderFilePath, OrderLineWithItem, ReqItem, UBLBucket } from './interfaces';
 import { getUserIdFromSession } from './userHelper';
-import { InvalidOrderId, UnauthorisedError } from './throwError';
+import { InvalidOrderId, InvalidSupabase, UnauthorisedError } from './throwError';
 import { supabase } from './supabase';
 
 async function generateItemXML(items: ReqItem[]): Promise<string> {
@@ -18,7 +18,7 @@ async function generateItemXML(items: ReqItem[]): Promise<string> {
     </cac:LineItem>`).join('');
 }
 
-async function getOrderUBLXML(orderId: string,
+export async function getOrderUBLXML(orderId: string,
   session: string): Promise<string> {
 
   const userId = await getUserIdFromSession(session);
@@ -46,10 +46,10 @@ async function getOrderUBLXML(orderId: string,
     .from(UBLBucket)
     .createSignedUrl(filePath, 60);
 
-  if (error) throw error;
+  if (error) throw new InvalidSupabase(error.message);
 
   if (!data) {
-    throw new Error('supabase failed to fetch UBL order document');
+    throw new InvalidSupabase('supabase failed to fetch UBL order document');
   }
 
   // return a signed url
@@ -57,12 +57,7 @@ async function getOrderUBLXML(orderId: string,
 }
 
 export async function createOrderUBLXML(orderId: string,
-  session: string): Promise<string> {
-
-  const checkUrl = await getOrderUBLXML(orderId, session);
-  if (checkUrl) {
-    return checkUrl;
-  }
+  session: string): Promise<null> {
 
   const userId = await getUserIdFromSession(session);
   const { data: orgData } = await getOrgByUserId(userId);
@@ -147,6 +142,16 @@ export async function createOrderUBLXML(orderId: string,
         ${itemList}
     </Order>`;
 
-  const addedUrl = await getOrderUBLXML(orderId, session);
-  return addedUrl;
+  // insert UBL file
+  const filePath = await generateUBLOrderFilePath(orderId);
+  const { error } = await supabase
+    .storage
+    .from('UBLBucket')
+    .upload(filePath, doc, {
+      cacheControl: '3600',
+      upsert: true
+    });
+
+  if (error) throw new InvalidSupabase(error.message);
+  return null;
 }

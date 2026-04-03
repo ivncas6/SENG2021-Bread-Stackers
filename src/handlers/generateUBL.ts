@@ -1,16 +1,16 @@
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import { jsonResponse } from './response';
-import { createOrderUBLXML } from '../generateUBL';
-import { InvalidOrderId, UnauthorisedError } from '../throwError';
+import { getOrderUBLXML } from '../generateUBL';
+import { InvalidOrderId, InvalidSupabase, UnauthorisedError } from '../throwError';
 
-export const createUBLHandler = async (
+export const generateUBLHandler = async (
   event: APIGatewayProxyEvent
 ) => {
   try {
     const orderId = event.pathParameters!.orderId!;
     const session = event.headers.session as string;
     
-    const result = await createOrderUBLXML(orderId, session);
+    const result = await getOrderUBLXML(orderId, session);
 
     return { signedUrl: result };
 
@@ -20,6 +20,9 @@ export const createUBLHandler = async (
     }
     if (e instanceof UnauthorisedError) {
       return jsonResponse(401, { error: e.message });
+    }
+    if (e instanceof InvalidSupabase) {
+      return jsonResponse(500, { error: e.message });
     }
     return jsonResponse(500, { error: 'INTERNAL SERVER ERROR' });
   }
