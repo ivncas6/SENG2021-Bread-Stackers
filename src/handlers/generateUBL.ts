@@ -11,8 +11,7 @@ export const generateUBLHandler = async (
     const session = event.headers.session as string;
     
     const result = await getOrderUBLXML(orderId, session);
-
-    return { signedUrl: result };
+    return jsonResponse(200, { signedUrl: result });
 
   } catch (e: unknown) {
     if (e instanceof InvalidOrderId) {

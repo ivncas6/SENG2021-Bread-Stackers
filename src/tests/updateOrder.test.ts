@@ -11,6 +11,12 @@ import { Order } from '../interfaces';
 jest.mock('../userHelper');
 jest.mock('../dataStore');
 
+// mock the storage bucket
+jest.mock('../generateUBL', () => ({
+  createOrderUBLXML: jest.fn().mockResolvedValue(null),
+  getOrderUBLXML: jest.fn().mockResolvedValue('mock-url')
+}));
+
 const mockedUserHelper = userHelper as jest.Mocked<typeof userHelper>;
 const mockedDataStore = dataStore as jest.Mocked<typeof dataStore>;
 
@@ -40,6 +46,14 @@ async function createTemplateOrderAndUser() {
   mockedUserHelper.getUserIdFromSession.mockReturnValue(mockUserId);
   mockedDataStore.getOrgByUserId.mockResolvedValue({ 
     data: { orgId: mockOrgId }, error: null 
+  } as never);
+
+  // mock user from supa
+  mockedDataStore.getUserByIdSupa.mockResolvedValue({
+    firstName: 'Test',
+    lastName: 'User',
+    email: 'test@example.com',
+    telephone: '0412345678'
   } as never);
 
   const mockOrder: Partial<Order> = { 

@@ -89,7 +89,7 @@ export async function createOrderUBLXML(orderId: string,
   const itemList = await generateItemXML(items);
 
   const delivery = order.deliveries?.[0];
-  const deliveryAddress = delivery?.addresses;
+  const deliveryAddress = delivery?.addresses?.street;
   
   await generateItemXML(items);
 
