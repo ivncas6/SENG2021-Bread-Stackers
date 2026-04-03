@@ -25,7 +25,7 @@ jest.mock('../supabase', () => ({
   }
 }));
 
-// Mock of UBL file path generator
+// mock of UBL file path generator
 jest.mock('../generateUBL', () => ({
   UBLBucket: 'UBL Order Documents',
   generateUBLOrderFilePath: jest.fn().mockResolvedValue('UBLOrders/test-uuid')
@@ -80,7 +80,8 @@ describe('DataStore Methods', () => {
       mockSupabase.single.mockResolvedValueOnce(
         { data: null, error: { message: 'Address error' } });
       
-      await expect(createOrderSupaPush(mockOrder, '123 Fake St', mockPeriod, mockItems)).rejects.toEqual({ message: 'Address error' });
+      await expect(createOrderSupaPush(mockOrder, '123 Fake St', mockPeriod, mockItems))
+        .rejects.toEqual({ message: 'Address error' });
     });
 
     test('throws if order insertion fails', async () => {
@@ -115,11 +116,15 @@ describe('DataStore Methods', () => {
     });
 
     test('ignores PGRST116 (no rows) and throws other errors', async () => {
-      mockSupabase.maybeSingle.mockResolvedValueOnce({ data: null, error: { code: 'PGRST116', message: 'Not found' } });
-      await expect(getOrderByIdSupa('550e8400-e29b-41d4-a716-446655440000')).resolves.toBeNull();
+      mockSupabase.maybeSingle.mockResolvedValueOnce(
+        { data: null, error: { code: 'PGRST116', message: 'Not found' } });
+      await expect(getOrderByIdSupa('550e8400-e29b-41d4-a716-446655440000'))
+        .resolves.toBeNull();
 
-      mockSupabase.maybeSingle.mockResolvedValueOnce({ data: null, error: { code: 'OTHER', message: 'Fatal DB error' } });
-      await expect(getOrderByIdSupa('550e8400-e29b-41d4-a716-446655440000')).rejects.toEqual({ code: 'OTHER', message: 'Fatal DB error' });
+      mockSupabase.maybeSingle.mockResolvedValueOnce(
+        { data: null, error: { code: 'OTHER', message: 'Fatal DB error' } });
+      await expect(getOrderByIdSupa('550e8400-e29b-41d4-a716-446655440000'))
+        .rejects.toEqual({ code: 'OTHER', message: 'Fatal DB error' });
     });
   });
 
@@ -162,15 +167,17 @@ describe('DataStore Methods', () => {
 
     test('updateOrderSupa updates order, delivery, and address', async () => {
       // Promise.all contains: order (awaited eq), delivery (chained eq to select)
-      // Then address update (awaited eq)
       mockSupabase.eq
-        .mockResolvedValueOnce({ data: {}, error: null }) // order awaits
-        .mockReturnValueOnce(mockSupabase) // delivery chains to select
-        .mockResolvedValueOnce({ data: {}, error: null }); // address awaits
+        .mockResolvedValueOnce({ data: {}, error: null })
+        // delivery chains to select
+        .mockReturnValueOnce(mockSupabase)
+        .mockResolvedValueOnce({ data: {}, error: null });
 
-      mockSupabase.single.mockResolvedValueOnce({ data: { deliveryAddressID: 99 }, error: null });
+      mockSupabase.single.mockResolvedValueOnce(
+        { data: { deliveryAddressID: 99 }, error: null });
 
-      await expect(updateOrderSupa('uuid', 'New St', { startDateTime: 1, endDateTime: 2 }, 'CLOSED')).resolves.not.toThrow();
+      await expect(updateOrderSupa('uuid', 'New St', 
+        { startDateTime: 1, endDateTime: 2 }, 'CLOSED')).resolves.not.toThrow();
     });
 
     test('updateOrderSupa throws if order update fails', async () => {
@@ -180,19 +187,23 @@ describe('DataStore Methods', () => {
 
       mockSupabase.single.mockResolvedValueOnce({ data: { deliveryAddressID: 99 }, error: null }); 
 
-      await expect(updateOrderSupa('uuid', 'New St', { startDateTime: 1, endDateTime: 2 }, 'CLOSED')).rejects.toEqual({ message: 'Order update fail' });
+      await expect(updateOrderSupa('uuid', 'New St', 
+        { startDateTime: 1, endDateTime: 2 }, 'CLOSED'))
+        .rejects.toEqual({ message: 'Order update fail' });
     });
   });
 
   describe('deleteOrderSupa', () => {
     test('successfully deletes UBL and order', async () => {
       mockSupabase.storage.remove.mockResolvedValueOnce({ data: {}, error: null });
-      mockSupabase.eq.mockResolvedValueOnce({ data: {}, error: null }); // order delete
+      // order delete
+      mockSupabase.eq.mockResolvedValueOnce({ data: {}, error: null });
       await expect(deleteOrderSupa('uuid')).resolves.not.toThrow();
     });
 
     test('throws if UBL delete fails', async () => {
-      mockSupabase.storage.remove.mockResolvedValueOnce({ data: null, error: { message: 'Storage error' } });
+      mockSupabase.storage.remove.mockResolvedValueOnce(
+        { data: null, error: { message: 'Storage error' } });
       await expect(deleteOrderSupa('uuid')).rejects.toEqual({ message: 'Storage error' });
     });
 

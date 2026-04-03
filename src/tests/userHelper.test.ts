@@ -43,7 +43,8 @@ describe('userHelper - Auth & Sessions', () => {
   });
 
   test('createNewSession signs a new token and cleans old ones', async () => {
-    mockSupabase.lt.mockResolvedValueOnce({}); // mock jwtClean success
+    // mock jwtClean success
+    mockSupabase.lt.mockResolvedValueOnce({});
     mockedJwt.sign.mockReturnValue('mocked-token' as never);
     
     const res = await createNewSession(1);
@@ -82,7 +83,7 @@ describe('userHelper - Auth & Sessions', () => {
       mockSupabase.maybeSingle.mockResolvedValueOnce({ data: { jti: '123' }, error: null });
 
       await expect(getUserIdFromSession('blacklisted-token'))
-      .rejects.toThrow('Token has been revoked');
+        .rejects.toThrow('Token has been revoked');
     });
 
     test('throws UnauthorisedError on verification failure', async () => {
@@ -92,7 +93,8 @@ describe('userHelper - Auth & Sessions', () => {
 
     test('throws generic UnauthorisedError for non-Error throws', async () => {
       mockedJwt.verify.mockImplementation(() => { throw 'String error'; });
-      await expect(getUserIdFromSession('weird-token')).rejects.toThrow('Invalid or expired session token');
+      await expect(getUserIdFromSession('weird-token'))
+        .rejects.toThrow('Invalid or expired session token');
     });
   });
 });
@@ -108,20 +110,24 @@ describe('userHelper - Validations', () => {
   describe('Name Validation', () => {
     test('invalidnameFirst throws correctly', () => {
       expect(invalidnameFirst('John')).toBeNull();
-       // special char
+      // special char
       expect(() => invalidnameFirst('J@hn')).toThrow(InvalidFirstName);
       // name too short
       expect(() => invalidnameFirst('J')).toThrow(InvalidFirstName);
       // too long
       expect(() => invalidnameFirst('ThisNameIsWayTooLongForTheSystem'))
-      .toThrow(InvalidFirstName);
+        .toThrow(InvalidFirstName);
     });
 
     test('invalidnameLast throws correctly', () => {
       expect(invalidnameLast('Doe')).toBeNull();
-      expect(() => invalidnameLast('D0e')).toThrow(InvalidLastName); // numbers/special
-      expect(() => invalidnameLast('D')).toThrow(InvalidLastName); // too short
-      expect(() => invalidnameLast('ThisLastNameIsWayTooLongForTheSystem')).toThrow(InvalidLastName); // too long
+      // numbers/special
+      expect(() => invalidnameLast('D0e')).toThrow(InvalidLastName);
+      // too short
+      expect(() => invalidnameLast('D')).toThrow(InvalidLastName);
+      expect(() => invalidnameLast('ThisLastNameIsWayTooLongForTheSystem'))
+      // too long
+        .toThrow(InvalidLastName);
     });
   });
 
@@ -139,7 +145,7 @@ describe('userHelper - Validations', () => {
         .mockResolvedValueOnce({ data: null, error: null }) 
         .mockResolvedValueOnce({ data: { contactId: 2 }, error: null });
       await expect(invalidemailcheck('token', 'test@test.com'))
-      .rejects.toThrow('Email is already used by another user');
+        .rejects.toThrow('Email is already used by another user');
 
       // unused email and not blacklisted token
       mockSupabase.maybeSingle
@@ -157,7 +163,8 @@ describe('userHelper - Validations', () => {
       mockSupabase.maybeSingle
         .mockResolvedValueOnce({ data: null, error: null })
         .mockResolvedValueOnce({ data: { contactId: 2 }, error: null });
-      await expect(invalidphonecheck('token', '0412345678')).rejects.toThrow('Phone number is already used by another user');
+      await expect(invalidphonecheck('token', '0412345678'))
+        .rejects.toThrow('Phone number is already used by another user');
 
       // unused phone should pass
       mockSupabase.maybeSingle
