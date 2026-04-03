@@ -22,7 +22,8 @@ const config = {
     'src/**/*.ts', 
     '!src/tests/**',
     '!src/config.ts',
-    '!src/interfaces'
+    '!src/interfaces.ts',
+    '!src/handlers/supabaseTest.ts'
   ],
   coverageDirectory: 'coverage',
   coverageThreshold: {
