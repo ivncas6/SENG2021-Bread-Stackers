@@ -1,8 +1,14 @@
 import { getOrderByIdSupa, getOrgByUserId, getUserByIdSupa } from './dataStore';
-import { generateUBLOrderFilePath, OrderLineWithItem, ReqItem, UBLBucket } from './interfaces';
+import { OrderLineWithItem, ReqItem } from './interfaces';
 import { getUserIdFromSession } from './userHelper';
 import { InvalidOrderId, InvalidSupabase, UnauthorisedError } from './throwError';
 import { supabase } from './supabase';
+
+export const UBLBucket = 'UBL Order Documents';
+
+export async function generateUBLOrderFilePath(orderId: string): Promise<string> {
+  return `UBLOrders/${orderId}`;
+}
 
 async function generateItemXML(items: ReqItem[]): Promise<string> {
   return items.map(i => `

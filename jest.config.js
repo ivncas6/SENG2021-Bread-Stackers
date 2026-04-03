@@ -21,6 +21,8 @@ const config = {
   collectCoverageFrom: [
     'src/**/*.ts', 
     '!src/tests/**',
+    '!src/config.ts',
+    '!src/interfaces'
   ],
   coverageDirectory: 'coverage',
   coverageThreshold: {

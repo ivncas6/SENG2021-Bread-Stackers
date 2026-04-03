@@ -146,6 +146,26 @@ Resources:
         EntryPoints: 
           - src/handlers/cancelOrder.ts
   
+  generateUBLFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/generateUBL.generateUBLHandler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BreadStackersApi
+            Path: /v0/order/{orderId}/ubl
+            Method: POST
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints: 
+          - src/handlers/generateUBL.ts
+  
   userRegisterFunction:
     Type: AWS::Serverless::Function
     Properties:

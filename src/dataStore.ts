@@ -1,7 +1,8 @@
 import { isUUID } from 'validator';
-import { Address, Contact, Delivery, generateUBLOrderFilePath, Item, Order, 
+import { Address, Contact, Delivery, Item, Order, 
   OrderLine, ReqDeliveryPeriod, ReqItem, 
-  UBLBucket} from './interfaces';
+  } from './interfaces';
+import { UBLBucket, generateUBLOrderFilePath } from './generateUBL'
 import { supabase } from './supabase';
 import { InvalidSupabase } from './throwError';
 

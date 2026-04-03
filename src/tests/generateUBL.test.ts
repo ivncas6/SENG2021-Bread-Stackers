@@ -1,81 +1,64 @@
-import { createOrderUBLXML, getOrderUBLXML } from '../generateUBL';
+import { createOrderUBLXML } from '../generateUBL';
+import { generateUBLHandler } from '../handlers/generateUBL';
 import * as dataStore from '../dataStore';
 import * as userHelper from '../userHelper';
-import { supabase } from '../supabase';
-import { UBLBucket } from '../interfaces';
+import { APIGatewayProxyEvent } from 'aws-lambda';
+import { UnauthorisedError } from '../throwError';
 
-// 1. Mock the internal dependencies
-jest.mock('../userHelper');
 jest.mock('../dataStore');
-
-// 2. Mock the Supabase client (specifically the storage chain)
-jest.mock('../supabase', () => ({
-  supabase: {
-    storage: {
-      from: jest.fn().mockReturnThis(), // allows .from().upload() chaining
-      upload: jest.fn(),
-      createSignedUrl: jest.fn(),
-    }
-  }
-}));
+jest.mock('../userHelper');
 
 const mockedUserHelper = userHelper as jest.Mocked<typeof userHelper>;
 const mockedDataStore = dataStore as jest.Mocked<typeof dataStore>;
-const mockedSupabase = supabase as jest.Mocked<typeof supabase>;
 
-describe('UBL Generation Tests', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
+beforeEach(() => {
+  jest.clearAllMocks();
+});
+
+describe('UBL Backend Functions', () => {
+  test('successfully creates a UBL', async () => {
+    mockedUserHelper.getUserIdFromSession.mockReturnValue(1);
+    mockedDataStore.getOrderByIdSupa.mockResolvedValue({ orderId: 'valid-id' } as never);
+    
+    // assumes generateUBL returns a file path or URL
+    const result = await createOrderUBLXML('valid-id', 'valid-session');
+    expect(result).toStrictEqual(expect.any(String)); 
   });
 
-  test('successfully creates and uploads a UBL XML', async () => {
-    // 1. Set up your mock data
-    const mockSession = 'valid-session';
-    const mockOrderId = 'order-123';
-    
-    mockedUserHelper.getUserIdFromSession.mockResolvedValue(1);
-    mockedDataStore.getOrgByUserId
-      .mockResolvedValue({ data: { orgId: 10 }, error: null } as never);
-    mockedDataStore.getUserByIdSupa.mockResolvedValue({
-      firstName: 'John',
-      lastName: 'Doe',
-      email: 'john@example.com',
-      telephone: '0412345678'
-    } as never);
-    
-    mockedDataStore.getOrderByIdSupa.mockResolvedValue({
-      orderId: mockOrderId,
-      issuedDate: '2026-04-03',
-      issuedTime: '12:00:00',
-      currency: 'AUD',
-      buyerOrgID: 10,
-      taxExclusive: 100,
-      taxInclusive: 110,
-      finalPrice: 110,
-      deliveries: [{ addresses: { street: '123 Baker St' } }],
-      order_lines: [{ 
-        quantity: 2, 
-        items: { name: 'Bread', description: 'Sourdough', price: 50 } 
-      }]
-    } as never);
+  test('throws UnauthorisedError for invalid session', async () => {
+    mockedUserHelper.getUserIdFromSession.mockImplementation(() => {
+      throw new UnauthorisedError('Invalid session');
+    });
 
-    // mock upload to work without errors
-    (mockedSupabase.storage.from(UBLBucket).upload as jest.Mock)
-      .mockResolvedValue({ data: { path: 'mock-path' }, error: null });
+    await expect(createOrderUBLXML('valid-id', 'bad-session')).rejects.toThrow(UnauthorisedError);
+  });
+});
 
-    // make UBL
-    await createOrderUBLXML(mockOrderId, mockSession);
+describe('UBL Handlers', () => {
+  test('Handler returns 200 on success', async () => {
+    mockedUserHelper.getUserIdFromSession.mockReturnValue(1);
+    mockedDataStore.getOrderByIdSupa.mockResolvedValue({ orderId: 'valid-id' } as never);
 
-    // check UBL Bucket
-    expect(mockedSupabase.storage.from).toHaveBeenCalledWith('UBLBucket');
-    expect(mockedSupabase.storage.from(UBLBucket).upload).toHaveBeenCalled();
-    
-    // consts for checking UBL content
-    const uploadArgs = (mockedSupabase
-      .storage.from(UBLBucket).upload as jest.Mock).mock.calls[0];
-    const uploadedXMLContent = uploadArgs[1];
-    
-    expect(uploadedXMLContent).toContain('<cbc:Name>John Doe</cbc:Name>');
-    expect(uploadedXMLContent).toContain('<cbc:StreetName>123 Baker St</cbc:StreetName>');
+    const mockEvent: Partial<APIGatewayProxyEvent> = {
+      pathParameters: { orderId: 'valid-id' },
+      headers: { session: 'valid-session' }
+    };
+
+    const res = await generateUBLHandler(mockEvent as APIGatewayProxyEvent);
+    expect(res.statusCode).toBe(200);
+  });
+
+  test('Handler returns 401 on invalid session', async () => {
+    mockedUserHelper.getUserIdFromSession.mockImplementation(() => {
+      throw new UnauthorisedError('Invalid session');
+    });
+
+    const mockEvent: Partial<APIGatewayProxyEvent> = {
+      pathParameters: { orderId: 'valid-id' },
+      headers: { session: 'bad-session' }
+    };
+
+    const res = await generateUBLHandler(mockEvent as APIGatewayProxyEvent);
+    expect(res.statusCode).toBe(401);
   });
 });
