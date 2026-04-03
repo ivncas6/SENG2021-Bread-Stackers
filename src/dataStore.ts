@@ -1,6 +1,7 @@
 import { isUUID } from 'validator';
-import { Address, Contact, Delivery, Item, Order, 
-  OrderLine, ReqDeliveryPeriod, ReqItem } from './interfaces';
+import { Address, Contact, Delivery, generateUBLOrderFilePath, Item, Order, 
+  OrderLine, ReqDeliveryPeriod, ReqItem, 
+  UBLBucket} from './interfaces';
 import { supabase } from './supabase';
 
 // local for testing
@@ -202,6 +203,15 @@ export async function updateOrderSupa(
 }
 
 export async function deleteOrderSupa(orderId: string) {
+  // delete UBLs
+  const filePath = await generateUBLOrderFilePath(orderId);
+  const deleteUBL = await supabase
+    .storage
+    .from(UBLBucket)
+    .remove([filePath]);
+  
+  if (deleteUBL.error) throw deleteUBL.error;
+
   const { error } = await supabase
     .from('orders')
     .delete()

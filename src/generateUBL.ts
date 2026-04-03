@@ -1,5 +1,5 @@
 import { getOrderByIdSupa, getOrgByUserId, getUserByIdSupa } from './dataStore';
-import { OrderLineWithItem, ReqItem } from './interfaces';
+import { generateUBLOrderFilePath, OrderLineWithItem, ReqItem, UBLBucket } from './interfaces';
 import { getUserIdFromSession } from './userHelper';
 import { InvalidOrderId, UnauthorisedError } from './throwError';
 import { supabase } from './supabase';
@@ -40,10 +40,10 @@ async function getOrderUBLXML(orderId: string,
     throw new UnauthorisedError('You do not have permission to cancel this order');
   }
     
-  const filePath = `UBLOrders/${order.orderId}`;
+  const filePath = await generateUBLOrderFilePath(orderId);
   const { data, error } = await supabase
     .storage
-    .from('UBL Order Documents')
+    .from(UBLBucket)
     .createSignedUrl(filePath, 60);
 
   if (error) throw error;

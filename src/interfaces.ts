@@ -126,3 +126,9 @@ export interface SessionId {
     session: string,
 }
 
+export const UBLBucket = 'UBL Order Documents'
+
+export async function generateUBLOrderFilePath(orderId: string): Promise<string> {
+  return `UBLOrders/${orderId}`
+}
+
