@@ -461,6 +461,36 @@ paths:
           description: "**UNAUTHORISED**"
           schema: 
             $ref: '#/definitions/error401'
+  /v0/order/{orderId}/ubl:
+    post:
+      tags: [Orders]
+      summary: Generate UBL for an order
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          type: string
+        - in: header
+          name: session
+          required: true
+          type: string
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            type: object
+            properties:
+              url:
+                type: string
+                example: "https://ubl-bucket.s3.amazonaws.com/order-123.xml"
+        400:
+          description: "**INVALID INPUT**"
+          schema:
+            $ref: '#/definitions/error400'
+        401:
+          description: "**UNAUTHORISED**"
+          schema:
+            $ref: '#/definitions/error401'
 
   /v0/order/list:
     get:
@@ -480,3 +510,4 @@ paths:
           description: "**UNAUTHORISED**"
           schema: 
             $ref: '#/definitions/error401'
+    

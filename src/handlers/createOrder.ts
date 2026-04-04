@@ -6,6 +6,7 @@ import {
   InvalidInput,
   InvalidPhone,
   InvalidRequestPeriod,
+  InvalidSupabase,
   UnauthorisedError } from '../throwError';
 import { jsonResponse } from './response';
 
@@ -47,6 +48,9 @@ export const createOrderHandler = async (
       err instanceof InvalidEmail || 
       err instanceof InvalidPhone) {
       return jsonResponse(400, { error: err.message });
+    }
+    if (err instanceof InvalidSupabase) {
+      return jsonResponse(500, { error: err.message });
     }
     // internal server error, server doesnot know how to handle the error
     return jsonResponse(500, { error: 'INTERNAL SERVER ERROR' });

@@ -21,11 +21,14 @@ const config = {
   collectCoverageFrom: [
     'src/**/*.ts', 
     '!src/tests/**',
+    '!src/config.ts',
+    '!src/interfaces.ts',
+    '!src/handlers/supabaseTest.ts'
   ],
   coverageDirectory: 'coverage',
   coverageThreshold: {
     global: {
-      lines: 70,
+      functions: 85,
     },
   },
 

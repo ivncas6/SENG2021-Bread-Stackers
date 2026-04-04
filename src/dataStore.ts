@@ -1,7 +1,10 @@
 import { isUUID } from 'validator';
 import { Address, Contact, Delivery, Item, Order, 
-  OrderLine, ReqDeliveryPeriod, ReqItem } from './interfaces';
+  OrderLine, ReqDeliveryPeriod, ReqItem, 
+} from './interfaces';
+import { UBLBucket, generateUBLOrderFilePath } from './generateUBL';
 import { supabase } from './supabase';
+import { InvalidSupabase } from './throwError';
 
 // local for testing
 
@@ -156,7 +159,7 @@ export async function updateOrderStatus(orderId: string, newStatus: string) {
     .update({ status: newStatus })
     .eq('orderId', orderId);
 
-  if (error) throw error;
+  if (error) throw new InvalidSupabase(error.message);
   return data;
 }
 
@@ -202,6 +205,15 @@ export async function updateOrderSupa(
 }
 
 export async function deleteOrderSupa(orderId: string) {
+  // delete UBLs
+  const filePath = await generateUBLOrderFilePath(orderId);
+  const deleteUBL = await supabase
+    .storage
+    .from(UBLBucket)
+    .remove([filePath]);
+  
+  if (deleteUBL.error) throw deleteUBL.error;
+
   const { error } = await supabase
     .from('orders')
     .delete()
@@ -231,6 +243,6 @@ export async function createOrganisationSupa(contactId: number, ownerName: strin
     .select()
     .single();
 
-  if (error) throw new Error(`Org Creation Failed: ${error.message}`);
+  if (error) throw new InvalidSupabase(`Org Creation Failed: ${error.message}`);
   return data;
 }

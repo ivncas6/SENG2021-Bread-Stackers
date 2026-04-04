@@ -95,3 +95,10 @@ export class InvalidInput extends Error {
     this.name = 'INVALID_INPUT';
   }
 }
+
+export class InvalidSupabase extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'INVALID_SUPABASE';
+  }
+}

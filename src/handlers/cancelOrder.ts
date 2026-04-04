@@ -1,6 +1,6 @@
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import { cancelOrder } from '../order';
-import { InvalidInput, UnauthorisedError } from '../throwError';
+import { InvalidInput, InvalidSupabase, UnauthorisedError } from '../throwError';
 import { jsonResponse } from './response';
 
 export const cancelOrderHandler = async (
@@ -22,6 +22,9 @@ export const cancelOrderHandler = async (
     }
     if (e instanceof UnauthorisedError) {
       return jsonResponse(401, { error: e.message });
+    }
+    if (e instanceof InvalidSupabase) {
+      return jsonResponse(500, { error: e.message });
     }
     // unknown error
     return jsonResponse(500, { error: 'INTERNAL SERVER ERROR' });
