@@ -107,7 +107,7 @@ describe('Lambda function for createOrder', () => {
   });
 
   // deprecated
-  /*test('Invalid Input - Wrong Phone number', async () => {
+  test('Invalid Input - Wrong Phone number', async () => {
     const event = {
       headers: { session: MOCK_SESSION },
       body: JSON.stringify({
@@ -121,7 +121,7 @@ describe('Lambda function for createOrder', () => {
 
     expect(response.statusCode).toStrictEqual(400);
     expect(JSON.parse(response.body)).toHaveProperty('error');
-  });*/
+  });
 
   test('Invalid Input - Wrong Delivery Date', async () => {
     const badPeriod = { startDateTime: 1000, endDateTime: 1000 };
@@ -153,6 +153,60 @@ describe('Lambda function for createOrder', () => {
     } as unknown as APIGatewayProxyEvent;
 
     const response: APIGatewayProxyResult = await createOrderHandler(event);
+
+    expect(response.statusCode).toStrictEqual(401);
+    expect(JSON.parse(response.body)).toHaveProperty('error');
+  });
+});
+
+describe('Lambda function for createOrder V2', () => {
+
+  test('successfully creates an order', async () => {
+    const event = {
+      ...mockEvent,
+      headers: { ...mockEvent.headers, session: MOCK_SESSION },
+      body: JSON.stringify({
+        currency: 'AUD', 
+        reqDeliveryPeriod, deliveryAddress: '123 Kingsford', items
+      })
+    } as unknown as APIGatewayProxyEvent;
+
+    const response: APIGatewayProxyResult = await v2create(event);
+
+    expect(response.statusCode).toStrictEqual(200);
+    expect(JSON.parse(response.body)).toStrictEqual({ orderId: expect.any(String) });
+  });
+
+  test('Invalid Input - Wrong Delivery Date', async () => {
+    const badPeriod = { startDateTime: 1000, endDateTime: 1000 };
+    const event = {
+      headers: { session: MOCK_SESSION },
+      body: JSON.stringify({
+        currency: 'AUD', 
+        reqDeliveryPeriod: badPeriod, deliveryAddress: '123 Kingsford', items
+      })
+    } as unknown as APIGatewayProxyEvent;
+
+    const response: APIGatewayProxyResult = await v2create(event);
+
+    expect(response.statusCode).toStrictEqual(400);
+    expect(JSON.parse(response.body)).toHaveProperty('error');
+  });
+
+  test('Testing Invalid Session', async () => {
+    mockedUserHelper.getUserIdFromSession.mockImplementation(() => {
+      throw new UnauthorisedError('Invalid Session');
+    });
+
+    const event = {
+      headers: { session: 'bad-session' },
+      body: JSON.stringify({
+        currency: 'AUD', 
+        deliveryAddress: '123 Kingsford', reqDeliveryPeriod, items
+      })
+    } as unknown as APIGatewayProxyEvent;
+
+    const response: APIGatewayProxyResult = await v2create(event);
 
     expect(response.statusCode).toStrictEqual(401);
     expect(JSON.parse(response.body)).toHaveProperty('error');

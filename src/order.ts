@@ -10,7 +10,6 @@ import { createOrderSupaPush,
   getOrgByUserId} from './dataStore';
 import { InvalidDeliveryAddr, InvalidEmail, InvalidInput,
   InvalidOrderId,
-  InvalidPhone,
   InvalidRequestPeriod, InvalidSupabase, UnauthorisedError } from './throwError';
 import { getUserIdFromSession } from './userHelper';
 import { supabase } from './supabase';
@@ -32,7 +31,7 @@ export async function createOrder(
     throw new UnauthorisedError('User does not exist');
   }
 
-  /*
+  /* deprecated from v1
   if (u.email !== user.email) {
     throw new InvalidEmail('This email does not belong to the user.');
   }

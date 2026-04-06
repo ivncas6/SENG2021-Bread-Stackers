@@ -9,6 +9,7 @@ import {
   InvalidSupabase,
   UnauthorisedError } from '../throwError';
 import { jsonResponse } from './response';
+import { invalidemailcheck } from '../userHelper';
 
 export const createOrderHandler = async (
   event: APIGatewayProxyEvent
@@ -27,6 +28,16 @@ export const createOrderHandler = async (
     const deliveryAddress: string = body.deliveryAddress;
     const reqDeliveryPeriod: ReqDeliveryPeriod = body.reqDeliveryPeriod;
     const items: ReqItem[] = body.items;
+
+    if (await invalidemailcheck(session, user.email)) {
+      throw new InvalidEmail('This email does not belong to the user.');
+    }
+
+    const phone = user.telephone;
+    const isAllDigits = /^\d+$/.test(phone);
+    if (!isAllDigits || phone.length < 8 || phone.length > 12) {
+      throw new InvalidPhone('The telephone number is incorrect');
+    }
 
     const result = await createOrder(
       currency,
