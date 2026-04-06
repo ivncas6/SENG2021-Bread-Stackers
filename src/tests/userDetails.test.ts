@@ -186,7 +186,7 @@ describe('Lambda V2 tests for updateUserDetailsHandler (Optional Fields)', () =>
     const response = await v2Details(event);
 
     expect(response?.statusCode).toStrictEqual(200);
-    expect((mockedSupabase as any).update).toHaveBeenCalledWith({
+    expect((mockedSupabase as never).update).toHaveBeenCalledWith({
       firstName: 'NewFirst',
       lastName: 'OldLast',
       email: 'old@test.com',
@@ -209,7 +209,8 @@ describe('Lambda V2 tests for updateUserDetailsHandler (Optional Fields)', () =>
     const response = await v2Details(event);
     
     expect(response?.statusCode).toStrictEqual(401); 
-    expect(JSON.parse(response?.body ?? '{}')).toHaveProperty('error', 'User for session does not exist');
+    expect(JSON.parse(response?.body ?? '{}'))
+      .toHaveProperty('error', 'User for session does not exist');
   });
 
 });

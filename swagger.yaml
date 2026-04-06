@@ -563,4 +563,32 @@ paths:
           description: "**UNAUTHORISED**"
           schema: 
             $ref: '#/definitions/error401'
+
+  /v1/user/details:
+    put:
+      tags: [Users]
+      summary: Update user details
+      parameters:
+        - in: header
+          name: session
+          required: true
+          type: string
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/userUpdate'
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/emptyObj'
+        400:
+          description: "**INVALID INPUT**"
+          schema:
+            $ref: '#/definitions/error400'
+        401:
+          description: "**UNAUTHORISED**"
+          schema: 
+            $ref: '#/definitions/error401'
     
