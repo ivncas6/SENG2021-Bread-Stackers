@@ -52,19 +52,20 @@ beforeEach(() => {
 describe('Backend logic test for Creating an Order', () => {
 
   test('Successfully create one order', async () => {
-    const res = await createOrder('AUD', MOCK_SESSION, userDetails,
+    const res = await createOrder('AUD', MOCK_SESSION,
       '123 Kingsford', reqDeliveryPeriod, items);
     
     expect(res).toEqual({ orderId: expect.any(String) });
     expect(mockedDataStore.createOrderSupaPush).toHaveBeenCalled();
   });
 
-  test('Testing Invalid input - Wrong Phone number', async () => {
+  // deprecated
+  /*test('Testing Invalid input - Wrong Phone number', async () => {
     await expect(
       createOrder('AUD', MOCK_SESSION, { ...userDetails, telephone: '246' }, 
         '123 Kingsford', reqDeliveryPeriod, items)
     ).rejects.toThrow(InvalidPhone);
-  });
+  });*/
   
   test('Testing Invalid input - Wrong Delivery Date', async () => {
     const badPeriod = {
@@ -72,7 +73,7 @@ describe('Backend logic test for Creating an Order', () => {
       endDateTime: Math.floor(Date.now() / 1000), 
     };
     await expect(
-      createOrder('AUD', MOCK_SESSION, userDetails, '123 Kingsford', badPeriod, items)
+      createOrder('AUD', MOCK_SESSION, '123 Kingsford', badPeriod, items)
     ).rejects.toThrow(InvalidRequestPeriod);
   });
 
@@ -82,7 +83,7 @@ describe('Backend logic test for Creating an Order', () => {
     });
 
     await expect(
-      createOrder('AUD', 'abcd', userDetails, '123 Kingsford', reqDeliveryPeriod, items)
+      createOrder('AUD', 'abcd', '123 Kingsford', reqDeliveryPeriod, items)
     ).rejects.toThrow(UnauthorisedError);
   });
 });
@@ -105,7 +106,8 @@ describe('Lambda function for createOrder', () => {
     expect(JSON.parse(response.body)).toStrictEqual({ orderId: expect.any(String) });
   });
 
-  test('Invalid Input - Wrong Phone number', async () => {
+  // deprecated
+  /*test('Invalid Input - Wrong Phone number', async () => {
     const event = {
       headers: { session: MOCK_SESSION },
       body: JSON.stringify({
@@ -119,7 +121,7 @@ describe('Lambda function for createOrder', () => {
 
     expect(response.statusCode).toStrictEqual(400);
     expect(JSON.parse(response.body)).toHaveProperty('error');
-  });
+  });*/
 
   test('Invalid Input - Wrong Delivery Date', async () => {
     const badPeriod = { startDateTime: 1000, endDateTime: 1000 };

@@ -19,8 +19,7 @@ import { createOrderUBLXML } from './generateUBL';
 
 export async function createOrder(
   currency: string, 
-  session: string, 
-  user: ReqUser, 
+  session: string,
   deliveryAddress: string, 
   reqDeliveryPeriod: ReqDeliveryPeriod,
   items: ReqItem[]
@@ -33,6 +32,7 @@ export async function createOrder(
     throw new UnauthorisedError('User does not exist');
   }
 
+  /*
   if (u.email !== user.email) {
     throw new InvalidEmail('This email does not belong to the user.');
   }
@@ -41,7 +41,7 @@ export async function createOrder(
   const isAllDigits = /^\d+$/.test(phone);
   if (!isAllDigits || phone.length < 8 || phone.length > 12) {
     throw new InvalidPhone('The telephone number is incorrect');
-  }
+  }*/
   
   if(deliveryAddress.length > 200) {
     throw new InvalidDeliveryAddr('The address is too long.');

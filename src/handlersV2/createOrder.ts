@@ -39,7 +39,6 @@ export const createOrderHandler = async (
     const result = await createOrder(
       currency,
       session,
-      user,
       deliveryAddress,
       reqDeliveryPeriod,
       items
