@@ -1,5 +1,6 @@
 import { userDetailsUpdate } from '../userRegister';
 import { updateUserDetailsHandler } from '../handlers/userDetails';
+import { updateUserDetailsHandler as v2Details } from '../handlersV2/userDetails';
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import * as userHelper from '../userHelper';
 import * as dataStore from '../dataStore';
@@ -11,14 +12,13 @@ import {
   UnauthorisedError,
 } from '../throwError';
 
-// 1. Mock external dependencies ONLY.
-// We use a factory for userHelper to keep the REAL validation logic but mock the DB/Session parts.
+// external deps
 jest.mock('../userHelper', () => {
   const actual = jest.requireActual('../userHelper');
   return {
     ...actual,
     getUserIdFromSession: jest.fn(),
-    invalidemailcheck: jest.fn(), // Mock these as they likely hit the DB
+    invalidemailcheck: jest.fn(),
     invalidphonecheck: jest.fn(),
   };
 });
@@ -158,4 +158,59 @@ describe('Lambda handler tests for userDetailsUpdate', () => {
     const response = await updateUserDetailsHandler(event);
     expect(response.statusCode).toBe(500);
   });
+});
+
+describe('Lambda V2 tests for updateUserDetailsHandler (Optional Fields)', () => {
+  
+  test('successfully merges partial body payload with existing DB data', async () => {
+    mockedUserHelper.getUserIdFromSession.mockResolvedValue(1);
+    mockedUserHelper.invalidemailcheck.mockResolvedValue(undefined);
+    mockedUserHelper.invalidphonecheck.mockResolvedValue(undefined);
+    mockedDataStore.getUserByIdSupa.mockResolvedValue({
+      contactId: 1,
+      firstName: 'OldFirst',
+      lastName: 'OldLast',
+      email: 'old@test.com',
+      telephone: '0400000000'
+    } as never);
+
+    const event = {
+      headers: { session: 'valid-session' },
+      body: JSON.stringify({
+        // only updating these two
+        firstName: 'NewFirst',
+        telephone: '0499999999'
+      })
+    } as unknown as APIGatewayProxyEvent;
+
+    const response = await v2Details(event);
+
+    expect(response?.statusCode).toStrictEqual(200);
+    expect((mockedSupabase as never).update).toHaveBeenCalledWith({
+      firstName: 'NewFirst',
+      lastName: 'OldLast',
+      email: 'old@test.com',
+      telephone: '0499999999'
+    });
+  });
+
+  test('returns 401 Unauthorised if session user is not found in DB', async () => {
+    mockedUserHelper.getUserIdFromSession.mockResolvedValue(1);
+    mockedUserHelper.invalidemailcheck.mockResolvedValue(undefined);
+    mockedUserHelper.invalidphonecheck.mockResolvedValue(undefined);
+    // Return null to simulate user missing from DB
+    mockedDataStore.getUserByIdSupa.mockResolvedValue(null);
+
+    const event = {
+      headers: { session: 'valid-session' },
+      body: JSON.stringify({ firstName: 'NewFirst' })
+    } as unknown as APIGatewayProxyEvent;
+
+    const response = await v2Details(event);
+    
+    expect(response?.statusCode).toStrictEqual(401); 
+    expect(JSON.parse(response?.body ?? '{}'))
+      .toHaveProperty('error', 'User for session does not exist');
+  });
+
 });

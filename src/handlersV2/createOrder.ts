@@ -1,6 +1,6 @@
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import { createOrder } from '../order';
-import { ReqItem, ReqDeliveryPeriod, ReqUser } from '../interfaces';
+import { ReqItem, ReqDeliveryPeriod } from '../interfaces';
 import {
   InvalidEmail,
   InvalidInput,
@@ -8,8 +8,9 @@ import {
   InvalidRequestPeriod,
   InvalidSupabase,
   UnauthorisedError } from '../throwError';
-import { jsonResponse } from './response';
-import validator from 'validator';
+import { jsonResponse } from '../handlers/response';
+import { getUserIdFromSession } from '../userHelper';
+import { getUserByIdSupa } from '../dataStore';
 
 export const createOrderHandler = async (
   event: APIGatewayProxyEvent
@@ -23,21 +24,17 @@ export const createOrderHandler = async (
       throw new UnauthorisedError('Session header missing');
     }
 
+    const userId = await getUserIdFromSession(session);
+    const user = await getUserByIdSupa(userId);
+
+    if (!user) {
+      throw new UnauthorisedError('User for session does not exist');
+    }
+
     const currency: string = body.currency;
-    const user: ReqUser = body.user;
     const deliveryAddress: string = body.deliveryAddress;
     const reqDeliveryPeriod: ReqDeliveryPeriod = body.reqDeliveryPeriod;
     const items: ReqItem[] = body.items;
-
-    if (!validator.isEmail(user.email)) {
-      throw new InvalidEmail('This email is not valid');
-    }
-
-    const phone = user.telephone;
-    const isAllDigits = /^\d+$/.test(phone);
-    if (!isAllDigits || phone.length < 8 || phone.length > 12) {
-      throw new InvalidPhone('The telephone number is incorrect');
-    }
 
     const result = await createOrder(
       currency,

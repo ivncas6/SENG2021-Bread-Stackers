@@ -1,5 +1,5 @@
 import  { createOrderReturn, EmptyObject, 
-  Order, ReqDeliveryPeriod, ReqItem, ReqUser, 
+  Order, ReqDeliveryPeriod, ReqItem, 
   OrderLineWithItem } from './interfaces';
 import { v4 as uuidv4 } from 'uuid';
 import { createOrderSupaPush, 
@@ -8,9 +8,8 @@ import { createOrderSupaPush,
   deleteOrderSupa,
   getUserByIdSupa,
   getOrgByUserId} from './dataStore';
-import { InvalidDeliveryAddr, InvalidEmail, InvalidInput,
+import { InvalidDeliveryAddr, InvalidInput,
   InvalidOrderId,
-  InvalidPhone,
   InvalidRequestPeriod, InvalidSupabase, UnauthorisedError } from './throwError';
 import { getUserIdFromSession } from './userHelper';
 import { supabase } from './supabase';
@@ -19,8 +18,7 @@ import { createOrderUBLXML } from './generateUBL';
 
 export async function createOrder(
   currency: string, 
-  session: string, 
-  user: ReqUser, 
+  session: string,
   deliveryAddress: string, 
   reqDeliveryPeriod: ReqDeliveryPeriod,
   items: ReqItem[]
@@ -33,6 +31,7 @@ export async function createOrder(
     throw new UnauthorisedError('User does not exist');
   }
 
+  /* deprecated from v1
   if (u.email !== user.email) {
     throw new InvalidEmail('This email does not belong to the user.');
   }
@@ -41,7 +40,7 @@ export async function createOrder(
   const isAllDigits = /^\d+$/.test(phone);
   if (!isAllDigits || phone.length < 8 || phone.length > 12) {
     throw new InvalidPhone('The telephone number is incorrect');
-  }
+  }*/
   
   if(deliveryAddress.length > 200) {
     throw new InvalidDeliveryAddr('The address is too long.');

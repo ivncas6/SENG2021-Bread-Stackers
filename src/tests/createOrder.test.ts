@@ -1,8 +1,9 @@
 import { createOrder } from '../order';
 import { createOrderHandler } from '../handlers/createOrder';
+import { createOrderHandler as v2create } from '../handlersV2/createOrder';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import mockEvent from './mocks/createOrderMock.json';
-import { InvalidPhone, InvalidRequestPeriod, UnauthorisedError } from '../throwError';
+import { InvalidRequestPeriod, UnauthorisedError } from '../throwError';
 
 import * as userHelper from '../userHelper';
 import * as dataStore from '../dataStore';
@@ -51,19 +52,20 @@ beforeEach(() => {
 describe('Backend logic test for Creating an Order', () => {
 
   test('Successfully create one order', async () => {
-    const res = await createOrder('AUD', MOCK_SESSION, userDetails,
+    const res = await createOrder('AUD', MOCK_SESSION,
       '123 Kingsford', reqDeliveryPeriod, items);
     
     expect(res).toEqual({ orderId: expect.any(String) });
     expect(mockedDataStore.createOrderSupaPush).toHaveBeenCalled();
   });
 
-  test('Testing Invalid input - Wrong Phone number', async () => {
+  // deprecated
+  /*test('Testing Invalid input - Wrong Phone number', async () => {
     await expect(
       createOrder('AUD', MOCK_SESSION, { ...userDetails, telephone: '246' }, 
         '123 Kingsford', reqDeliveryPeriod, items)
     ).rejects.toThrow(InvalidPhone);
-  });
+  });*/
   
   test('Testing Invalid input - Wrong Delivery Date', async () => {
     const badPeriod = {
@@ -71,7 +73,7 @@ describe('Backend logic test for Creating an Order', () => {
       endDateTime: Math.floor(Date.now() / 1000), 
     };
     await expect(
-      createOrder('AUD', MOCK_SESSION, userDetails, '123 Kingsford', badPeriod, items)
+      createOrder('AUD', MOCK_SESSION, '123 Kingsford', badPeriod, items)
     ).rejects.toThrow(InvalidRequestPeriod);
   });
 
@@ -81,7 +83,7 @@ describe('Backend logic test for Creating an Order', () => {
     });
 
     await expect(
-      createOrder('AUD', 'abcd', userDetails, '123 Kingsford', reqDeliveryPeriod, items)
+      createOrder('AUD', 'abcd', '123 Kingsford', reqDeliveryPeriod, items)
     ).rejects.toThrow(UnauthorisedError);
   });
 });
@@ -104,6 +106,7 @@ describe('Lambda function for createOrder', () => {
     expect(JSON.parse(response.body)).toStrictEqual({ orderId: expect.any(String) });
   });
 
+  // deprecated
   test('Invalid Input - Wrong Phone number', async () => {
     const event = {
       headers: { session: MOCK_SESSION },
@@ -153,5 +156,75 @@ describe('Lambda function for createOrder', () => {
 
     expect(response.statusCode).toStrictEqual(401);
     expect(JSON.parse(response.body)).toHaveProperty('error');
+  });
+});
+
+describe('Lambda function for createOrder V2', () => {
+
+  test('successfully creates an order', async () => {
+    const event = {
+      ...mockEvent,
+      headers: { ...mockEvent.headers, session: MOCK_SESSION },
+      body: JSON.stringify({
+        currency: 'AUD', 
+        reqDeliveryPeriod, deliveryAddress: '123 Kingsford', items
+      })
+    } as unknown as APIGatewayProxyEvent;
+
+    const response: APIGatewayProxyResult = await v2create(event);
+
+    expect(response.statusCode).toStrictEqual(200);
+    expect(JSON.parse(response.body)).toStrictEqual({ orderId: expect.any(String) });
+  });
+
+  test('Invalid Input - Wrong Delivery Date', async () => {
+    const badPeriod = { startDateTime: 1000, endDateTime: 1000 };
+    const event = {
+      headers: { session: MOCK_SESSION },
+      body: JSON.stringify({
+        currency: 'AUD', 
+        reqDeliveryPeriod: badPeriod, deliveryAddress: '123 Kingsford', items
+      })
+    } as unknown as APIGatewayProxyEvent;
+
+    const response: APIGatewayProxyResult = await v2create(event);
+
+    expect(response.statusCode).toStrictEqual(400);
+    expect(JSON.parse(response.body)).toHaveProperty('error');
+  });
+
+  test('Testing Invalid Session', async () => {
+    mockedUserHelper.getUserIdFromSession.mockImplementation(() => {
+      throw new UnauthorisedError('Invalid Session');
+    });
+
+    const event = {
+      headers: { session: 'bad-session' },
+      body: JSON.stringify({
+        currency: 'AUD', 
+        deliveryAddress: '123 Kingsford', reqDeliveryPeriod, items
+      })
+    } as unknown as APIGatewayProxyEvent;
+
+    const response: APIGatewayProxyResult = await v2create(event);
+
+    expect(response.statusCode).toStrictEqual(401);
+    expect(JSON.parse(response.body)).toHaveProperty('error');
+  });
+
+  test('successfully creates an order V2', async () => {
+    const event = {
+      ...mockEvent,
+      headers: { ...mockEvent.headers, session: MOCK_SESSION },
+      body: JSON.stringify({
+        currency: 'AUD', 
+        reqDeliveryPeriod, deliveryAddress: '123 Kingsford', items
+      })
+    } as unknown as APIGatewayProxyEvent;
+
+    const response: APIGatewayProxyResult = await v2create(event);
+
+    expect(response.statusCode).toStrictEqual(200);
+    expect(JSON.parse(response.body)).toStrictEqual({ orderId: expect.any(String) });
   });
 });
