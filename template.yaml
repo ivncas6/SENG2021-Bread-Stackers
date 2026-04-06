@@ -22,7 +22,7 @@ Resources:
   BreadStackersApi:
     Type: AWS::Serverless::Api
     Properties:
-      StageName: finalAPISprint2Release
+      StageName: Sprint2Final
       Cors:
         AllowMethods: "'OPTIONS,GET,POST,PUT,DELETE'"
         AllowHeaders: "'Content-Type,x-api-key,session'"
@@ -290,7 +290,7 @@ Resources:
 Outputs:
   WebEndpoint:
     Description: API Gateway endpoint URL for final sprint2 stage
-    Value: !Sub "https://${BreadStackersApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/https://tx12cup9z0.execute-api.ap-southeast-2.amazonaws.com/Sprint2Final/"
+    Value: !Sub "https://${BreadStackersApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/Sprint2Final/"
 
 
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
