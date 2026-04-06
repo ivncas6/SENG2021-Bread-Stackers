@@ -157,6 +157,4 @@ describe('Lambda handler tests for userDetailsUpdate', () => {
     const response = await updateUserDetailsHandler(event);
     expect(response.statusCode).toBe(500);
   });
-
-  
 });
