@@ -1,5 +1,6 @@
 import { createOrder } from '../order';
 import { createOrderHandler } from '../handlers/createOrder';
+import { createOrderHandler as v2create } from '../handlersV2/createOrder';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import mockEvent from './mocks/createOrderMock.json';
 import { InvalidPhone, InvalidRequestPeriod, UnauthorisedError } from '../throwError';
@@ -153,5 +154,21 @@ describe('Lambda function for createOrder', () => {
 
     expect(response.statusCode).toStrictEqual(401);
     expect(JSON.parse(response.body)).toHaveProperty('error');
+  });
+
+   test('successfully creates an order V2', async () => {
+    const event = {
+      ...mockEvent,
+      headers: { ...mockEvent.headers, session: MOCK_SESSION },
+      body: JSON.stringify({
+        currency: 'AUD', 
+        reqDeliveryPeriod, deliveryAddress: '123 Kingsford', items
+      })
+    } as unknown as APIGatewayProxyEvent;
+
+    const response: APIGatewayProxyResult = await v2create(event);
+
+    expect(response.statusCode).toStrictEqual(200);
+    expect(JSON.parse(response.body)).toStrictEqual({ orderId: expect.any(String) });
   });
 });

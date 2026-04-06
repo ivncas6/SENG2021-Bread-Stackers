@@ -11,14 +11,13 @@ import {
   UnauthorisedError,
 } from '../throwError';
 
-// 1. Mock external dependencies ONLY.
-// We use a factory for userHelper to keep the REAL validation logic but mock the DB/Session parts.
+// external deps
 jest.mock('../userHelper', () => {
   const actual = jest.requireActual('../userHelper');
   return {
     ...actual,
     getUserIdFromSession: jest.fn(),
-    invalidemailcheck: jest.fn(), // Mock these as they likely hit the DB
+    invalidemailcheck: jest.fn(),
     invalidphonecheck: jest.fn(),
   };
 });
@@ -158,4 +157,6 @@ describe('Lambda handler tests for userDetailsUpdate', () => {
     const response = await updateUserDetailsHandler(event);
     expect(response.statusCode).toBe(500);
   });
+
+  
 });
