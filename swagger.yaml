@@ -158,6 +158,29 @@ definitions:
         items:
             $ref: '#/definitions/orderItem'
   
+  orderCreateV2:
+    type: object
+    required:
+      - currency
+      - deliveryAddress
+      - items
+    properties:
+      currency:
+        type: string
+        example: AUD
+      deliveryAddress:
+        type: string
+        example: 123 Street Name, Kensington
+      reqDeliveryPeriod:
+        type: object
+        properties: 
+          startDateTime: { type: number, example: 1773100800000 }
+          endDateTime: { type: number, example: 1773619200000 }
+      items:
+        type: array
+        items:
+          $ref: '#/definitions/orderItem'
+  
   orderView:
     type: object
     properties:
@@ -506,6 +529,36 @@ paths:
           description: "**SUCCESS**"
           schema:
             $ref: '#/definitions/orderList'
+        401:
+          description: "**UNAUTHORISED**"
+          schema: 
+            $ref: '#/definitions/error401'
+  
+  /v1/order:
+    post:
+      tags: [Orders]
+      summary: Creates an Order
+      parameters:
+        - in: header
+          name: session
+          required: true
+          type: string
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/orderCreateV2'
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/orderId'
+        400:
+          description: |
+             "**INVALID INPUT**"
+             - INVALID_ITEM
+          schema:
+            $ref: '#/definitions/error400'
         401:
           description: "**UNAUTHORISED**"
           schema: 

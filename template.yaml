@@ -245,6 +245,26 @@ Resources:
         Sourcemap: true
         EntryPoints: 
           - src/handlers/userLogout.ts
+  
+  createOrderV2Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlersV2/createOrder.createOrderHandler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BreadStackersApi
+            Path: /v1/order
+            Method: POST
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints: 
+          - src/handlersV2/createOrder.ts
     
 
 Outputs:
