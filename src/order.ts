@@ -1,5 +1,5 @@
 import  { createOrderReturn, EmptyObject, 
-  Order, ReqDeliveryPeriod, ReqItem, ReqUser, 
+  Order, ReqDeliveryPeriod, ReqItem, 
   OrderLineWithItem } from './interfaces';
 import { v4 as uuidv4 } from 'uuid';
 import { createOrderSupaPush, 
@@ -8,7 +8,7 @@ import { createOrderSupaPush,
   deleteOrderSupa,
   getUserByIdSupa,
   getOrgByUserId} from './dataStore';
-import { InvalidDeliveryAddr, InvalidEmail, InvalidInput,
+import { InvalidDeliveryAddr, InvalidInput,
   InvalidOrderId,
   InvalidRequestPeriod, InvalidSupabase, UnauthorisedError } from './throwError';
 import { getUserIdFromSession } from './userHelper';

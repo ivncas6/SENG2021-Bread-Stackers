@@ -3,7 +3,7 @@ import { createOrderHandler } from '../handlers/createOrder';
 import { createOrderHandler as v2create } from '../handlersV2/createOrder';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import mockEvent from './mocks/createOrderMock.json';
-import { InvalidPhone, InvalidRequestPeriod, UnauthorisedError } from '../throwError';
+import { InvalidRequestPeriod, UnauthorisedError } from '../throwError';
 
 import * as userHelper from '../userHelper';
 import * as dataStore from '../dataStore';
@@ -212,7 +212,7 @@ describe('Lambda function for createOrder V2', () => {
     expect(JSON.parse(response.body)).toHaveProperty('error');
   });
 
-   test('successfully creates an order V2', async () => {
+  test('successfully creates an order V2', async () => {
     const event = {
       ...mockEvent,
       headers: { ...mockEvent.headers, session: MOCK_SESSION },

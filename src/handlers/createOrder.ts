@@ -9,7 +9,7 @@ import {
   InvalidSupabase,
   UnauthorisedError } from '../throwError';
 import { jsonResponse } from './response';
-import { invalidemailcheck } from '../userHelper';
+import validator from 'validator';
 
 export const createOrderHandler = async (
   event: APIGatewayProxyEvent
@@ -29,8 +29,8 @@ export const createOrderHandler = async (
     const reqDeliveryPeriod: ReqDeliveryPeriod = body.reqDeliveryPeriod;
     const items: ReqItem[] = body.items;
 
-    if (await invalidemailcheck(session, user.email)) {
-      throw new InvalidEmail('This email does not belong to the user.');
+    if (!validator.isEmail(user.email)) {
+      throw new InvalidEmail('This email is not valid');
     }
 
     const phone = user.telephone;
