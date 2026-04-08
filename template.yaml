@@ -156,7 +156,7 @@ Resources:
           Properties:
             RestApiId: !Ref BreadStackersApi
             Path: /v0/order/{orderId}/ubl
-            Method: POST
+            Method: GET
     Metadata:
       BuildMethod: esbuild
       BuildProperties:

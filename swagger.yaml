@@ -535,7 +535,7 @@ paths:
             $ref: '#/definitions/error401'
   
   /v1/order:
-    post:
+    get:
       tags: [Orders]
       summary: Creates an Order
       parameters:
