@@ -485,7 +485,7 @@ paths:
           schema: 
             $ref: '#/definitions/error401'
   /v0/order/{orderId}/ubl:
-    post:
+    get:
       tags: [Orders]
       summary: Generate UBL for an order
       parameters:
