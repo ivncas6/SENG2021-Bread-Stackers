@@ -78,7 +78,7 @@ export async function createOrder(
   };
 
   await createOrderSupaPush(order, deliveryAddress, reqDeliveryPeriod, items);
-  createOrderUBLXML(orderId, session);
+  await createOrderUBLXML(orderId, session);
   return { orderId: orderId };
 }
 
@@ -243,7 +243,7 @@ export async function updateOrder(
   }
 
   await updateOrderSupa(orderId, deliveryAddress, reqDeliveryPeriod, status);
-  createOrderUBLXML(orderId, session);
+  await createOrderUBLXML(orderId, session);
 
   // Return empty 
   return {};
