@@ -5,7 +5,7 @@ info:
   version: 1.0.1
 
 host: "tx12cup9z0.execute-api.ap-southeast-2.amazonaws.com"
-basePath: "/Sprint3Final"
+basePath: "/Sprint3"
 schemes:
   - https
 
@@ -485,7 +485,7 @@ paths:
           schema: 
             $ref: '#/definitions/error401'
   /v0/order/{orderId}/ubl:
-    post:
+    get:
       tags: [Orders]
       summary: Generate UBL for an order
       parameters:

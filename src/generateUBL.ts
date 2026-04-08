@@ -96,8 +96,6 @@ export async function createOrderUBLXML(orderId: string,
 
   const delivery = order.deliveries?.[0];
   const deliveryAddress = delivery?.addresses?.street;
-  
-  await generateItemXML(items);
 
   const doc = `<?xml version="1.0" encoding="UTF-8"?>
     <Order xmlns="urn:oasis:names:specification:ubl:schema:xsd:Order-2"
@@ -152,10 +150,11 @@ export async function createOrderUBLXML(orderId: string,
   const filePath = await generateUBLOrderFilePath(orderId);
   const { error } = await supabase
     .storage
-    .from('UBLBucket')
+    .from(UBLBucket)
     .upload(filePath, doc, {
       cacheControl: '3600',
-      upsert: true
+      upsert: true,
+      contentType: 'application/xml'
     });
 
   if (error) throw new InvalidSupabase(error.message);

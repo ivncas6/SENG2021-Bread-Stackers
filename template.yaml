@@ -22,7 +22,7 @@ Resources:
   BreadStackersApi:
     Type: AWS::Serverless::Api
     Properties:
-      StageName: Sprint3Final
+      StageName: Sprint3
       Cors:
         AllowMethods: "'OPTIONS,GET,POST,PUT,DELETE'"
         AllowHeaders: "'Content-Type,x-api-key,session'"
@@ -156,7 +156,7 @@ Resources:
           Properties:
             RestApiId: !Ref BreadStackersApi
             Path: /v0/order/{orderId}/ubl
-            Method: POST
+            Method: GET
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
