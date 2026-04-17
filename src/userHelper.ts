@@ -100,6 +100,20 @@ export function invalidnameLast(nameLast: string): ErrorObject | null {
   return null;
 }
 
+export function invalidBusinessname(businessName: string): ErrorObject | null {
+  const charRange: RegExp = /^[a-zA-Z\s\-']+$/;
+  if (!charRange.test(businessName)) {
+    throw new InvalidLastName('invalid last name -> includes special characters');
+  }
+  if (businessName.length < 2) {
+    throw new InvalidLastName('Last name is less than 2 characters');
+  }
+  if (businessName.length > 100) {
+    throw new InvalidLastName('name is more than 100 characters');
+  }
+  return null;
+}
+
 export async function invalidemailcheck(sessionId: string, 
   email: string): Promise<ErrorObject | null> {
   const userId = getUserIdFromSession(sessionId);

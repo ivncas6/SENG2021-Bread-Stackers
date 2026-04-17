@@ -32,6 +32,14 @@ export class InvalidLastName extends Error {
   }
 }
 
+// for invalid business name (statusCode: 400)
+export class InvalidBusinessName extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'INVALID_BUSINESS_NAME';
+  }
+}
+
 // for invalid password (statusCode: 400)
 export class InvalidPassword extends Error {
   constructor(message: string) {
