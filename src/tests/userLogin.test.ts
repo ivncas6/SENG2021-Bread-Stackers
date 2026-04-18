@@ -1,4 +1,3 @@
-import { clearData } from '../dataStore';
 import { userLogin } from '../userRegister';
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import { userLoginHandler } from '../handlers/userLogin';

@@ -7,15 +7,13 @@ import { APIGatewayProxyEvent } from 'aws-lambda';
 import { SupabaseMock } from '../interfaces';
 
 jest.mock('../userHelper');
-const mockUpdateEq = jest.fn();
 jest.mock('../supabase', () => ({
   supabase: {
     from: jest.fn().mockReturnThis(),
     select: jest.fn().mockReturnThis(),
-    eq: jest.fn().mockReturnThis(), // Returns this for chaining maybeSingle
+    eq: jest.fn().mockReturnThis(),
     maybeSingle: jest.fn(),
-    // Update returns a custom object with its own eq that resolves
-    update: jest.fn().mockReturnValue({ eq: mockUpdateEq }), 
+    update: jest.fn().mockReturnThis()
   }
 }));
 
@@ -41,9 +39,6 @@ describe('Backend: updateOrganisation', () => {
     mockedSupabase.maybeSingle.mockResolvedValueOnce({ 
       data: { addressID: 2 }, error: null 
     });
-    // mock final update execution
-    // this resolves the final .eq('orgId', orgId) on the update
-    mockUpdateEq.mockResolvedValueOnce({ error: null });
     const res = await updateOrganisation(mockSession, mockOrgId, 'Updated Name', 2);
     expect(res).toEqual({ orgId: mockOrgId });
     expect(mockedSupabase.update).toHaveBeenCalledWith({ orgName: 'Updated Name', addressId: 2 });
@@ -80,7 +75,6 @@ describe('Lambda: updateOrganisationHandler', () => {
     mockedSupabase.maybeSingle.mockResolvedValueOnce({ 
       data: { addressID: 2 }, error: null 
     });
-    mockUpdateEq.mockResolvedValueOnce({ error: null });
 
     const event = {
       headers: { session: 'valid-session' },

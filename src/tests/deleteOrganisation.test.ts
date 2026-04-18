@@ -7,7 +7,6 @@ import { APIGatewayProxyEvent } from 'aws-lambda';
 import { SupabaseMock } from '../interfaces';
 
 jest.mock('../userHelper');
-const mockDeleteEq = jest.fn();
 jest.mock('../supabase', () => ({
   supabase: {
     from: jest.fn().mockReturnThis(),
@@ -16,8 +15,8 @@ jest.mock('../supabase', () => ({
     or: jest.fn().mockReturnThis(),
     limit: jest.fn(),
     maybeSingle: jest.fn(),
-    // Delete returns a custom object with its own eq that resolves
-    delete: jest.fn().mockReturnValue({ eq: mockDeleteEq }), 
+    // Now Jest allows this because the variable name starts with 'mock'
+    delete: jest.fn().mockReturnThis(), 
   }
 }));
 
@@ -41,8 +40,6 @@ describe('Backend: deleteOrganisation', () => {
     });
     // mock orders check (returns empty array meaning no orders exist)
     mockedSupabase.limit.mockResolvedValueOnce({ data: [], error: null });
-    // mock final delete execution
-    mockDeleteEq.mockResolvedValueOnce({ error: null }); 
 
     const res = await deleteOrganisation(mockSession, mockOrgId);
     expect(res).toEqual({});
@@ -74,7 +71,6 @@ describe('Lambda: deleteOrganisationHandler', () => {
       data: { orgId: 456, contactId: 123 }, error: null 
     });
     mockedSupabase.limit.mockResolvedValueOnce({ data: [], error: null });
-    mockDeleteEq.mockResolvedValueOnce({ error: null });
 
     const event = {
       headers: { session: 'valid-session' },

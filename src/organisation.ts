@@ -169,8 +169,10 @@ export async function deleteOrgUser(session: string, userId: string, orgId: stri
   if (!currUserId) {
     throw new UnauthorisedError('Invalid user session');
   }
-
-
   // userId does not exist in org
     
+}
+
+export async function listOrgUsers(session: string, orgId: string) {
+  
 }
