@@ -25,7 +25,6 @@ jest.mock('../supabase', () => ({
 const mockedSupabase = supabase as unknown as SupabaseMock;
 
 beforeEach(async () => {
-  await clearData();
   jest.clearAllMocks();
 });
 

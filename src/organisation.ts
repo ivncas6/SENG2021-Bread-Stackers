@@ -69,7 +69,11 @@ export async function updateOrganisation(session: string, orgId:
     .eq('orgId', orgId)
     .maybeSingle();
 
-  if (!orgData || orgData.contactId !== userId) {
+  if (!orgData) {
+    throw new InvalidInput('no attributed orgId found');
+  }
+
+  if (orgData.contactId !== userId) {
     throw new UnauthorisedError('You do not have permission to modify this organization');
   }
 

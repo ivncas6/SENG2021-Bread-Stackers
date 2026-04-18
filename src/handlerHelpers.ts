@@ -1,8 +1,6 @@
-import { UnauthorisedError, InvalidInput, InvalidBusinessName, 
-  InvalidOrderId, InvalidDeliveryAddr, InvalidRequestPeriod, 
-  InvalidEmail, InvalidPhone, InvalidPassword, InvalidLogin, 
-  InvalidSupabase, InvalidLastName, 
-  InvalidFirstName } from './throwError';
+import { UnauthorisedError, InvalidInput, 
+  InvalidOrderId, InvalidDeliveryAddr, InvalidLogin, 
+  InvalidSupabase } from './throwError';
 
 export const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
