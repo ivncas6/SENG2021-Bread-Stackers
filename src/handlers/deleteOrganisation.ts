@@ -8,7 +8,7 @@ export const deleteOrganisationHandler = async (event: APIGatewayProxyEvent) => 
     const session = event.headers.session;
 
     if (!session) {
-        return jsonResponse(401, { error: 'provided session is not valid' });
+      return jsonResponse(401, { error: 'provided session is not valid' });
     }
 
     const result = await deleteOrganisation(session, orgId);
