@@ -3,12 +3,9 @@ import { createOrder } from '../order';
 import { ReqItem, ReqDeliveryPeriod, ReqUser } from '../interfaces';
 import {
   InvalidEmail,
-  InvalidInput,
   InvalidPhone,
-  InvalidRequestPeriod,
-  InvalidSupabase,
   UnauthorisedError } from '../throwError';
-import { jsonResponse } from '../handlerHelpers/response';
+import { handleErrorResponse, jsonResponse } from '../handlerHelpers';
 import validator from 'validator';
 
 export const createOrderHandler = async (
@@ -49,20 +46,7 @@ export const createOrderHandler = async (
 
     return jsonResponse(200, result);
 
-  } catch (err: unknown) {
-    if (err instanceof UnauthorisedError) {
-      return jsonResponse(401, { error: err.message });
-    }
-    if (err instanceof InvalidInput || 
-      err instanceof InvalidRequestPeriod ||
-      err instanceof InvalidEmail || 
-      err instanceof InvalidPhone) {
-      return jsonResponse(400, { error: err.message });
-    }
-    if (err instanceof InvalidSupabase) {
-      return jsonResponse(500, { error: err.message });
-    }
-    // internal server error, server doesnot know how to handle the error
-    return jsonResponse(500, { error: 'INTERNAL SERVER ERROR' });
+  } catch (e: unknown) {
+    return handleErrorResponse(e);
   }
 };
