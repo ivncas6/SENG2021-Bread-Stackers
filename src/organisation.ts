@@ -1,9 +1,8 @@
-import { v4 as uuidv4 } from 'uuid';
-import { supabase } from "./supabase";
-import { InvalidBusinessName, InvalidInput, InvalidLastName, InvalidSupabase, UnauthorisedError } from "./throwError";
-import { getUserIdFromSession } from "./userHelper";
+import { supabase } from './supabase';
+import { InvalidBusinessName, InvalidInput, 
+  InvalidSupabase, UnauthorisedError } from './throwError';
+import { getUserIdFromSession } from './userHelper';
 import { ErrorObject } from './interfaces';
-import { getOrgByUserId } from './dataStore';
 
 function InvalidBusinessname(businessName: string): ErrorObject | null {
   const charRange: RegExp = /^[a-zA-Z0-9\s\-']+$/;
@@ -20,152 +19,154 @@ function InvalidBusinessname(businessName: string): ErrorObject | null {
 }
 
 export async function createOrganisation(session: string, orgName: string, addressId: number) {
-    // invalidate session
-    const userId = await getUserIdFromSession(session);
-    if (!userId) {
-        throw new UnauthorisedError("Invalid user session");
-    }
+  // invalidate session
+  const userId = await getUserIdFromSession(session);
+  if (!userId) {
+    throw new UnauthorisedError('Invalid user session');
+  }
 
-    InvalidBusinessname(orgName);
+  InvalidBusinessname(orgName);
 
-    // find if address in database
-    const { data: addressData, error: addressError } = await supabase
-        .from('addresses')
-        .select('addressID')
-        .eq('addressID', addressId)
-        .maybeSingle();
+  // find if address in database
+  const { data: addressData, error: addressError } = await supabase
+    .from('addresses')
+    .select('addressID')
+    .eq('addressID', addressId)
+    .maybeSingle();
 
-    if (!addressData || addressError) {
-        throw new InvalidInput("Provided addressId does not exist");
-    }
+  if (!addressData || addressError) {
+    throw new InvalidInput('Provided addressId does not exist');
+  }
 
-    // insert org
-    const { data, error } = await supabase
-        .from('organisations')
-        .insert([{ 
-            orgName: orgName,
-            addressId: addressId,
-            contactId: userId,
-        }])
-        .select()
-        .single();
+  // insert org
+  const { data, error } = await supabase
+    .from('organisations')
+    .insert([{ 
+      orgName: orgName,
+      addressId: addressId,
+      contactId: userId,
+    }])
+    .select()
+    .single();
 
-    if (error) throw new InvalidSupabase(`Org Creation Failed: ${error.message}`);
+  if (error) throw new InvalidSupabase(`Org Creation Failed: ${error.message}`);
     
-    return { orgId: data.orgId };
+  return { orgId: data.orgId };
 }
 
-export async function updateOrganisation(session: string, orgId: number, orgName: string, addressId: number) {
-    // invalid sesion
-    const userId = await getUserIdFromSession(session);
-    if (!userId) {
-        throw new UnauthorisedError("Invalid user session");
-    }
+export async function updateOrganisation(session: string, orgId: 
+    number, orgName: string, addressId: number) {
+  // invalid sesion
+  const userId = await getUserIdFromSession(session);
+  if (!userId) {
+    throw new UnauthorisedError('Invalid user session');
+  }
 
-    // org belongs to user
-    const { data: orgData, error: orgError } = await supabase
-        .from('organisations')
-        .select('orgId, contactId')
-        .eq('orgId', orgId)
-        .maybeSingle();
+  // org belongs to user
+  const { data: orgData, error: orgError } = await supabase
+    .from('organisations')
+    .select('orgId, contactId')
+    .eq('orgId', orgId)
+    .maybeSingle();
 
-    if (!orgData || orgData.contactId !== userId) {
-        throw new UnauthorisedError('You do not have permission to modify this organization');
-    }
+  if (!orgData || orgData.contactId !== userId) {
+    throw new UnauthorisedError('You do not have permission to modify this organization');
+  }
 
-    InvalidBusinessname(orgName);
+  InvalidBusinessname(orgName);
 
-    // verify new address exists
-    const { data: addressData } = await supabase
-        .from('addresses')
-        .select('addressID')
-        .eq('addressID', addressId)
-        .maybeSingle();
+  // verify new address exists
+  const { data: addressData } = await supabase
+    .from('addresses')
+    .select('addressID')
+    .eq('addressID', addressId)
+    .maybeSingle();
 
-    if (!addressData) {
-        throw new InvalidInput("Provided addressId does not exist");
-    }
+  if (!addressData) {
+    throw new InvalidInput('Provided addressId does not exist');
+  }
 
-    // update org
-    const { error } = await supabase
-        .from('organisations')
-        .update({ 
-            orgName: orgName,
-            addressId: addressId,
-        })
-        .eq('orgId', orgId);
+  // update org
+  const { error } = await supabase
+    .from('organisations')
+    .update({ 
+      orgName: orgName,
+      addressId: addressId,
+    })
+    .eq('orgId', orgId);
 
-    if (error) throw new InvalidSupabase(`Org Update Failed: ${error.message}`);
+  if (error) throw new InvalidSupabase(`Org Update Failed: ${error.message}`);
     
-    return { orgId };
+  return { orgId };
 }
 
 export async function deleteOrganisation(session: string, orgId: number) {
-    // invalid session
-    const userId = await getUserIdFromSession(session);
-    if (!userId) {
-        throw new UnauthorisedError("Invalid user session");
-    }
+  // invalid session
+  const userId = await getUserIdFromSession(session);
+  if (!userId) {
+    throw new UnauthorisedError('Invalid user session');
+  }
 
-    // check org belongs to user and org exists
-    const { data: orgData } = await supabase
-        .from('organisations')
-        .select('orgId, contactId')
-        .eq('orgId', orgId)
-        .maybeSingle();
+  // check org belongs to user and org exists
+  const { data: orgData } = await supabase
+    .from('organisations')
+    .select('orgId, contactId')
+    .eq('orgId', orgId)
+    .maybeSingle();
 
-    if (!orgData) {
-        throw new InvalidInput('No organisation attributed to orgId');
-    }
+  if (!orgData) {
+    throw new InvalidInput('No organisation attributed to orgId');
+  }
 
-    if (orgData.contactId !== userId) {
-        throw new UnauthorisedError('You do not have permission to delete this organization');
-    }
+  if (orgData.contactId !== userId) {
+    throw new UnauthorisedError('You do not have permission to delete this organization');
+  }
 
-    // check if orders are attached - no delete if orders exist
-    const { data: orders } = await supabase
-        .from('orders')
-        .select('orderId')
-        .or(`buyerOrgID.eq.${orgId},sellerOrgID.eq.${orgId}`)
-        .limit(1);
+  // check if orders are attached - no delete if orders exist
+  const { data: orders } = await supabase
+    .from('orders')
+    .select('orderId')
+    .or(`buyerOrgID.eq.${orgId},sellerOrgID.eq.${orgId}`)
+    .limit(1);
 
-    if (orders && orders.length > 0) {
-        throw new InvalidInput("Cannot delete organization: There are existing orders associated with it.");
-    }
+  if (orders && orders.length > 0) {
+    throw new InvalidInput(
+      'Cannot delete organization: There are existing orders associated with it.');
+  }
 
-    // delete org
-    const { error } = await supabase
-        .from('organisations')
-        .delete()
-        .eq('orgId', orgId);
+  // delete org
+  const { error } = await supabase
+    .from('organisations')
+    .delete()
+    .eq('orgId', orgId);
 
-    if (error) throw new InvalidSupabase(`Org Deletion Failed: ${error.message}`);
+  if (error) throw new InvalidSupabase(`Org Deletion Failed: ${error.message}`);
     
-    return {};
+  return {};
 }
 
 // add and edit users in organisations -> might be kindsa built in alr
 export async function addOrgUser(session: string, userId: string, orgId: string) {
 
-    // invalid session
-    const currUserId = await getUserIdFromSession(session);
-    if (!currUserId) {
-        throw new UnauthorisedError("Invalid user session");
-    }
+  // invalid session
+  const currUserId = await getUserIdFromSession(session);
+  if (!currUserId) {
+    throw new UnauthorisedError('Invalid user session');
+  }
     
 
-    // userId already exists in org
+  // userId already exists in org
 }
 
 export async function deleteOrgUser(session: string, userId: string, orgId: string) {
 
-    // invalid session
-    const currUserId = await getUserIdFromSession(session);
-    if (!currUserId) {
-        throw new UnauthorisedError("Invalid user session");
-    }
+  // invalid session
+  const currUserId = await getUserIdFromSession(session);
+  if (!currUserId) {
+    throw new UnauthorisedError('Invalid user session');
+  }
 
 
-    // userId does not exist in org
+  // userId does not exist in org
     
 }
