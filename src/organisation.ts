@@ -69,6 +69,8 @@ export async function updateOrganisation(session: string, orgId:
     .eq('orgId', orgId)
     .maybeSingle();
 
+  if (orgError) throw orgError;
+
   if (!orgData) {
     throw new InvalidInput('no attributed orgId found');
   }
@@ -174,5 +176,9 @@ export async function deleteOrgUser(session: string, userId: string, orgId: stri
 }
 
 export async function listOrgUsers(session: string, orgId: string) {
-  
+  // invalid sesion
+  const userId = await getUserIdFromSession(session);
+  if (!userId) {
+    throw new UnauthorisedError('Invalid user session');
+  }
 }
