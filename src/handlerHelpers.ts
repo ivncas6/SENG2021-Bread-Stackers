@@ -27,16 +27,10 @@ export function handleErrorResponse(e: unknown) {
 
   // 400 Bad Request (validation errors)
   if (
+    // invalid input covers a lot of errors as they are sub classes
     e instanceof InvalidInput ||
-    e instanceof InvalidBusinessName || 
-    e instanceof InvalidFirstName ||
-    e instanceof InvalidLastName ||
     e instanceof InvalidOrderId ||
     e instanceof InvalidDeliveryAddr ||
-    e instanceof InvalidRequestPeriod ||
-    e instanceof InvalidEmail ||
-    e instanceof InvalidPhone ||
-    e instanceof InvalidPassword ||
     e instanceof InvalidLogin
   ) {
     return jsonResponse(400, { error: e.message });
@@ -47,8 +41,8 @@ export function handleErrorResponse(e: unknown) {
     return jsonResponse(500, { error: e.message });
   }
 
-  // fallback for unexpected crashes
-  console.error('Unhandled Error: ', e); // Good for CloudWatch logs
+  // fallback for unexpected crashes. Good for CloudWatch logs
+  console.error('Unhandled Error: ', e);
   return jsonResponse(500, { error: 'INTERNAL SERVER ERROR' });
 }
 

@@ -4,7 +4,7 @@ import { handleErrorResponse, jsonResponse } from '../handlerHelpers';
 
 export const updateOrganisationHandler = async (event: APIGatewayProxyEvent) => {
   try {
-    // Extract orgId from the URL path: /v0/organisation/{orgId}
+    // extract orgId from the URL path: /v0/organisation/{orgId}
     const orgId = parseInt(event.pathParameters!.orgId!);
     const body = JSON.parse(event.body ?? '{}');
     const session = event.headers.session;
