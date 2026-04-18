@@ -5,7 +5,7 @@ import {
   InvalidPassword
 } from '../throwError';
 import { userLogin } from '../userRegister';
-import { jsonResponse } from './response';
+import { jsonResponse } from '../handlerHelpers/response';
 
 export const userLoginHandler = async (event: APIGatewayProxyEvent) => {
   try {

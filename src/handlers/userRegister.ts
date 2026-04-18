@@ -2,7 +2,7 @@ import { APIGatewayProxyEvent } from 'aws-lambda';
 import { InvalidLastName, InvalidFirstName, 
   InvalidEmail, InvalidPassword, InvalidPhone } from '../throwError';
 import { userRegister } from '../userRegister';
-import { jsonResponse } from './response';
+import { jsonResponse } from '../handlerHelpers/response';
 
 export const registerUserHandler = async (
   event: APIGatewayProxyEvent

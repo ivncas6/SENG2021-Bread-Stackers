@@ -8,7 +8,7 @@ import {
   InvalidRequestPeriod,
   InvalidSupabase,
   UnauthorisedError } from '../throwError';
-import { jsonResponse } from '../handlers/response';
+import { jsonResponse } from '../handlerHelpers/response';
 import { getUserIdFromSession } from '../userHelper';
 import { getUserByIdSupa } from '../dataStore';
 

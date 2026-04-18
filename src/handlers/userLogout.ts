@@ -1,7 +1,7 @@
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import { UnauthorisedError } from '../throwError';
 import { userLogout } from '../userRegister';
-import { jsonResponse } from './response';
+import { jsonResponse } from '../handlerHelpers/response';
 
 export const userLogoutHandler = async (event: APIGatewayProxyEvent) => {
   try {

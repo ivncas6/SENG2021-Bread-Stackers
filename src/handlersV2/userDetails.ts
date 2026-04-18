@@ -4,7 +4,7 @@ import { InvalidLastName,
   InvalidPhone
 } from '../throwError';
 import { userDetailsUpdate } from '../userRegister';
-import { jsonResponse } from '../handlers/response';
+import { jsonResponse } from '../handlerHelpers/response';
 import { getUserIdFromSession } from '../userHelper';
 import { getUserByIdSupa } from '../dataStore';
 

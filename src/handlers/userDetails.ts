@@ -4,7 +4,7 @@ import { InvalidLastName,
   InvalidPhone
 } from '../throwError';
 import { userDetailsUpdate } from '../userRegister';
-import { jsonResponse } from './response';
+import { jsonResponse } from '../handlerHelpers/response';
 
 export const updateUserDetailsHandler = async (
   event: APIGatewayProxyEvent

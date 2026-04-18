@@ -1,5 +1,5 @@
 import { APIGatewayProxyEvent } from 'aws-lambda';
-import { jsonResponse } from './response';
+import { jsonResponse } from '../handlerHelpers/response';
 import { getOrderUBLXML } from '../generateUBL';
 import { InvalidOrderId, InvalidSupabase, UnauthorisedError } from '../throwError';
 

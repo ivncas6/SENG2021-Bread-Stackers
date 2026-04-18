@@ -4,7 +4,7 @@ import { InvalidOrderId, UnauthorisedError,
   InvalidInput, 
   InvalidSupabase} from '../throwError';
 import { updateOrder } from '../order';
-import { jsonResponse } from './response';
+import { jsonResponse } from '../handlerHelpers/response';
 
 // Update Order
 export const updateOrderHandler = async (event: APIGatewayProxyEvent) => {

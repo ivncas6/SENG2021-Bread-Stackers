@@ -1,7 +1,7 @@
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import { listOrders } from '../order';
 import { UnauthorisedError } from '../throwError';
-import { jsonResponse } from './response';
+import { jsonResponse } from '../handlerHelpers/response';
 
 export const listOrderHandler = async (event: APIGatewayProxyEvent) => {
   try {

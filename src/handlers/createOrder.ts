@@ -8,7 +8,7 @@ import {
   InvalidRequestPeriod,
   InvalidSupabase,
   UnauthorisedError } from '../throwError';
-import { jsonResponse } from './response';
+import { jsonResponse } from '../handlerHelpers/response';
 import validator from 'validator';
 
 export const createOrderHandler = async (

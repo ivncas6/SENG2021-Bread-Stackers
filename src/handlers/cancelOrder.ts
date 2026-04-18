@@ -1,7 +1,7 @@
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import { cancelOrder } from '../order';
 import { InvalidInput, InvalidSupabase, UnauthorisedError } from '../throwError';
-import { jsonResponse } from './response';
+import { jsonResponse } from '../handlerHelpers/response';
 
 export const cancelOrderHandler = async (
   event: APIGatewayProxyEvent
