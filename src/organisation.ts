@@ -151,6 +151,10 @@ export async function deleteOrganisation(session: string, orgId: number) {
   return {};
 }
 
+/* TODO below. Make sure to check for errors (think permissions, 
+and if parameters are valid input). Look at Supabase table and Database to understand*/
+
+/* uncomment this and the other * / below to start workign 
 // add and edit users in organisations -> might be kindsa built in alr
 export async function addOrgUser(session: string, userId: string, orgId: string) {
 
@@ -182,3 +186,4 @@ export async function listOrgUsers(session: string, orgId: string) {
     throw new UnauthorisedError('Invalid user session');
   }
 }
+*/
