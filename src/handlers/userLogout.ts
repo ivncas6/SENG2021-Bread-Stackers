@@ -1,7 +1,6 @@
 import { APIGatewayProxyEvent } from 'aws-lambda';
-import { UnauthorisedError } from '../throwError';
 import { userLogout } from '../userRegister';
-import { jsonResponse } from './response';
+import { handleErrorResponse, jsonResponse } from '../handlerHelpers';
 
 export const userLogoutHandler = async (event: APIGatewayProxyEvent) => {
   try {
@@ -15,11 +14,7 @@ export const userLogoutHandler = async (event: APIGatewayProxyEvent) => {
     const res = await userLogout(session);
 
     return jsonResponse(200, res);
-  } catch (e) {
-    if (e instanceof UnauthorisedError) {
-      return jsonResponse(401, { error: e.message });
-    }
-    // internal server error, server doesnot know how to handle the error
-    return jsonResponse(500, { error: 'INTERNAL SERVER ERROR' });
+  } catch (e: unknown) {
+    return handleErrorResponse(e);
   }
 };

@@ -1,8 +1,6 @@
 import { APIGatewayProxyEvent } from 'aws-lambda';
-import { InvalidLastName, InvalidFirstName, 
-  InvalidEmail, InvalidPassword, InvalidPhone } from '../throwError';
 import { userRegister } from '../userRegister';
-import { jsonResponse } from './response';
+import { handleErrorResponse, jsonResponse } from '../handlerHelpers';
 
 export const registerUserHandler = async (
   event: APIGatewayProxyEvent
@@ -21,16 +19,7 @@ export const registerUserHandler = async (
 
     return jsonResponse(200, user);
 
-  } catch (e) {
-    if (e instanceof InvalidLastName ||
-        e instanceof InvalidFirstName ||
-        e instanceof InvalidEmail ||
-        e instanceof InvalidPassword ||
-        e instanceof InvalidPhone
-    ) {
-      return jsonResponse(400, { error: e.message });
-    }
-    // internal server error, server doesnot know how to handle the error
-    return jsonResponse(500, { error: 'INTERNAL SERVER ERROR' });
+  } catch (e: unknown) {
+    return handleErrorResponse(e);
   }
 };

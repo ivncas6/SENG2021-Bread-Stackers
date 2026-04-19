@@ -1,7 +1,15 @@
 // this file contains the custom errors used for all the functions
 
+// for invalid input
+export class InvalidInput extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'INVALID_INPUT';
+  }
+}
+
 // for invalid email (statusCode: 400)
-export class InvalidEmail extends Error {
+export class InvalidEmail extends InvalidInput {
   constructor(message: string) {
     super(message);
     this.name = 'INVALID_EMAIL';
@@ -9,7 +17,7 @@ export class InvalidEmail extends Error {
 }
 
 // for invalid phone (statusCode: 400)
-export class InvalidPhone extends Error {
+export class InvalidPhone extends InvalidInput {
   constructor(message: string) {
     super(message);
     this.name = 'INVALID_PHONE';
@@ -17,7 +25,7 @@ export class InvalidPhone extends Error {
 }
 
 // for invalid first name (statusCode: 400)
-export class InvalidFirstName extends Error {
+export class InvalidFirstName extends InvalidInput {
   constructor(message: string) {
     super(message);
     this.name = 'INVALID_FIRST_NAME';
@@ -25,15 +33,23 @@ export class InvalidFirstName extends Error {
 }
 
 // for invalid last name (statusCode: 400)
-export class InvalidLastName extends Error {
+export class InvalidLastName extends InvalidInput {
   constructor(message: string) {
     super(message);
     this.name = 'INVALID_LAST_NAME';
   }
 }
 
+// for invalid business name (statusCode: 400)
+export class InvalidBusinessName extends InvalidInput {
+  constructor(message: string) {
+    super(message);
+    this.name = 'INVALID_BUSINESS_NAME';
+  }
+}
+
 // for invalid password (statusCode: 400)
-export class InvalidPassword extends Error {
+export class InvalidPassword extends InvalidInput {
   constructor(message: string) {
     super(message);
     this.name = 'INVALID_PASSWORD';
@@ -73,7 +89,7 @@ export class InvalidDeliveryAddr extends Error {
 }
 
 // for invalid delivery request period
-export class InvalidRequestPeriod extends Error {
+export class InvalidRequestPeriod extends InvalidInput {
   constructor(message: string) {
     super(message);
     this.name = 'INVALID_REQUEST_PERIOD';
@@ -85,14 +101,6 @@ export class InvalidItemQuantity extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'INVALID_ITEM_QUANTITY';
-  }
-}
-
-// for invalid item number
-export class InvalidInput extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'INVALID_INPUT';
   }
 }
 

@@ -1,4 +1,3 @@
-import { clearData } from '../dataStore';
 import { userLogin } from '../userRegister';
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import { userLoginHandler } from '../handlers/userLogin';
@@ -25,7 +24,6 @@ jest.mock('../supabase', () => ({
 const mockedSupabase = supabase as unknown as SupabaseMock;
 
 beforeEach(async () => {
-  await clearData();
   jest.clearAllMocks();
 });
 
