@@ -33,6 +33,7 @@ deploy_preview:
     - main
   script:
     - npm install --global vercel@latest
+    - npm run build:frontend
     - echo "Deploying preview frontend to Vercel"
     - vercel pull --yes --environment=preview --token=$VERCEL_TOKEN
     - vercel build --token=$VERCEL_TOKEN
@@ -44,6 +45,7 @@ deploy_production:
     - main
   script:
     - npm install --global vercel@latest
+    - npm run build:frontend
     - echo "Deploying production frontend to Vercel"
     - vercel pull --yes --environment=production --token=$VERCEL_TOKEN
     - vercel build --prod --token=$VERCEL_TOKEN

@@ -1,9 +1,3 @@
-type StorageConfig = {
-  apiKey: string;
-  baseUrl: string;
-  session: string;
-};
-
 type ApiRequestOptions = {
   body?: unknown;
   headers?: Record<string, string>;
@@ -26,8 +20,6 @@ type OrderSummary = {
 };
 
 const storageKeys = {
-  apiKey: 'breadstackers.apiKey',
-  baseUrl: 'breadstackers.apiBaseUrl',
   session: 'breadstackers.session',
 } as const;
 
@@ -66,8 +58,6 @@ function getFormValue(form: FormData, key: string): string {
 }
 
 const elements = {
-  apiBaseUrl: getRequiredElement<HTMLInputElement>('apiBaseUrl'),
-  apiKey: getRequiredElement<HTMLInputElement>('apiKey'),
   cancelOrderForm: getRequiredElement<HTMLFormElement>('cancelOrderForm'),
   clearSessionButton: getRequiredElement<HTMLButtonElement>('clearSessionButton'),
   consoleOutput: getRequiredElement<HTMLElement>('consoleOutput'),
@@ -78,17 +68,12 @@ const elements = {
   orderInfoOutput: getRequiredElement<HTMLElement>('orderInfoOutput'),
   ordersList: getRequiredElement<HTMLElement>('ordersList'),
   registerForm: getRequiredElement<HTMLFormElement>('registerForm'),
-  saveConfigButton: getRequiredElement<HTMLButtonElement>('saveConfigButton'),
   sessionStatus: getRequiredElement<HTMLElement>('sessionStatus'),
   updateOrderForm: getRequiredElement<HTMLFormElement>('updateOrderForm'),
 } as const;
 
-function getConfig(): StorageConfig {
-  return {
-    apiKey: localStorage.getItem(storageKeys.apiKey) || '',
-    baseUrl: localStorage.getItem(storageKeys.baseUrl) || '',
-    session: localStorage.getItem(storageKeys.session) || '',
-  };
+function getSession(): string {
+  return localStorage.getItem(storageKeys.session) || '';
 }
 
 function setSession(session: string): void {
@@ -102,7 +87,7 @@ function setSession(session: string): void {
 }
 
 function renderSession(): void {
-  const { session } = getConfig();
+  const session = getSession();
 
   if (!session) {
     elements.sessionStatus.textContent = 'No active session';
@@ -113,41 +98,28 @@ function renderSession(): void {
   elements.sessionStatus.textContent = `Active session: ${preview}`;
 }
 
-function initialiseConfig(): void {
-  const { apiKey, baseUrl } = getConfig();
-  elements.apiBaseUrl.value = baseUrl;
-  elements.apiKey.value = apiKey;
-  renderSession();
-}
-
 function logResult(title: string, payload: unknown): void {
   elements.consoleOutput.textContent = `${title}\n\n${JSON.stringify(payload, null, 2)}`;
 }
 
-function ensureConfig(): Pick<StorageConfig, 'apiKey' | 'baseUrl'> {
-  const { apiKey, baseUrl } = getConfig();
-
-  if (!baseUrl || !apiKey) {
-    throw new Error('Set API base URL and x-api-key before sending requests.');
-  }
-
-  return { apiKey, baseUrl };
+function buildProxyUrl(path: string): string {
+  const proxyUrl = new URL('/api/proxy', window.location.origin);
+  proxyUrl.searchParams.set('path', path);
+  return proxyUrl.toString();
 }
 
 async function apiRequest<T extends JsonRecord = JsonRecord>(
   path: string,
   options: ApiRequestOptions = {},
 ): Promise<T> {
-  const { apiKey, baseUrl } = ensureConfig();
-  const { session } = getConfig();
+  const session = getSession();
   const headers = {
     'Content-Type': 'application/json',
-    'x-api-key': apiKey,
     ...(options.useSession === false ? {} : session ? { session } : {}),
     ...(options.headers || {}),
   };
 
-  const response = await fetch(`${baseUrl}${path}`, {
+  const response = await fetch(buildProxyUrl(path), {
     body: options.body ? JSON.stringify(options.body) : undefined,
     headers,
     method: options.method || 'GET',
@@ -198,19 +170,6 @@ function renderOrders(orders: OrderSummary[] | undefined): void {
 
   elements.ordersList.innerHTML = markup;
 }
-
-elements.saveConfigButton.addEventListener('click', () => {
-  localStorage.setItem(
-    storageKeys.baseUrl,
-    elements.apiBaseUrl.value.trim().replace(/\/$/, ''),
-  );
-  localStorage.setItem(storageKeys.apiKey, elements.apiKey.value.trim());
-
-  logResult('Configuration saved', {
-    apiKeyPresent: Boolean(localStorage.getItem(storageKeys.apiKey)),
-    baseUrl: localStorage.getItem(storageKeys.baseUrl),
-  });
-});
 
 elements.clearSessionButton.addEventListener('click', () => {
   setSession('');
@@ -374,4 +333,4 @@ elements.cancelOrderForm.addEventListener('submit', async (event: SubmitEvent) =
   }
 });
 
-initialiseConfig();
+renderSession();
