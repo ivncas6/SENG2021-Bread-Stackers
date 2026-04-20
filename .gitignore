@@ -13,3 +13,5 @@ samconfig.toml
 # AWS installations
 sam-install/
 .aws-sam/
+.vercel
+.env*.local

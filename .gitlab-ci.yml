@@ -33,10 +33,16 @@ testing:
     - npm test
 
 # Deploys everything in the main branch to serverless endpoint
-deploying:
+deploy_production:
   stage: deploy
   only:
     - main
   script:
+    - npm install --global vercel
+    - echo "Deploying to vercel frontend"
+    - vercel pull --yes --environment=production --token=$VERCEL_TOKEN
+    - vercel build --prod --token=$VERCEL_TOKEN
+    - vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
+
     - echo "Deploying application to AWS Lambda..."
     # Left for later, want to deploy manually atm
