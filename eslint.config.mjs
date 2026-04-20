@@ -11,6 +11,7 @@ export default defineConfig([
       "*.config.*",
       '.aws-sam/**',
       'events/**',
+      'frontend/app.js',
     ]
   },
   { 

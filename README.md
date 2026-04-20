@@ -7,12 +7,14 @@
 
 A static frontend proof of concept for Sprint 3 is available in [`frontend/index.html`](frontend/index.html).
 
-To demo it locally:
+To demo it locally with the backend proxy:
 
-1. Serve the repository root with a simple static server, for example `python3 -m http.server 8000`
-2. Open `http://localhost:8000/frontend/`
-3. Enter your deployed API base URL and `x-api-key`
+1. Configure the hosting environment with `AWS_API_BASE_URL` and `AWS_API_KEY`
+2. Start the app through Vercel so the `/api/proxy` route is available, for example `vercel dev`
+3. Open the local frontend URL shown by Vercel
 4. Use the forms to register, login, create orders, list orders, inspect details, update, and cancel
+
+For deployed environments, the frontend expects backend connection details to be provided by the hosting platform rather than entered by the user.
 
 Notes:
 - The frontend is intentionally lightweight and uses plain HTML, CSS, and JavaScript so it can be demoed without adding a framework.
