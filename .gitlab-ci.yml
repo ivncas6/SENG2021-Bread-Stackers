@@ -29,8 +29,8 @@ testing:
 
 deploy_preview:
   stage: deploy
-  except:
-    - main
+  only:
+    - merge_requests
   script:
     - npm install --global vercel@latest
     - npm run build:frontend
