@@ -1,18 +1,14 @@
 # This file is used for continuous integration
 
-# add an image below later if needed
-image: node:20-alpine
+image: node:22
 
 stages:
-  # tests concurrently with lint and unit tests
   - concurChecks
   - deploy
 
-# install all dependencies before running
 before_script:
   - npm install
 
-# check code style issues
 linting:
   stage: concurChecks
   only:
@@ -20,9 +16,8 @@ linting:
     - merge_requests
   script:
     - echo "Linting code..."
-    - npx eslint . || exit 1
+    - npx eslint .
 
-# check if build passes all unit tests
 testing:
   stage: concurChecks
   only:
@@ -32,17 +27,24 @@ testing:
     - echo "Running unit tests..."
     - npm test
 
-# Deploys everything in the main branch to serverless endpoint
+deploy_preview:
+  stage: deploy
+  except:
+    - main
+  script:
+    - npm install --global vercel@latest
+    - echo "Deploying preview frontend to Vercel"
+    - vercel pull --yes --environment=preview --token=$VERCEL_TOKEN
+    - vercel build --token=$VERCEL_TOKEN
+    - vercel deploy --prebuilt --token=$VERCEL_TOKEN
+
 deploy_production:
   stage: deploy
   only:
     - main
   script:
-    - npm install --global vercel
-    - echo "Deploying to vercel frontend"
+    - npm install --global vercel@latest
+    - echo "Deploying production frontend to Vercel"
     - vercel pull --yes --environment=production --token=$VERCEL_TOKEN
     - vercel build --prod --token=$VERCEL_TOKEN
     - vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
-
-    - echo "Deploying application to AWS Lambda..."
-    # Left for later, want to deploy manually atm

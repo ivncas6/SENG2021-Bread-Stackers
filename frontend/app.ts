@@ -1,46 +1,109 @@
-const storageKeys = {
-  baseUrl: 'breadstackers.apiBaseUrl',
-  apiKey: 'breadstackers.apiKey',
-  session: 'breadstackers.session',
+type StorageConfig = {
+  apiKey: string;
+  baseUrl: string;
+  session: string;
 };
+
+type ApiRequestOptions = {
+  body?: unknown;
+  headers?: Record<string, string>;
+  method?: string;
+  useSession?: boolean;
+};
+
+type JsonRecord = Record<string, unknown>;
+
+type SessionResponse = JsonRecord & {
+  session?: string;
+};
+
+type OrderSummary = {
+  currency: string;
+  finalPrice: number | string;
+  issuedDate: string;
+  orderId: string;
+  status: string;
+};
+
+const storageKeys = {
+  apiKey: 'breadstackers.apiKey',
+  baseUrl: 'breadstackers.apiBaseUrl',
+  session: 'breadstackers.session',
+} as const;
+
+function getRequiredElement<T extends HTMLElement>(id: string): T {
+  const element = document.getElementById(id);
+
+  if (!element) {
+    throw new Error(`Missing required element: ${id}`);
+  }
+
+  return element as T;
+}
+
+function getFormData(target: EventTarget | null): FormData {
+  if (!(target instanceof HTMLFormElement)) {
+    throw new Error('Expected form submission from an HTMLFormElement.');
+  }
+
+  return new FormData(target);
+}
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return 'An unexpected error occurred.';
+}
+
+function isJsonRecord(value: unknown): value is JsonRecord {
+  return typeof value === 'object' && value !== null;
+}
+
+function getFormValue(form: FormData, key: string): string {
+  return String(form.get(key) ?? '');
+}
 
 const elements = {
-  apiBaseUrl: document.getElementById('apiBaseUrl'),
-  apiKey: document.getElementById('apiKey'),
-  saveConfigButton: document.getElementById('saveConfigButton'),
-  clearSessionButton: document.getElementById('clearSessionButton'),
-  sessionStatus: document.getElementById('sessionStatus'),
-  consoleOutput: document.getElementById('consoleOutput'),
-  ordersList: document.getElementById('ordersList'),
-  orderInfoOutput: document.getElementById('orderInfoOutput'),
-  registerForm: document.getElementById('registerForm'),
-  loginForm: document.getElementById('loginForm'),
-  createOrderForm: document.getElementById('createOrderForm'),
-  orderInfoForm: document.getElementById('orderInfoForm'),
-  updateOrderForm: document.getElementById('updateOrderForm'),
-  cancelOrderForm: document.getElementById('cancelOrderForm'),
-  listOrdersButton: document.getElementById('listOrdersButton'),
-};
+  apiBaseUrl: getRequiredElement<HTMLInputElement>('apiBaseUrl'),
+  apiKey: getRequiredElement<HTMLInputElement>('apiKey'),
+  cancelOrderForm: getRequiredElement<HTMLFormElement>('cancelOrderForm'),
+  clearSessionButton: getRequiredElement<HTMLButtonElement>('clearSessionButton'),
+  consoleOutput: getRequiredElement<HTMLElement>('consoleOutput'),
+  createOrderForm: getRequiredElement<HTMLFormElement>('createOrderForm'),
+  listOrdersButton: getRequiredElement<HTMLButtonElement>('listOrdersButton'),
+  loginForm: getRequiredElement<HTMLFormElement>('loginForm'),
+  orderInfoForm: getRequiredElement<HTMLFormElement>('orderInfoForm'),
+  orderInfoOutput: getRequiredElement<HTMLElement>('orderInfoOutput'),
+  ordersList: getRequiredElement<HTMLElement>('ordersList'),
+  registerForm: getRequiredElement<HTMLFormElement>('registerForm'),
+  saveConfigButton: getRequiredElement<HTMLButtonElement>('saveConfigButton'),
+  sessionStatus: getRequiredElement<HTMLElement>('sessionStatus'),
+  updateOrderForm: getRequiredElement<HTMLFormElement>('updateOrderForm'),
+} as const;
 
-function getConfig() {
+function getConfig(): StorageConfig {
   return {
-    baseUrl: localStorage.getItem(storageKeys.baseUrl) || '',
     apiKey: localStorage.getItem(storageKeys.apiKey) || '',
+    baseUrl: localStorage.getItem(storageKeys.baseUrl) || '',
     session: localStorage.getItem(storageKeys.session) || '',
   };
 }
 
-function setSession(session) {
+function setSession(session: string): void {
   if (session) {
     localStorage.setItem(storageKeys.session, session);
   } else {
     localStorage.removeItem(storageKeys.session);
   }
+
   renderSession();
 }
 
-function renderSession() {
+function renderSession(): void {
   const { session } = getConfig();
+
   if (!session) {
     elements.sessionStatus.textContent = 'No active session';
     return;
@@ -50,27 +113,33 @@ function renderSession() {
   elements.sessionStatus.textContent = `Active session: ${preview}`;
 }
 
-function initialiseConfig() {
-  const { baseUrl, apiKey } = getConfig();
+function initialiseConfig(): void {
+  const { apiKey, baseUrl } = getConfig();
   elements.apiBaseUrl.value = baseUrl;
   elements.apiKey.value = apiKey;
   renderSession();
 }
 
-function logResult(title, payload) {
+function logResult(title: string, payload: unknown): void {
   elements.consoleOutput.textContent = `${title}\n\n${JSON.stringify(payload, null, 2)}`;
 }
 
-function ensureConfig() {
-  const { baseUrl, apiKey } = getConfig();
+function ensureConfig(): Pick<StorageConfig, 'apiKey' | 'baseUrl'> {
+  const { apiKey, baseUrl } = getConfig();
+
   if (!baseUrl || !apiKey) {
     throw new Error('Set API base URL and x-api-key before sending requests.');
   }
-  return { baseUrl, apiKey };
+
+  return { apiKey, baseUrl };
 }
 
-async function apiRequest(path, options = {}) {
-  const { baseUrl, apiKey, session } = { ...ensureConfig(), ...getConfig() };
+async function apiRequest<T extends JsonRecord = JsonRecord>(
+  path: string,
+  options: ApiRequestOptions = {},
+): Promise<T> {
+  const { apiKey, baseUrl } = ensureConfig();
+  const { session } = getConfig();
   const headers = {
     'Content-Type': 'application/json',
     'x-api-key': apiKey,
@@ -79,13 +148,13 @@ async function apiRequest(path, options = {}) {
   };
 
   const response = await fetch(`${baseUrl}${path}`, {
-    method: options.method || 'GET',
-    headers,
     body: options.body ? JSON.stringify(options.body) : undefined,
+    headers,
+    method: options.method || 'GET',
   });
 
   const rawText = await response.text();
-  let payload;
+  let payload: unknown;
 
   try {
     payload = rawText ? JSON.parse(rawText) : {};
@@ -94,17 +163,25 @@ async function apiRequest(path, options = {}) {
   }
 
   if (!response.ok) {
-    throw new Error(payload.error || `Request failed with status ${response.status}`);
+    if (isJsonRecord(payload) && typeof payload.error === 'string') {
+      throw new Error(payload.error);
+    }
+
+    throw new Error(`Request failed with status ${response.status}`);
   }
 
-  return payload;
+  if (!isJsonRecord(payload)) {
+    return { rawText: rawText || String(payload) } as unknown as T;
+  }
+
+  return payload as T;
 }
 
-function toEpochMillis(value) {
+function toEpochMillis(value: string): number {
   return new Date(value).getTime();
 }
 
-function renderOrders(orders) {
+function renderOrders(orders: OrderSummary[] | undefined): void {
   if (!orders || orders.length === 0) {
     elements.ordersList.textContent = 'No orders returned.';
     return;
@@ -123,11 +200,15 @@ function renderOrders(orders) {
 }
 
 elements.saveConfigButton.addEventListener('click', () => {
-  localStorage.setItem(storageKeys.baseUrl, elements.apiBaseUrl.value.trim().replace(/\/$/, ''));
+  localStorage.setItem(
+    storageKeys.baseUrl,
+    elements.apiBaseUrl.value.trim().replace(/\/$/, ''),
+  );
   localStorage.setItem(storageKeys.apiKey, elements.apiKey.value.trim());
+
   logResult('Configuration saved', {
-    baseUrl: localStorage.getItem(storageKeys.baseUrl),
     apiKeyPresent: Boolean(localStorage.getItem(storageKeys.apiKey)),
+    baseUrl: localStorage.getItem(storageKeys.baseUrl),
   });
 });
 
@@ -136,21 +217,21 @@ elements.clearSessionButton.addEventListener('click', () => {
   logResult('Session cleared', {});
 });
 
-elements.registerForm.addEventListener('submit', async (event) => {
+elements.registerForm.addEventListener('submit', async (event: SubmitEvent) => {
   event.preventDefault();
-  const form = new FormData(event.target);
+  const form = getFormData(event.currentTarget);
 
   try {
-    const payload = await apiRequest('/v0/user/register', {
+    const payload = await apiRequest<SessionResponse>('/v0/user/register', {
+      body: {
+        email: getFormValue(form, 'email'),
+        firstName: getFormValue(form, 'firstName'),
+        lastName: getFormValue(form, 'lastName'),
+        password: getFormValue(form, 'password'),
+        telephone: getFormValue(form, 'telephone'),
+      },
       method: 'POST',
       useSession: false,
-      body: {
-        firstName: form.get('firstName'),
-        lastName: form.get('lastName'),
-        email: form.get('email'),
-        telephone: form.get('telephone'),
-        password: form.get('password'),
-      },
     });
 
     if (payload.session) {
@@ -159,22 +240,22 @@ elements.registerForm.addEventListener('submit', async (event) => {
 
     logResult('Register succeeded', payload);
   } catch (error) {
-    logResult('Register failed', { error: error.message });
+    logResult('Register failed', { error: getErrorMessage(error) });
   }
 });
 
-elements.loginForm.addEventListener('submit', async (event) => {
+elements.loginForm.addEventListener('submit', async (event: SubmitEvent) => {
   event.preventDefault();
-  const form = new FormData(event.target);
+  const form = getFormData(event.currentTarget);
 
   try {
-    const payload = await apiRequest('/v0/user/login', {
+    const payload = await apiRequest<SessionResponse>('/v0/user/login', {
+      body: {
+        email: getFormValue(form, 'email'),
+        password: getFormValue(form, 'password'),
+      },
       method: 'POST',
       useSession: false,
-      body: {
-        email: form.get('email'),
-        password: form.get('password'),
-      },
     });
 
     if (payload.session) {
@@ -183,62 +264,62 @@ elements.loginForm.addEventListener('submit', async (event) => {
 
     logResult('Login succeeded', payload);
   } catch (error) {
-    logResult('Login failed', { error: error.message });
+    logResult('Login failed', { error: getErrorMessage(error) });
   }
 });
 
-elements.createOrderForm.addEventListener('submit', async (event) => {
+elements.createOrderForm.addEventListener('submit', async (event: SubmitEvent) => {
   event.preventDefault();
-  const form = new FormData(event.target);
+  const form = getFormData(event.currentTarget);
 
   try {
     const payload = await apiRequest('/v0/order', {
-      method: 'POST',
       body: {
-        currency: form.get('currency'),
-        deliveryAddress: form.get('deliveryAddress'),
-        user: {
-          firstName: form.get('userFirstName'),
-          lastName: form.get('userLastName'),
-          email: form.get('userEmail'),
-          telephone: form.get('userTelephone'),
-        },
-        reqDeliveryPeriod: {
-          startDateTime: toEpochMillis(form.get('startDateTime')),
-          endDateTime: toEpochMillis(form.get('endDateTime')),
-        },
+        currency: getFormValue(form, 'currency'),
+        deliveryAddress: getFormValue(form, 'deliveryAddress'),
         items: [
           {
-            name: form.get('itemName'),
-            description: form.get('itemDescription'),
-            unitPrice: Number(form.get('itemUnitPrice')),
-            quantity: Number(form.get('itemQuantity')),
+            description: getFormValue(form, 'itemDescription'),
+            name: getFormValue(form, 'itemName'),
+            quantity: Number(getFormValue(form, 'itemQuantity')),
+            unitPrice: Number(getFormValue(form, 'itemUnitPrice')),
           },
         ],
+        reqDeliveryPeriod: {
+          endDateTime: toEpochMillis(getFormValue(form, 'endDateTime')),
+          startDateTime: toEpochMillis(getFormValue(form, 'startDateTime')),
+        },
+        user: {
+          email: getFormValue(form, 'userEmail'),
+          firstName: getFormValue(form, 'userFirstName'),
+          lastName: getFormValue(form, 'userLastName'),
+          telephone: getFormValue(form, 'userTelephone'),
+        },
       },
+      method: 'POST',
     });
 
     logResult('Create order succeeded', payload);
   } catch (error) {
-    logResult('Create order failed', { error: error.message });
+    logResult('Create order failed', { error: getErrorMessage(error) });
   }
 });
 
 elements.listOrdersButton.addEventListener('click', async () => {
   try {
-    const payload = await apiRequest('/v0/order/list');
+    const payload = await apiRequest<{ orders?: OrderSummary[] }>('/v0/order/list');
     renderOrders(payload.orders);
     logResult('List orders succeeded', payload);
   } catch (error) {
     renderOrders([]);
-    logResult('List orders failed', { error: error.message });
+    logResult('List orders failed', { error: getErrorMessage(error) });
   }
 });
 
-elements.orderInfoForm.addEventListener('submit', async (event) => {
+elements.orderInfoForm.addEventListener('submit', async (event: SubmitEvent) => {
   event.preventDefault();
-  const form = new FormData(event.target);
-  const orderId = form.get('orderId');
+  const form = getFormData(event.currentTarget);
+  const orderId = getFormValue(form, 'orderId');
 
   try {
     const payload = await apiRequest(`/v0/order/${orderId}`);
@@ -246,50 +327,50 @@ elements.orderInfoForm.addEventListener('submit', async (event) => {
     logResult('Get order succeeded', payload);
   } catch (error) {
     elements.orderInfoOutput.textContent = 'Failed to load order.';
-    logResult('Get order failed', { error: error.message });
+    logResult('Get order failed', { error: getErrorMessage(error) });
   }
 });
 
-elements.updateOrderForm.addEventListener('submit', async (event) => {
+elements.updateOrderForm.addEventListener('submit', async (event: SubmitEvent) => {
   event.preventDefault();
-  const form = new FormData(event.target);
-  const orderId = form.get('orderId');
+  const form = getFormData(event.currentTarget);
+  const orderId = getFormValue(form, 'orderId');
 
   try {
     const payload = await apiRequest(`/v0/order/${orderId}`, {
-      method: 'PUT',
       body: {
-        deliveryAddress: form.get('deliveryAddress'),
+        deliveryAddress: getFormValue(form, 'deliveryAddress'),
         reqDeliveryPeriod: {
-          startDateTime: toEpochMillis(form.get('startDateTime')),
-          endDateTime: toEpochMillis(form.get('endDateTime')),
+          endDateTime: toEpochMillis(getFormValue(form, 'endDateTime')),
+          startDateTime: toEpochMillis(getFormValue(form, 'startDateTime')),
         },
-        status: form.get('status'),
+        status: getFormValue(form, 'status'),
       },
+      method: 'PUT',
     });
 
     logResult('Update order succeeded', payload);
   } catch (error) {
-    logResult('Update order failed', { error: error.message });
+    logResult('Update order failed', { error: getErrorMessage(error) });
   }
 });
 
-elements.cancelOrderForm.addEventListener('submit', async (event) => {
+elements.cancelOrderForm.addEventListener('submit', async (event: SubmitEvent) => {
   event.preventDefault();
-  const form = new FormData(event.target);
-  const orderId = form.get('orderId');
+  const form = getFormData(event.currentTarget);
+  const orderId = getFormValue(form, 'orderId');
 
   try {
     const payload = await apiRequest(`/v0/order/${orderId}`, {
-      method: 'DELETE',
       body: {
-        reason: form.get('reason'),
+        reason: getFormValue(form, 'reason'),
       },
+      method: 'DELETE',
     });
 
     logResult('Cancel order succeeded', payload);
   } catch (error) {
-    logResult('Cancel order failed', { error: error.message });
+    logResult('Cancel order failed', { error: getErrorMessage(error) });
   }
 });
 
