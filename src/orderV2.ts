@@ -2,14 +2,15 @@ import { createOrderReturn, EmptyObject, Order,
   ReqDeliveryPeriod, ReqItem, OrderLineWithItem } from './interfaces';
 import { v4 as uuidv4 } from 'uuid';
 import {
-  createOrderSupaPush,
+  createOrderSupaPushV2,
   getOrderByIdSupa,
-  updateOrderSupa,
+  updateOrderSupaV2,
   deleteOrderSupa,
 } from './dataStore';
 import { requireOrgMember } from './orgPermissions';
 import {
   InvalidDeliveryAddr,
+  InvalidInput,
   InvalidOrderId,
   InvalidRequestPeriod,
   InvalidSupabase,
@@ -20,12 +21,12 @@ import { supabase } from './supabase';
 import { uploadUBLForOrder, getSignedUBLUrl } from './generateUBL';
 
 /**
- *  key differences from order.ts (V0/V1):
- *  - orgId is passed explicitly by the caller (taken from the URL path)
- *  - Auth uses requireOrgMember from orgPermissions so any member of the
- *    org can operate on its orders, not just the owner
- *  - UBL generation uses the lightweight uploadUBLForOrder / getSignedUBLUrl
- *    helpers that do not repeat the permission check
+ * V2 order logic. Key differences from order.ts (V0/V1):
+ *  - orgId is taken from the URL path
+ *  - deliveryAddressId (number) is used instead of a raw address string —
+ *    callers must first create an address via POST /v2/address
+ *  - Auth uses requireOrgMember so any member of the org can act
+ *  - UBL helpers skip the redundant permission check
  */
 
 
@@ -49,16 +50,15 @@ export async function createOrder(
   orgId: number,
   currency: string,
   session: string,
-  deliveryAddress: string,
+  deliveryAddressId: number,
   reqDeliveryPeriod: ReqDeliveryPeriod,
   items: ReqItem[]
 ): Promise<createOrderReturn> {
   const userId = await getUserIdFromSession(session);
-  // any member of the org can create orders
   await requireOrgMember(userId, orgId);
 
-  if (deliveryAddress.length > 200) {
-    throw new InvalidDeliveryAddr('The address is too long.');
+  if (!Number.isInteger(deliveryAddressId) || deliveryAddressId <= 0) {
+    throw new InvalidDeliveryAddr('deliveryAddressId must be a positive integer');
   }
 
   if (reqDeliveryPeriod.endDateTime <= reqDeliveryPeriod.startDateTime) {
@@ -84,7 +84,7 @@ export async function createOrder(
     finalPrice: taxInclusive,
   };
 
-  await createOrderSupaPush(order, deliveryAddress, reqDeliveryPeriod, items);
+  await createOrderSupaPushV2(order, deliveryAddressId, reqDeliveryPeriod, items);
   await uploadUBLForOrder(orderId, userId);
   return { orderId };
 }
@@ -126,6 +126,7 @@ export async function getOrderInfo(
     taxInclusive: Number(order.taxInclusive || 0),
     finalPrice: Number(order.finalPrice || 0),
     address: address?.street || '',
+    deliveryAddressId: delivery?.deliveryAddressID ?? null,
     deliveryDetails: {
       startDateTime: Number(delivery?.startDate || 0),
       endDateTime: Number(delivery?.endDate || 0),
@@ -162,7 +163,7 @@ export async function updateOrder(
   orgId: number,
   session: string,
   orderId: string,
-  deliveryAddress: string,
+  deliveryAddressId: number,
   reqDeliveryPeriod: ReqDeliveryPeriod,
   status: string
 ): Promise<EmptyObject> {
@@ -170,17 +171,14 @@ export async function updateOrder(
   await requireOrgMember(userId, orgId);
   await assertOrderBelongsToOrg(orderId, orgId);
 
-  if (!deliveryAddress || deliveryAddress.trim().length === 0) {
-    throw new InvalidDeliveryAddr('Address cannot be empty');
-  }
-  if (deliveryAddress.length > 200) {
-    throw new InvalidDeliveryAddr('The address is too long.');
+  if (!Number.isInteger(deliveryAddressId) || deliveryAddressId <= 0) {
+    throw new InvalidDeliveryAddr('deliveryAddressId must be a positive integer');
   }
   if (reqDeliveryPeriod.endDateTime <= reqDeliveryPeriod.startDateTime) {
     throw new InvalidRequestPeriod('The requested delivery period is invalid.');
   }
 
-  await updateOrderSupa(orderId, deliveryAddress, reqDeliveryPeriod, status);
+  await updateOrderSupaV2(orderId, deliveryAddressId, reqDeliveryPeriod, status);
   await uploadUBLForOrder(orderId, userId);
   return {};
 }
@@ -195,9 +193,6 @@ export async function getOrderUBL(
   await assertOrderBelongsToOrg(orderId, orgId);
   return getSignedUBLUrl(orderId);
 }
-
-// V2 organisation management (uses orgPermissions for correct role based access)
-// replaces the direct contactId checks in the V0 organisation.ts
 
 export async function getOrdersByOrg(orgId: number, session: string) {
   return listOrders(orgId, session);

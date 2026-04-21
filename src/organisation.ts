@@ -49,7 +49,7 @@ export async function createOrganisation(session: string, orgName: string, addre
 
   if (error) throw new InvalidSupabase(`Org Creation Failed: ${error.message}`);
 
-  // Add the creator as OWNER in organisation_members
+  // add creator as OWNER in organisation_members
   await supabase
     .from('organisation_members')
     .insert([{ orgId: data.orgId, contactId: userId, role: 'OWNER' }]);

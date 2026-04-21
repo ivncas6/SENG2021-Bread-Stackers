@@ -109,6 +109,59 @@ export async function createOrderSupaPush(
   }
 }
 
+/* V2 version: uses an existing addressId instead of  inserting new address row.
+callers can manage addresses independently from /v2/address endpoints
+and reference them when placing orders. */
+export async function createOrderSupaPushV2(
+  order: Order,
+  deliveryAddressId: number,
+  reqDeliveryPeriod: ReqDeliveryPeriod,
+  items: ReqItem[]
+) {
+  const { error: orderError } = await supabase
+    .from('orders').insert([{
+      orderId: order.orderId,
+      currency: order.currency,
+      finalPrice: order.finalPrice,
+      taxExclusive: order.taxExclusive,
+      taxInclusive: order.taxInclusive,
+      buyerOrgID: order.buyerOrgID,
+      status: 'OPEN',
+      issuedDate: order.issuedDate,
+      issuedTime: order.issuedTime
+    }]);
+
+  if (orderError) {
+    console.error('Supabase Order Insert Error:', orderError.message);
+    throw new Error(`Order Table Error: ${orderError.message}`);
+  }
+
+  await supabase
+    .from('deliveries').insert([{
+      orderID: order.orderId,
+      deliveryAddressID: deliveryAddressId,
+      startDate: reqDeliveryPeriod.startDateTime.toString(),
+      endDate: reqDeliveryPeriod.endDateTime.toString()
+    }]);
+
+  for (const i of items) {
+    const { data: itemData } = await supabase.from('items').insert([{
+      name: i.name,
+      price: i.unitPrice,
+      description: i.description
+    }]).select().single();
+
+    if (itemData) {
+      await supabase.from('order_lines').insert([{
+        orderID: order.orderId,
+        itemID: itemData.itemId,
+        quantity: i.quantity,
+        status: 'OPEN'
+      }]);
+    }
+  }
+}
+
 export async function getOrderByIdSupa(orderId: string): Promise<Order | null> {
   if (!isUUID(orderId)) {
     return null; 
@@ -188,6 +241,37 @@ export async function updateOrderSupa(
       
     if (addressError) throw addressError;
   }
+}
+
+/**
+ * V2 variant: updates the delivery's addressId reference (swaps which address
+ * the delivery points at) rather than mutating the address row itself.
+ * This keeps address records reusable and independently managed.
+ */
+export async function updateOrderSupaV2(
+  orderId: string,
+  deliveryAddressId: number,
+  reqDeliveryPeriod: ReqDeliveryPeriod,
+  status: string
+) {
+  const [orderRes, deliveryRes] = await Promise.all([
+    supabase
+      .from('orders')
+      .update({ status })
+      .eq('orderId', orderId),
+
+    supabase
+      .from('deliveries')
+      .update({
+        deliveryAddressID: deliveryAddressId,
+        startDate: reqDeliveryPeriod.startDateTime.toString(),
+        endDate: reqDeliveryPeriod.endDateTime.toString()
+      })
+      .eq('orderID', orderId)
+  ]);
+
+  if (orderRes.error) throw orderRes.error;
+  if (deliveryRes.error) throw deliveryRes.error;
 }
 
 export async function deleteOrderSupa(orderId: string) {
