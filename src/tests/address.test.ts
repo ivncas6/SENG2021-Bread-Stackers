@@ -12,7 +12,7 @@ import * as orgPermissions from '../orgPermissions';
 import { supabase } from '../supabase';
 import { InvalidInput, InvalidSupabase, UnauthorisedError } from '../throwError';
 
-// ─── Mocks ───────────────────────────────────────────────────────────────────
+// mocks
 
 jest.mock('../userHelper');
 jest.mock('../orgPermissions');
@@ -72,9 +72,10 @@ beforeEach(() => {
   setupChain();
   mockedUserHelper.getUserIdFromSession.mockResolvedValue(USER_ID);
   mockedPerms.requireOrgMember.mockResolvedValue('MEMBER');
+  jest.spyOn(console, 'error').mockImplementation(() => {});
 });
 
-// ─── createAddress ───────────────────────────────────────────────────────────
+// createAddress 
 
 describe('createAddress (business logic)', () => {
   test('inserts new address when no duplicate exists', async () => {
@@ -151,7 +152,7 @@ describe('createAddress (business logic)', () => {
   });
 });
 
-// ─── listAddresses ───────────────────────────────────────────────────────────
+//  listAddresses 
 //
 // listAddresses runs 4 queries in sequence:
 //   1. organisations.select('addressId').eq() → maybeSingle  (org's own address)
@@ -167,6 +168,7 @@ describe('listAddresses (business logic)', () => {
 
   test('returns org address plus all delivery addresses', async () => {
     db.maybeSingle.mockResolvedValueOnce({ data: { addressId: 1 }, error: null });
+    db.eq.mockReturnValueOnce(db);
     db.eq.mockResolvedValueOnce({ data: [{ orderId: 'uuid-1' }], error: null });
     db.in
       .mockResolvedValueOnce({ data: [{ deliveryAddressID: 2 }], error: null })
@@ -179,6 +181,7 @@ describe('listAddresses (business logic)', () => {
 
   test('returns only org address when org has no orders yet', async () => {
     db.maybeSingle.mockResolvedValueOnce({ data: { addressId: 1 }, error: null });
+    db.eq.mockReturnValueOnce(db);
     // no orders
     db.eq.mockResolvedValueOnce({ data: [], error: null });
     // No deliveries query fires when orderIds is empty.
@@ -191,6 +194,7 @@ describe('listAddresses (business logic)', () => {
   test('returns empty array when org has no address and no orders', async () => {
     // no org address
     db.maybeSingle.mockResolvedValueOnce({ data: null, error: null });
+    db.eq.mockReturnValueOnce(db);
     // no orders
     db.eq.mockResolvedValueOnce({ data: [], error: null });
 
@@ -203,6 +207,7 @@ describe('listAddresses (business logic)', () => {
   test('deduplicates when org address and delivery address are the same', async () => {
     // Both steps resolve to addressID = 1 — Set deduplication means only one row fetched.
     db.maybeSingle.mockResolvedValueOnce({ data: { addressId: 1 }, error: null });
+    db.eq.mockReturnValueOnce(db);
     db.eq.mockResolvedValueOnce({ data: [{ orderId: 'uuid-1' }], error: null });
     db.in
       .mockResolvedValueOnce({ data: [{ deliveryAddressID: 1 }], error: null })
@@ -231,6 +236,7 @@ describe('listAddresses (business logic)', () => {
 
   test('throws InvalidSupabase when final address fetch fails', async () => {
     db.maybeSingle.mockResolvedValueOnce({ data: { addressId: 1 }, error: null });
+    db.eq.mockReturnValueOnce(db);
     db.eq.mockResolvedValueOnce({ data: [], error: null });
     db.in.mockResolvedValueOnce({ data: null, error: { message: 'DB error' } });
 
@@ -238,7 +244,7 @@ describe('listAddresses (business logic)', () => {
   });
 });
 
-// ─── getAddress ───────────────────────────────────────────────────────────────
+// getAddress
 
 describe('getAddress (business logic)', () => {
   test('returns address data on success', async () => {
@@ -267,7 +273,7 @@ describe('getAddress (business logic)', () => {
   });
 });
 
-// ─── updateAddress ────────────────────────────────────────────────────────────
+// updateAddress
 
 describe('updateAddress (business logic)', () => {
   test('updates address fields successfully', async () => {
@@ -307,7 +313,7 @@ describe('updateAddress (business logic)', () => {
   });
 });
 
-// ─── deleteAddress ────────────────────────────────────────────────────────────
+// deleteAddress
 
 describe('deleteAddress (business logic)', () => {
   test('deletes address when not referenced anywhere', async () => {
@@ -345,7 +351,7 @@ describe('deleteAddress (business logic)', () => {
   });
 });
 
-// ─── Lambda: createAddressHandler ────────────────────────────────────────────
+//  Lambda: createAddressHandler 
 
 describe('Lambda: createAddressHandler', () => {
   test('200 on success — new address', async () => {
@@ -385,11 +391,12 @@ describe('Lambda: createAddressHandler', () => {
   });
 });
 
-// ─── Lambda: listAddressHandler ──────────────────────────────────────────────
+// Lambda: listAddressHandler
 
 describe('Lambda: listAddressHandler', () => {
   test('200 returns address list for the org', async () => {
     db.maybeSingle.mockResolvedValueOnce({ data: { addressId: 1 }, error: null });
+    db.eq.mockReturnValueOnce(db);
     db.eq.mockResolvedValueOnce({ data: [], error: null });
     db.in.mockResolvedValueOnce({
       data: [{ addressID: 1, street: '1 First St', city: 'Sydney', postcode: '2000', country: 'AUS' }],
@@ -403,6 +410,7 @@ describe('Lambda: listAddressHandler', () => {
 
   test('200 returns empty array when org has no addresses', async () => {
     db.maybeSingle.mockResolvedValueOnce({ data: null, error: null });
+    db.eq.mockReturnValueOnce(db);
     db.eq.mockResolvedValueOnce({ data: [], error: null });
 
     const res = await listAddressHandler(makeEvent({ pathParameters: { orgId: String(ORG_ID) } }));
@@ -429,7 +437,7 @@ describe('Lambda: listAddressHandler', () => {
   });
 });
 
-// ─── Lambda: getAddressHandler ───────────────────────────────────────────────
+//  Lambda: getAddressHandler 
 
 describe('Lambda: getAddressHandler', () => {
   test('200 on success', async () => {
@@ -460,7 +468,7 @@ describe('Lambda: getAddressHandler', () => {
   });
 });
 
-// ─── Lambda: updateAddressHandler ────────────────────────────────────────────
+//  Lambda: updateAddressHandler 
 
 describe('Lambda: updateAddressHandler', () => {
   test('200 on success', async () => {
@@ -489,7 +497,7 @@ describe('Lambda: updateAddressHandler', () => {
   });
 });
 
-// ─── Lambda: deleteAddressHandler ────────────────────────────────────────────
+//  Lambda: deleteAddressHandler 
 
 describe('Lambda: deleteAddressHandler', () => {
   test('200 on success', async () => {
