@@ -71,6 +71,17 @@ export async function updateOrganisation(
 
   validateBusinessName(orgName);
 
+  // check duplicate name
+  const { data: dupOrg } = await supabase
+    .from('organisations')
+    .select('orgId')
+    .eq('orgName', orgName)
+    .maybeSingle();
+ 
+  if (dupOrg) {
+    throw new InvalidBusinessName('An organisation with this name already exists');
+  }
+
   const { data: addressData } = await supabase
     .from('addresses')
     .select('addressID')

@@ -10,7 +10,6 @@ import {
 import { requireOrgMember } from './orgPermissions';
 import {
   InvalidDeliveryAddr,
-  InvalidInput,
   InvalidOrderId,
   InvalidRequestPeriod,
   InvalidSupabase,

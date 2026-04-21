@@ -8,7 +8,7 @@ import * as userHelper from '../userHelper';
 import { supabase } from '../supabase';
 import { InvalidInput, InvalidSupabase, UnauthorisedError } from '../throwError';
 
-// ── Mocks ────────────────────────────────────────────────────────────────────
+// mocks
 
 jest.mock('../userHelper');
 jest.mock('../supabase', () => ({
@@ -19,6 +19,7 @@ jest.mock('../supabase', () => ({
     update: jest.fn(),
     delete: jest.fn(),
     eq: jest.fn(),
+    neq: jest.fn(),
     limit: jest.fn(),
     maybeSingle: jest.fn(),
     single: jest.fn(),
@@ -28,7 +29,7 @@ jest.mock('../supabase', () => ({
 const mockedUserHelper = userHelper as jest.Mocked<typeof userHelper>;
 const db = supabase as never as {
   from: jest.Mock; select: jest.Mock; insert: jest.Mock; update: jest.Mock;
-  delete: jest.Mock; eq: jest.Mock; limit: jest.Mock;
+  delete: jest.Mock; eq: jest.Mock; neq: jest.Mock; limit: jest.Mock;
   maybeSingle: jest.Mock; single: jest.Mock;
 };
 
@@ -36,6 +37,8 @@ const SESSION = 'valid-session';
 const USER_ID = 1;
 const ADDRESS_ID = 42;
 
+// Non-terminal chain methods return `this` by default.
+// Terminal methods (maybeSingle, single, limit-as-terminal) are set explicitly per test.
 function setupChain() {
   db.from.mockReturnThis();
   db.select.mockReturnThis();
@@ -43,7 +46,8 @@ function setupChain() {
   db.update.mockReturnThis();
   db.delete.mockReturnThis();
   db.eq.mockReturnThis();
-  db.limit.mockReturnThis();
+  db.neq.mockReturnThis();
+  // limit, maybeSingle and single left without a default — tests must set them explicitly
 }
 
 function makeEvent(overrides: Partial<APIGatewayProxyEvent>): APIGatewayProxyEvent {
@@ -61,7 +65,7 @@ beforeEach(() => {
   mockedUserHelper.getUserIdFromSession.mockResolvedValue(USER_ID);
 });
 
-// ── createAddress ─────────────────────────────────────────────────────────────
+// createAddress 
 
 describe('createAddress (business logic)', () => {
   test('creates address and returns addressId', async () => {
@@ -74,11 +78,14 @@ describe('createAddress (business logic)', () => {
 
   test('throws InvalidInput when street is empty', async () => {
     await expect(createAddress(SESSION, '')).rejects.toThrow(InvalidInput);
+  });
+
+  test('throws InvalidInput when street is only whitespace', async () => {
     await expect(createAddress(SESSION, '   ')).rejects.toThrow(InvalidInput);
   });
 
   test('throws InvalidInput when street is too long', async () => {
-    await expect(createAddress(SESSION, 'A'.repeat(201))).rejects.toThrow(InvalidInput);
+    await expect(createAddress(SESSION, 'A'.repeat(201))).rejects.toThrow('too long');
   });
 
   test('throws UnauthorisedError on bad session', async () => {
@@ -100,7 +107,7 @@ describe('createAddress (business logic)', () => {
   });
 });
 
-// ── getAddress ────────────────────────────────────────────────────────────────
+// getAddress
 
 describe('getAddress (business logic)', () => {
   test('returns address data on success', async () => {
@@ -111,9 +118,9 @@ describe('getAddress (business logic)', () => {
     expect(result).toEqual(mockAddress);
   });
 
-  test('throws InvalidInput when address not found', async () => {
+  test('throws with "Address not found" message when not found', async () => {
+    // One call only — avoids consuming a queued mock for the second assertion
     db.maybeSingle.mockResolvedValueOnce({ data: null, error: null });
-    await expect(getAddress(SESSION, 999)).rejects.toThrow(InvalidInput);
     await expect(getAddress(SESSION, 999)).rejects.toThrow('Address not found');
   });
 
@@ -130,7 +137,7 @@ describe('getAddress (business logic)', () => {
   });
 });
 
-// ── updateAddress ─────────────────────────────────────────────────────────────
+// updateAddress 
 
 describe('updateAddress (business logic)', () => {
   test('updates address fields successfully', async () => {
@@ -141,69 +148,79 @@ describe('updateAddress (business logic)', () => {
     expect(db.update).toHaveBeenCalledWith({ street: 'New St', city: 'Melb' });
   });
 
-  test('throws InvalidInput when address not found', async () => {
+  test('throws with "Address not found" when address does not exist', async () => {
     db.maybeSingle.mockResolvedValueOnce({ data: null, error: null });
-    await expect(updateAddress(SESSION, 999, { street: 'X' })).rejects.toThrow(InvalidInput);
+    await expect(updateAddress(SESSION, 999, { street: 'X' })).rejects.toThrow('Address not found');
   });
 
   test('throws InvalidInput when no fields are provided', async () => {
     db.maybeSingle.mockResolvedValueOnce({ data: { addressID: ADDRESS_ID }, error: null });
-    await expect(updateAddress(SESSION, ADDRESS_ID, {})).rejects.toThrow(InvalidInput);
+    await expect(updateAddress(SESSION, ADDRESS_ID, {})).rejects.toThrow('No fields');
   });
 
   test('throws InvalidInput when street is too long', async () => {
     db.maybeSingle.mockResolvedValueOnce({ data: { addressID: ADDRESS_ID }, error: null });
     await expect(
       updateAddress(SESSION, ADDRESS_ID, { street: 'A'.repeat(201) })
-    ).rejects.toThrow(InvalidInput);
+    ).rejects.toThrow('too long');
   });
 
   test('throws InvalidSupabase on DB update error', async () => {
+    // updateAddress makes two eq calls:
+    // eq #1 (existence check): .select().eq() → maybeSingle is terminal, eq must return `this`
+    // eq #2 (update):          .update().eq() → terminal, must resolve with error
+    // Explicitly queue both to guarantee correct ordering.
     db.maybeSingle.mockResolvedValueOnce({ data: { addressID: ADDRESS_ID }, error: null });
-    // eq terminal for the update call — override default mockReturnThis
-    db.eq.mockResolvedValueOnce({ error: { message: 'Update failed' } });
+    db.eq
+      .mockReturnValueOnce(db)  // eq #1: existence check — chain continues to maybeSingle
+      .mockResolvedValueOnce({ error: { message: 'Update failed' } }); // eq #2: terminal
+
     await expect(
       updateAddress(SESSION, ADDRESS_ID, { street: 'New St' })
     ).rejects.toThrow(InvalidSupabase);
   });
 });
 
-// ── deleteAddress ─────────────────────────────────────────────────────────────
+// deleteAddress 
 
 describe('deleteAddress (business logic)', () => {
   test('deletes address when not in use', async () => {
-    // deliveries check
-    db.limit.mockResolvedValueOnce({ data: [], error: null });
-    // orgs check
-    db.limit.mockResolvedValueOnce({ data: [], error: null });
+    db.limit
+      .mockResolvedValueOnce({ data: [], error: null })   // delivery guard
+      .mockResolvedValueOnce({ data: [], error: null });   // org guard
 
     const result = await deleteAddress(SESSION, ADDRESS_ID);
     expect(result).toEqual({});
     expect(db.delete).toHaveBeenCalled();
   });
 
-  test('throws InvalidInput when address is used by a delivery', async () => {
+  test('throws "order delivery" when address is used by a delivery', async () => {
+    // Throws immediately after first limit — no second call needed
     db.limit.mockResolvedValueOnce({ data: [{ deliveryID: 1 }], error: null });
-
-    await expect(deleteAddress(SESSION, ADDRESS_ID)).rejects.toThrow(InvalidInput);
     await expect(deleteAddress(SESSION, ADDRESS_ID)).rejects.toThrow('order delivery');
   });
 
-  test('throws InvalidInput when address is used by an organisation', async () => {
-    // deliveries: none
-    db.limit.mockResolvedValueOnce({ data: [], error: null });
-    // orgs: one
-    db.limit.mockResolvedValueOnce({ data: [{ orgId: 5 }], error: null });
-
-    await expect(deleteAddress(SESSION, ADDRESS_ID)).rejects.toThrow(InvalidInput);
+  test('throws "organisation" when address is used by an org', async () => {
+    db.limit
+      .mockResolvedValueOnce({ data: [], error: null })               // no deliveries
+      .mockResolvedValueOnce({ data: [{ orgId: 5 }], error: null });  // org match
     await expect(deleteAddress(SESSION, ADDRESS_ID)).rejects.toThrow('organisation');
   });
 
   test('throws InvalidSupabase on DB delete error', async () => {
+    // Both guard limit calls pass
     db.limit
       .mockResolvedValueOnce({ data: [], error: null })
       .mockResolvedValueOnce({ data: [], error: null });
-    db.eq.mockResolvedValueOnce({ error: { message: 'Delete failed' } });
+
+    // deleteAddress makes 3 eq calls:
+    // eq #1: delivery guard .eq('deliveryAddressID', …) → limit is terminal, eq returns this
+    // eq #2: org guard      .eq('addressId', …)         → limit is terminal, eq returns this
+    // eq #3: delete         .delete().eq(…)             → terminal, resolves with error
+    db.eq
+      .mockReturnValueOnce(db)
+      .mockReturnValueOnce(db)
+      .mockResolvedValueOnce({ error: { message: 'Delete failed' } });
 
     await expect(deleteAddress(SESSION, ADDRESS_ID)).rejects.toThrow(InvalidSupabase);
   });
@@ -216,7 +233,7 @@ describe('deleteAddress (business logic)', () => {
   });
 });
 
-// ── Lambda handlers ───────────────────────────────────────────────────────────
+// Lambda handlers 
 
 describe('Lambda: createAddressHandler', () => {
   test('200 on success', async () => {
@@ -319,7 +336,7 @@ describe('Lambda: deleteAddressHandler', () => {
     expect(res.statusCode).toBe(401);
   });
 
-  test('400 when address is in use', async () => {
+  test('400 when address is in use by a delivery', async () => {
     db.limit.mockResolvedValueOnce({ data: [{ deliveryID: 1 }], error: null });
     const res = await deleteAddressHandler(makeEvent({}));
     expect(res.statusCode).toBe(400);

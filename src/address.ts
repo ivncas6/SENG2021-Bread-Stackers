@@ -107,7 +107,7 @@ export async function deleteAddress(session: string, addressId: number) {
     );
   }
 
-  // check if used by an organisation
+  // check if used by an organisation?
   const { data: orgUse } = await supabase
     .from('organisations')
     .select('orgId')
