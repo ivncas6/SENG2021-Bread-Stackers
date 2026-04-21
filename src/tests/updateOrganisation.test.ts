@@ -44,9 +44,9 @@ beforeEach(() => {
 
 describe('Backend: updateOrganisation', () => {
   test('successfully updates organisation', async () => {
-    // 1. duplicate name check: no duplicate (select.eq.neq.maybeSingle)
+    // duplicate name check: no duplicate (select.eq.neq.maybeSingle)
     db.maybeSingle.mockResolvedValueOnce({ data: null, error: null });
-    // 2. address exists
+    // address exists
     db.maybeSingle.mockResolvedValueOnce({ data: { addressID: 2 }, error: null });
 
     const res = await updateOrganisation(mockSession, mockOrgId, 'Updated Name', 2);
