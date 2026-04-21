@@ -246,10 +246,10 @@ Resources:
         EntryPoints: 
           - src/handlers/userLogout.ts
   
-  createOrderV2Function:
+  createOrderV1Function:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: src/handlersV2/createOrder.createOrderHandler
+      Handler: src/handlersV1/createOrder.createOrderHandler
       Events:
         Api:
           Type: Api
@@ -264,12 +264,12 @@ Resources:
         Target: "es2020"
         Sourcemap: true
         EntryPoints: 
-          - src/handlersV2/createOrder.ts
+          - src/handlersV1/createOrder.ts
 
-  userDetailsUpdateV2Function:
+  userDetailsUpdateV1Function:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: src/handlersV2/userDetails.updateUserDetailsHandler
+      Handler: src/handlersV1/userDetails.updateUserDetailsHandler
       Events:
         Api:
           Type: Api
@@ -284,7 +284,7 @@ Resources:
         Target: "es2020"
         Sourcemap: true
         EntryPoints: 
-          - src/handlersV2/userDetails.ts
+          - src/handlersV1/userDetails.ts
     
 
 Outputs:

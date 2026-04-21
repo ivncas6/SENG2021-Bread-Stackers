@@ -1,6 +1,6 @@
 import { createOrder } from '../order';
 import { createOrderHandler } from '../handlers/createOrder';
-import { createOrderHandler as v2create } from '../handlersV2/createOrder';
+import { createOrderHandler as v2create } from '../handlersV1/createOrder';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import mockEvent from './mocks/createOrderMock.json';
 import { InvalidRequestPeriod, UnauthorisedError } from '../throwError';

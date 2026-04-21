@@ -158,7 +158,7 @@ definitions:
         items:
             $ref: '#/definitions/orderItem'
   
-  orderCreateV2:
+  orderCreateV1:
     type: object
     required:
       - currency
@@ -547,7 +547,7 @@ paths:
           name: body
           required: true
           schema:
-            $ref: '#/definitions/orderCreateV2'
+            $ref: '#/definitions/orderCreateV1'
       responses:
         200:
           description: "**SUCCESS**"

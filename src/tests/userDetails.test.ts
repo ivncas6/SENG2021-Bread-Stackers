@@ -1,6 +1,6 @@
 import { userDetailsUpdate } from '../userRegister';
 import { updateUserDetailsHandler } from '../handlers/userDetails';
-import { updateUserDetailsHandler as v2Details } from '../handlersV2/userDetails';
+import { updateUserDetailsHandler as v2Details } from '../handlersV1/userDetails';
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import * as userHelper from '../userHelper';
 import * as dataStore from '../dataStore';
