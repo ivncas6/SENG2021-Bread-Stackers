@@ -1,16 +1,3 @@
-/**
- * orderV2.test.ts
- *
- * Mocking strategy — three mocks only, no Supabase chain needed:
- *   1. jest.mock('../userHelper')        → control getUserIdFromSession
- *   2. jest.mock('../orgPermissions')    → control all role/membership guards
- *   3. jest.mock('../dataStore')         → control order DB calls
- *   4. jest.mock('../generateUBL')       → suppress UBL side effects
- *
- * The supabase client is mocked via __mocks__/supabase.ts for listOrders
- * (the only function that calls supabase directly in orderV2.ts).
- */
-
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import {
   createOrder, cancelOrder, getOrderInfo,
@@ -257,7 +244,7 @@ describe('getOrderUBL (V2 business logic)', () => {
 });
 
 
-// Lambda handlers — one happy path + one error path per handler
+// Lambda handlers - one happy path + one error path per handler
 
 
 function makeEvent(overrides: Partial<APIGatewayProxyEvent>): APIGatewayProxyEvent {

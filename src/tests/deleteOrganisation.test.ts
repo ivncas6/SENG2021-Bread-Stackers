@@ -1,15 +1,3 @@
-/**
- * deleteOrganisation.test.ts  (V0 handler tests — backwards compat)
- *
- * organisation.ts now uses orgPermissions (requireOrgOwner) instead of a raw
- * supabase maybeSingle for the ownership check.  We must mock orgPermissions
- * here so the old tests don't try to walk the real permission chain.
- *
- * Semantic change to acknowledge:
- *   OLD: org not found → InvalidInput
- *   NEW: org not found / user not owner → UnauthorisedError  (via requireOrgOwner)
- * The "org does not exist" test now expects UnauthorisedError to match reality.
- */
 import { deleteOrganisation } from '../organisation';
 import { deleteOrganisationHandler } from '../handlers/deleteOrganisation';
 import * as userHelper from '../userHelper';
@@ -46,12 +34,14 @@ beforeEach(() => {
   ['from','select','delete','eq','or'].forEach(m => db[m].mockReturnThis());
 
   mockedUserHelper.getUserIdFromSession.mockResolvedValue(mockUserId);
-  mockedPerms.requireOrgOwner.mockResolvedValue(undefined); // default: caller is owner
+  // default: caller is owner
+  mockedPerms.requireOrgOwner.mockResolvedValue(undefined);
 });
 
 describe('Backend: deleteOrganisation', () => {
   test('successfully deletes organisation', async () => {
-    mockedLimit.mockResolvedValueOnce({ data: [], error: null }); // no orders
+    // no orders
+    mockedLimit.mockResolvedValueOnce({ data: [], error: null });
 
     const res = await deleteOrganisation(mockSession, mockOrgId);
     expect(res).toEqual({});
@@ -60,8 +50,11 @@ describe('Backend: deleteOrganisation', () => {
 
   test('throws UnauthorisedError when org does not exist or user is not OWNER', async () => {
     // With the new model, "org not found" is surfaced as UnauthorisedError by requireOrgOwner
-    mockedPerms.requireOrgOwner.mockRejectedValue(new UnauthorisedError('Only the organisation owner'));
-    await expect(deleteOrganisation(mockSession, mockOrgId)).rejects.toThrow(UnauthorisedError);
+    mockedPerms.requireOrgOwner.mockRejectedValue(
+      new UnauthorisedError('Only the organisation owner')
+    );
+    await expect(deleteOrganisation(mockSession, mockOrgId))
+      .rejects.toThrow(UnauthorisedError);
   });
 
   test('throws InvalidInput if orders are still attached', async () => {
@@ -83,11 +76,13 @@ describe('Lambda: deleteOrganisationHandler', () => {
     } as unknown as APIGatewayProxyEvent;
 
     const res = await deleteOrganisationHandler(event);
-    expect(res.statusCode).toBe(200);
+    expect(res.statusCode).toStrictEqual(200);
   });
 
   test('returns 401 when caller is not OWNER', async () => {
-    mockedPerms.requireOrgOwner.mockRejectedValue(new UnauthorisedError('Only the organisation owner'));
+    mockedPerms.requireOrgOwner.mockRejectedValue(
+      new UnauthorisedError('Only the organisation owner')
+    );
 
     const event = {
       headers: { session: mockSession },
@@ -95,6 +90,6 @@ describe('Lambda: deleteOrganisationHandler', () => {
     } as unknown as APIGatewayProxyEvent;
 
     const res = await deleteOrganisationHandler(event);
-    expect(res.statusCode).toBe(401);
+    expect(res.statusCode).toStrictEqual(401);
   });
 });

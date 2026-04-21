@@ -1,10 +1,3 @@
-/**
- * updateOrganisation.test.ts  (V0 handler tests — backwards compat)
- *
- * organisation.ts now uses requireOrgAdminOrOwner instead of a raw supabase
- * ownership check.  Mock orgPermissions to keep these tests focused on the
- * business logic that lives AFTER the permission gate.
- */
 import { updateOrganisation } from '../organisation';
 import { updateOrganisationHandler } from '../handlers/updateOrganisation';
 import * as userHelper from '../userHelper';
@@ -26,7 +19,7 @@ jest.mock('../supabase', () => ({
 }));
 
 const mockedUserHelper = userHelper as jest.Mocked<typeof userHelper>;
-const mockedPerms      = orgPermissions as jest.Mocked<typeof orgPermissions>;
+const mockedPerms = orgPermissions as jest.Mocked<typeof orgPermissions>;
 const db = supabase as never as {
   from: jest.Mock; select: jest.Mock; eq: jest.Mock;
   maybeSingle: jest.Mock; update: jest.Mock;
@@ -41,16 +34,14 @@ beforeEach(() => {
   db.from.mockReturnThis();
   db.select.mockReturnThis();
   db.update.mockReturnThis();
-  db.eq.mockReturnThis(); // default non-terminal; terminal eq calls rely on default → error=undefined
+  db.eq.mockReturnThis();
 
   mockedUserHelper.getUserIdFromSession.mockResolvedValue(mockUserId);
-  mockedPerms.requireOrgAdminOrOwner.mockResolvedValue(undefined); // default: caller is admin/owner
+  mockedPerms.requireOrgAdminOrOwner.mockResolvedValue(undefined);
 });
 
 describe('Backend: updateOrganisation', () => {
   test('successfully updates organisation', async () => {
-    // Chain: from('addresses').select().eq().maybeSingle()  — terminal: maybeSingle
-    // Then:  from('orgs').update({...}).eq()                — terminal eq → error=undefined ✓
     db.maybeSingle.mockResolvedValueOnce({ data: { addressID: 2 }, error: null });
 
     const res = await updateOrganisation(mockSession, mockOrgId, 'Updated Name', 2);

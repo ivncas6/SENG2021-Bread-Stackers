@@ -14,15 +14,15 @@
  *    - eq           ONLY when it is the very last call before the await
  *
  * 3. For non-terminal eq calls in a chain that ends with maybeSingle, the
- *    default mockReturnThis() is fine — eq returns `this` and maybeSingle
+ *    default mockReturnThis() is fine - eq returns `this` and maybeSingle
  *    remains accessible on the chain.
  *
- * 4. Standalone inserts (no .select().single() after) do NOT need a mock —
+ * 4. Standalone inserts (no .select().single() after) do NOT need a mock -
  *    insert returns `this` (mock object), `await mockObject` resolves to the
  *    mock object, and `{ error } = mockObject` gives error=undefined (falsy).
  *
  * 5. orgPermissions is fully mocked so Supabase is NEVER hit for permission
- *    checks — only for the business-logic DB calls inside organisation.ts.
+ *    checks - only for the business-logic DB calls inside organisation.ts.
  */
 
 import { APIGatewayProxyEvent } from 'aws-lambda';
@@ -106,16 +106,13 @@ function makeEvent(overrides: Partial<APIGatewayProxyEvent>): APIGatewayProxyEve
   } as unknown as APIGatewayProxyEvent;
 }
 
-// ---------------------------------------------------------------------------
+
 // createOrganisation
-// ---------------------------------------------------------------------------
+
 describe('createOrganisation', () => {
   test('creates org and adds owner to organisation_members', async () => {
-    // Chain 1: from('addresses').select().eq().maybeSingle()  — terminal: maybeSingle
     db.maybeSingle.mockResolvedValueOnce({ data: { addressID: 1 }, error: null });
-    // Chain 2: from('orgs').insert([...]).select().single()   — terminal: single
     db.single.mockResolvedValueOnce({ data: { orgId: 99 }, error: null });
-    // Chain 3: from('org_members').insert([...])              — standalone, no mock needed
 
     const result = await createOrganisation(SESSION, 'My Shop', 1);
     expect(result).toEqual({ orgId: 99 });
@@ -139,19 +136,17 @@ describe('createOrganisation', () => {
 
   test('throws UnauthorisedError on invalid session', async () => {
     mockedUserHelper.getUserIdFromSession.mockResolvedValue(null as never);
-    await expect(createOrganisation('bad-session', 'Good Name', 1)).rejects.toThrow(UnauthorisedError);
+    await expect(createOrganisation('bad-session', 'Good Name', 1))
+      .rejects.toThrow(UnauthorisedError);
   });
 });
 
-// ---------------------------------------------------------------------------
+
 // updateOrganisation
-// ---------------------------------------------------------------------------
+
 describe('updateOrganisation', () => {
   test('updates org when caller is ADMIN or OWNER', async () => {
-    // Chain: from('addresses').select().eq().maybeSingle() — terminal: maybeSingle
-    // Note: eq() for address check is non-terminal (default mockReturnThis) ✓
     db.maybeSingle.mockResolvedValueOnce({ data: { addressID: 2 }, error: null });
-    // from('orgs').update({...}).eq() — terminal eq, default mockReturnThis → error=undefined ✓
 
     const result = await updateOrganisation(SESSION, ORG_ID, 'New Name', 2);
     expect(result).toEqual({ orgId: ORG_ID });
@@ -161,7 +156,8 @@ describe('updateOrganisation', () => {
 
   test('throws UnauthorisedError when caller is plain MEMBER', async () => {
     mockedPerms.requireOrgAdminOrOwner.mockRejectedValue(new UnauthorisedError('Admin or owner'));
-    await expect(updateOrganisation(SESSION, ORG_ID, 'New Name', 2)).rejects.toThrow(UnauthorisedError);
+    await expect(updateOrganisation(SESSION, ORG_ID, 'New Name', 2))
+      .rejects.toThrow(UnauthorisedError);
   });
 
   test('throws InvalidInput when new address does not exist', async () => {
@@ -174,14 +170,14 @@ describe('updateOrganisation', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
+
 // deleteOrganisation
-// ---------------------------------------------------------------------------
+
 describe('deleteOrganisation', () => {
   test('deletes org when caller is OWNER and no attached orders', async () => {
-    // from('orders').select().or().limit() — terminal: limit
+    // from('orders').select().or().limit() - terminal: limit
     db.limit.mockResolvedValueOnce({ data: [], error: null });
-    // from('orgs').delete().eq()           — terminal eq, default → error=undefined ✓
+    // from('orgs').delete().eq()           - terminal eq, default → error=undefined ✓
 
     const result = await deleteOrganisation(SESSION, ORG_ID);
     expect(result).toEqual({});
@@ -189,7 +185,9 @@ describe('deleteOrganisation', () => {
   });
 
   test('throws UnauthorisedError when caller is not OWNER', async () => {
-    mockedPerms.requireOrgOwner.mockRejectedValue(new UnauthorisedError('Only the organisation owner'));
+    mockedPerms.requireOrgOwner.mockRejectedValue(
+      new UnauthorisedError('Only the organisation owner')
+    );
     await expect(deleteOrganisation(SESSION, ORG_ID)).rejects.toThrow(UnauthorisedError);
   });
 
@@ -200,15 +198,11 @@ describe('deleteOrganisation', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
+
 // addOrgUser
-// ---------------------------------------------------------------------------
+
 describe('addOrgUser', () => {
   test('adds member when caller is ADMIN or OWNER', async () => {
-    // Chain 1: from('contacts').select().eq().maybeSingle()      — terminal: maybeSingle
-    // Chain 2: from('org_members').select().eq().eq().maybeSingle() — terminal: maybeSingle
-    //          Both eq calls in chain 2 use default mockReturnThis ✓
-    // Chain 3: from('org_members').insert([...])                 — standalone, no mock needed
     db.maybeSingle
       .mockResolvedValueOnce({ data: { contactId: TARGET_USER }, error: null }) // user exists
       .mockResolvedValueOnce({ data: null, error: null });                       // not a member yet
@@ -240,15 +234,11 @@ describe('addOrgUser', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
+
 // deleteOrgUser
-// ---------------------------------------------------------------------------
+
 describe('deleteOrgUser', () => {
   test('removes member when caller is ADMIN or OWNER', async () => {
-    // Chain 1: from('orgs').select().eq().maybeSingle()         — terminal: maybeSingle
-    // Chain 2: from('org_members').select().eq().eq().maybeSingle() — terminal: maybeSingle
-    // Chain 3: from('org_members').delete().eq().eq()            — both eq non-terminal then terminal
-    //          default mockReturnThis for all eq calls → error=undefined ✓
     db.maybeSingle
       .mockResolvedValueOnce({ data: { contactId: 999 }, error: null }) // owner is 999 (≠ target)
       .mockResolvedValueOnce({ data: { id: 5 }, error: null });          // member row exists
@@ -263,7 +253,7 @@ describe('deleteOrgUser', () => {
   });
 
   test('throws InvalidInput when trying to remove the owner', async () => {
-    // org owner IS the target user — function guards against this
+    // org owner IS the target user - function guards against this
     db.maybeSingle.mockResolvedValueOnce({ data: { contactId: TARGET_USER }, error: null });
     await expect(deleteOrgUser(SESSION, TARGET_USER, ORG_ID)).rejects.toThrow(InvalidInput);
   });
@@ -276,20 +266,14 @@ describe('deleteOrgUser', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
+
 // listOrgUsers
-// ---------------------------------------------------------------------------
+
 describe('listOrgUsers', () => {
   test('returns all members including owner', async () => {
-    // Chain 1: from('orgs').select().eq().maybeSingle()  — terminal: maybeSingle
-    // Chain 2: from('org_members').select().eq()         — terminal: eq
-    //          FIRST eq (chain 1) is non-terminal → default mockReturnThis ✓
-    //          SECOND eq (chain 2) is terminal → mockResolvedValueOnce
-    // Chain 3: from('contacts').select().in()            — terminal: in
     db.maybeSingle.mockResolvedValueOnce({ data: { contactId: USER_ID }, error: null });
-    // eq in chain 1 uses default (non-terminal). eq in chain 2 is terminal:
-    db.eq.mockReturnValueOnce(db)                                         // chain 1 eq (non-terminal)
-      .mockResolvedValueOnce({ data: [{ contactId: 2 }], error: null });  // chain 2 eq (terminal)
+    db.eq.mockReturnValueOnce(db)
+      .mockResolvedValueOnce({ data: [{ contactId: 2 }], error: null });
     db.in.mockResolvedValueOnce({
       data: [
         { contactId: USER_ID, firstName: 'A', lastName: 'B', email: 'a@b.com', telephone: '000' },
@@ -308,9 +292,9 @@ describe('listOrgUsers', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
+
 // Lambda handlers
-// ---------------------------------------------------------------------------
+
 describe('Lambda: createOrganisationHandler', () => {
   test('200 on success', async () => {
     db.maybeSingle.mockResolvedValueOnce({ data: { addressID: 1 }, error: null });
@@ -370,7 +354,9 @@ describe('Lambda: deleteOrganisationHandler', () => {
   });
 
   test('401 when caller is ADMIN (not OWNER)', async () => {
-    mockedPerms.requireOrgOwner.mockRejectedValue(new UnauthorisedError('Only the organisation owner'));
+    mockedPerms.requireOrgOwner.mockRejectedValue(
+      new UnauthorisedError('Only the organisation owner')
+    );
     const res = await deleteOrganisationHandler(makeEvent({}));
     expect(res.statusCode).toBe(401);
   });
@@ -405,7 +391,9 @@ describe('Lambda: deleteOrgUserHandler', () => {
       .mockResolvedValueOnce({ data: { contactId: 999 }, error: null })
       .mockResolvedValueOnce({ data: { id: 5 }, error: null });
 
-    const event = makeEvent({ pathParameters: { orgId: String(ORG_ID), userId: String(TARGET_USER) } });
+    const event = makeEvent({ pathParameters: 
+      { orgId: String(ORG_ID), userId: String(TARGET_USER) } 
+    });
     const res = await deleteOrgUserHandler(event);
     expect(res.statusCode).toBe(200);
   });
@@ -422,7 +410,8 @@ describe('Lambda: listOrgUsersHandler', () => {
     db.eq.mockReturnValueOnce(db)
       .mockResolvedValueOnce({ data: [{ contactId: 2 }], error: null });
     db.in.mockResolvedValueOnce({
-      data: [{ contactId: USER_ID, firstName: 'A', lastName: 'B', email: 'a@b.com', telephone: '000' }],
+      data: [{ contactId: USER_ID, firstName: 'A',
+        lastName: 'B', email: 'a@b.com', telephone: '000' }],
       error: null,
     });
 

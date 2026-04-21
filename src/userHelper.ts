@@ -72,6 +72,9 @@ export async function getUserIdFromSession(token: string): Promise<number> {
 }
 
 export function invalidnameFirst(nameFirst: string): null | ErrorObject {
+  if (!nameFirst) {
+    throw new InvalidFirstName('First name is required');
+  }
   const charRange: RegExp = /^[a-zA-Z\s\-']+$/;
   if (!charRange.test(nameFirst)) {
     throw new InvalidFirstName('invalid first name: includes special characters');
@@ -87,6 +90,9 @@ export function invalidnameFirst(nameFirst: string): null | ErrorObject {
 }
 
 export function invalidnameLast(nameLast: string): ErrorObject | null {
+  if (!nameLast) {
+    throw new InvalidLastName('Last name is required');
+  }
   const charRange: RegExp = /^[a-zA-Z\s\-']+$/;
   if (!charRange.test(nameLast)) {
     throw new InvalidLastName('invalid last name -> includes special characters');
@@ -96,20 +102,6 @@ export function invalidnameLast(nameLast: string): ErrorObject | null {
   }
   if (nameLast.length > 20) {
     throw new InvalidLastName('Last name is more than 20 characters');
-  }
-  return null;
-}
-
-export function invalidBusinessname(businessName: string): ErrorObject | null {
-  const charRange: RegExp = /^[a-zA-Z\s\-']+$/;
-  if (!charRange.test(businessName)) {
-    throw new InvalidLastName('invalid last name -> includes special characters');
-  }
-  if (businessName.length < 2) {
-    throw new InvalidLastName('Last name is less than 2 characters');
-  }
-  if (businessName.length > 100) {
-    throw new InvalidLastName('name is more than 100 characters');
   }
   return null;
 }

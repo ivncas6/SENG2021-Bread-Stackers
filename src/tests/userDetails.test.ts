@@ -127,7 +127,7 @@ describe('Lambda handler tests for userDetailsUpdate', () => {
     } as unknown as APIGatewayProxyEvent;
 
     const response = await updateUserDetailsHandler(event);
-    expect(response?.statusCode).toBe(400);
+    expect(response?.statusCode).toStrictEqual(400);
     expect(JSON.parse(response?.body ?? '{}')).toHaveProperty('error');
   });
 
@@ -139,24 +139,33 @@ describe('Lambda handler tests for userDetailsUpdate', () => {
     } as unknown as APIGatewayProxyEvent;
 
     const response = await updateUserDetailsHandler(event);
-    expect(response.statusCode).toBe(401);
+    expect(response.statusCode).toStrictEqual(401);
   });
 
   test('Internal Server Error (500) on unexpected crash', async () => {
     const { session } = await setupMockUser();
-    // crash
-    mockedUserHelper.getUserIdFromSession.mockImplementation(() => {
-      throw new Error('Unexpected Crash');
-    });
 
+    // valid body
     const event = {
       ...mockEvent,
       headers: { session },
-      body: JSON.stringify({}),
+      body: JSON.stringify({
+        firstName: 'John',
+        lastName: 'Smith',
+        email: 'test@test.com',
+        phone: '0412345678'
+      }),
     } as unknown as APIGatewayProxyEvent;
 
+    // force crash after validation
+    // DB call throw a non-Supabase, non-Validation error
+    mockedDataStore.getUserByIdSupa.mockImplementation(() => {
+      throw new Error('Generic Database Explosion'); 
+    });
+
     const response = await updateUserDetailsHandler(event);
-    expect(response.statusCode).toBe(500);
+    
+    expect(response.statusCode).toStrictEqual(500);
   });
 });
 

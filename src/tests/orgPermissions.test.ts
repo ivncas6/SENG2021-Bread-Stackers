@@ -1,13 +1,4 @@
-/**
- * orgPermissions.test.ts
- *
- * WHY factory mock instead of jest.mock('../dataStore') auto-mock:
- *   dataStore.ts has a circular import with generateUBL.ts. Jest's auto-mock
- *   introspects the original module to build stubs which triggers that circular
- *   dependency at creation time → silent compile failure → zero tests registered
- *   → "Your test suite must contain at least one test" error.
- *   A factory mock (() => ({...})) skips introspection entirely.
- */
+// mock here before imports as dataStore will cause circular import with UBL func
 jest.mock('../dataStore', () => ({
   getUserRoleInOrg: jest.fn(),
 }));
@@ -25,7 +16,7 @@ function setRole(role: OrgRole | null) {
 
 beforeEach(() => jest.resetAllMocks());
 
-// ---------------------------------------------------------------------------
+
 describe('requireOrgMember', () => {
   test('returns OWNER when user owns the org', async () => {
     setRole('OWNER');
@@ -49,7 +40,7 @@ describe('requireOrgMember', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
+
 describe('requireOrgAdminOrOwner', () => {
   test('resolves for OWNER', async () => {
     setRole('OWNER');
@@ -73,7 +64,6 @@ describe('requireOrgAdminOrOwner', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
 describe('requireOrgOwner', () => {
   test('resolves for OWNER', async () => {
     setRole('OWNER');
