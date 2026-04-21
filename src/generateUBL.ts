@@ -166,7 +166,8 @@ export async function getSignedUBLUrl(orderId: string): Promise<string> {
 // Shared XML builder (private)
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function buildUBLDocument(order: any, user: any, deliveryAddress: string, itemList: string): string {
+function buildUBLDocument(order: any, user: any, 
+  deliveryAddress: string, itemList: string): string {
   return `<?xml version="1.0" encoding="UTF-8"?>
     <Order xmlns="urn:oasis:names:specification:ubl:schema:xsd:Order-2"
         xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"

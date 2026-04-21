@@ -10,7 +10,9 @@ export const getOrderInfoHandler = async (event: APIGatewayProxyEvent) => {
 
     const orgId = parseInt(event.pathParameters?.orgId ?? '');
     const orderId = event.pathParameters?.orderId;
-    if (isNaN(orgId) || !orderId) return jsonResponse(400, { error: 'Missing orgId or orderId in path' });
+    if (isNaN(orgId) || !orderId) { 
+      return jsonResponse(400, { error: 'Missing orgId or orderId in path' });
+    }
 
     const result = await getOrderInfo(orgId, session, orderId);
     return jsonResponse(200, result);

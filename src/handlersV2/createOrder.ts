@@ -18,7 +18,9 @@ export const createOrderHandler = async (event: APIGatewayProxyEvent) => {
     const reqDeliveryPeriod: ReqDeliveryPeriod = body.reqDeliveryPeriod;
     const items: ReqItem[] = body.items;
 
-    const result = await createOrder(orgId, currency, session, deliveryAddress, reqDeliveryPeriod, items);
+    const result = await createOrder(
+      orgId, currency, session, deliveryAddress, reqDeliveryPeriod, items
+    );
     return jsonResponse(200, result);
   } catch (e) {
     return handleErrorResponse(e);

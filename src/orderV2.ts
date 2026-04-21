@@ -1,15 +1,5 @@
-/**
- * orderV2.ts
- *
- * V2 order operations. The key difference from order.ts (V0/V1):
- *  - orgId is passed explicitly by the caller (taken from the URL path)
- *  - Auth uses requireOrgMember from orgPermissions so any member of the
- *    org can operate on its orders, not just the owner
- *  - UBL generation uses the lightweight uploadUBLForOrder / getSignedUBLUrl
- *    helpers that do not repeat the permission check
- */
-
-import { createOrderReturn, EmptyObject, Order, ReqDeliveryPeriod, ReqItem, OrderLineWithItem } from './interfaces';
+import { createOrderReturn, EmptyObject, Order, 
+  ReqDeliveryPeriod, ReqItem, OrderLineWithItem } from './interfaces';
 import { v4 as uuidv4 } from 'uuid';
 import {
   createOrderSupaPush,
@@ -30,11 +20,19 @@ import { getUserIdFromSession } from './userHelper';
 import { supabase } from './supabase';
 import { uploadUBLForOrder, getSignedUBLUrl } from './generateUBL';
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
+/**
+ *  key differences from order.ts (V0/V1):
+ *  - orgId is passed explicitly by the caller (taken from the URL path)
+ *  - Auth uses requireOrgMember from orgPermissions so any member of the
+ *    org can operate on its orders, not just the owner
+ *  - UBL generation uses the lightweight uploadUBLForOrder / getSignedUBLUrl
+ *    helpers that do not repeat the permission check
+ */
 
-/** Verify the order belongs to the given org. Throws if not. */
+
+// helpers
+
+// verify order belongs to given org. Throws if not.
 async function assertOrderBelongsToOrg(orderId: string, orgId: number): Promise<Order> {
   const order = await getOrderByIdSupa(orderId);
   if (!order) {
@@ -46,9 +44,7 @@ async function assertOrderBelongsToOrg(orderId: string, orgId: number): Promise<
   return order;
 }
 
-// ---------------------------------------------------------------------------
-// Order operations
-// ---------------------------------------------------------------------------
+// order funcs
 
 export async function createOrder(
   orgId: number,
@@ -201,10 +197,8 @@ export async function getOrderUBL(
   return getSignedUBLUrl(orderId);
 }
 
-// ---------------------------------------------------------------------------
-// V2 Organisation management (uses orgPermissions for correct RBAC)
-// These replace the direct contactId checks in the V0 organisation.ts
-// ---------------------------------------------------------------------------
+// V2 organisation management (uses orgPermissions for correct role based access)
+// replaces the direct contactId checks in the V0 organisation.ts
 
 export async function getOrdersByOrg(orgId: number, session: string) {
   return listOrders(orgId, session);
