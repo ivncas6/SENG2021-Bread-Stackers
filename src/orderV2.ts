@@ -54,7 +54,7 @@ export async function createOrder(
   items: ReqItem[]
 ): Promise<createOrderReturn> {
   const userId = await getUserIdFromSession(session);
-  // Any member of the org can create orders
+  // any member of the org can create orders
   await requireOrgMember(userId, orgId);
 
   if (deliveryAddress.length > 200) {
