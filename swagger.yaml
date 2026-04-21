@@ -759,7 +759,6 @@ paths:
           description: "**UNAUTHORISED**"
           schema:
             $ref: '#/definitions/error401'
- 
     post:
       tags: [Organisations]
       summary: Add a user to an organisation (ADMIN or OWNER only)
