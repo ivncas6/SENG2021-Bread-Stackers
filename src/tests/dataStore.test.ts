@@ -1,12 +1,24 @@
 /**
  * dataStore.test.ts
  *
- * Mocking strategy: deep mock of the Supabase client via jest.mock.
- * Every Supabase method is a jest.fn() returning `this` by default so we can
- * chain calls freely. Terminal methods (single, maybeSingle, eq, remove, etc.)
- * are overridden per-test with mockResolvedValueOnce.
+ * KEY RULES for this mock approach:
  *
- * We also mock generateUBL so deleteOrderSupa can run without UBL side effects.
+ * 1. `jest.resetAllMocks()` in beforeEach — unlike clearAllMocks(), this also
+ *    clears the mockResolvedValueOnce / mockReturnValueOnce queues, so stale
+ *    values from a failed test never bleed into the next test.
+ *
+ * 2. Re-setup mockReturnThis() for every NON-TERMINAL chain method after reset.
+ *    Terminal methods (single, maybeSingle, limit, remove) are left without a
+ *    default so tests must set them explicitly — a missing mock is a loud failure,
+ *    not a silent undefined.
+ *
+ * 3. NEVER put mockResolvedValueOnce on a non-terminal chain method (e.g. insert
+ *    when it is followed by .select().single()). Doing so makes that call return a
+ *    Promise instead of `this`, breaking the chain for the next call.
+ *
+ * 4. For standalone awaited insert/delete/update (no further chaining), the default
+ *    mockReturnThis() is fine: `await mockObject` resolves to the mock object whose
+ *    .error property is undefined (falsy) → no error thrown.
  */
 
 import {
@@ -20,16 +32,16 @@ import { InvalidSupabase } from '../throwError';
 
 jest.mock('../supabase', () => ({
   supabase: {
-    from: jest.fn().mockReturnThis(),
-    select: jest.fn().mockReturnThis(),
-    insert: jest.fn().mockReturnThis(),
-    update: jest.fn().mockReturnThis(),
-    delete: jest.fn().mockReturnThis(),
-    eq: jest.fn().mockReturnThis(),
-    neq: jest.fn().mockReturnThis(),
-    in: jest.fn().mockReturnThis(),
-    or: jest.fn().mockReturnThis(),
-    limit: jest.fn().mockReturnThis(),
+    from: jest.fn(),
+    select: jest.fn(),
+    insert: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+    eq: jest.fn(),
+    neq: jest.fn(),
+    in: jest.fn(),
+    or: jest.fn(),
+    limit: jest.fn(),
     single: jest.fn(),
     maybeSingle: jest.fn(),
     storage: {
@@ -44,13 +56,35 @@ jest.mock('../generateUBL', () => ({
   generateUBLOrderFilePath: jest.fn().mockResolvedValue('UBLOrders/test-uuid'),
 }));
 
-const mock = supabase as never;
+const db = supabase as never as {
+  from: jest.Mock; select: jest.Mock; insert: jest.Mock; update: jest.Mock;
+  delete: jest.Mock; eq: jest.Mock; neq: jest.Mock; in: jest.Mock;
+  or: jest.Mock; limit: jest.Mock; single: jest.Mock; maybeSingle: jest.Mock;
+  storage: { from: jest.Mock; remove: jest.Mock };
+};
 
-beforeEach(() => jest.clearAllMocks());
+// Re-apply mockReturnThis() on all NON-TERMINAL chain methods after each reset.
+function setupChainDefaults() {
+  db.from.mockReturnThis();
+  db.select.mockReturnThis();
+  db.insert.mockReturnThis();
+  db.update.mockReturnThis();
+  db.delete.mockReturnThis();
+  db.eq.mockReturnThis();
+  db.neq.mockReturnThis();
+  db.in.mockReturnThis();
+  db.or.mockReturnThis();
+  db.limit.mockReturnThis(); // overridden per-test when terminal
+}
 
+beforeEach(() => {
+  jest.resetAllMocks();   // clears call records AND the mockResolvedValueOnce queues
+  setupChainDefaults();
+});
 
-// Local data
-
+// ---------------------------------------------------------------------------
+// Local data helpers
+// ---------------------------------------------------------------------------
 describe('Local data helpers', () => {
   test('getData returns empty data structure', () => {
     const d = getData();
@@ -58,8 +92,9 @@ describe('Local data helpers', () => {
     expect(d).toHaveProperty('orders');
   });
 
-  test('clearData calls delete on all tables', async () => {
-    mock.neq.mockResolvedValue({});
+  test('clearData calls delete on all expected tables', async () => {
+    // neq is used as the terminal "delete everything" call; its return value
+    // doesn't matter for clearData (no error check), so mockReturnThis() is fine.
     await clearData();
     expect(supabase.from).toHaveBeenCalledWith('order_lines');
     expect(supabase.from).toHaveBeenCalledWith('orders');
@@ -67,50 +102,51 @@ describe('Local data helpers', () => {
   });
 });
 
-
+// ---------------------------------------------------------------------------
 // createOrderSupaPush
-
+// ---------------------------------------------------------------------------
 describe('createOrderSupaPush', () => {
   const mockOrder = { orderId: 'uuid', currency: 'AUD', finalPrice: 100 } as never;
   const period = { startDateTime: 100, endDateTime: 200 };
   const items = [{ name: 'Bread', unitPrice: 5, description: 'Loaf', quantity: 1 }];
 
   test('pushes full order sequence successfully', async () => {
-    mock.insert
-      .mockReturnValueOnce(mock) // address insert chain
-      .mockResolvedValueOnce({ error: null }) // order insert
-      .mockResolvedValueOnce({ error: null }) // delivery insert
-      .mockReturnValueOnce(mock) // item insert chain
-      .mockResolvedValueOnce({ error: null }); // order_lines insert
+    // address insert chain: from().insert().select().single()
+    db.single
+      .mockResolvedValueOnce({ data: { addressID: 1 }, error: null })  // address
+      .mockResolvedValueOnce({ data: { itemId: 101 }, error: null });   // item
 
-    mock.single
-      .mockResolvedValueOnce({ data: { addressID: 1 }, error: null }) // address
-      .mockResolvedValueOnce({ data: { itemId: 101 }, error: null }); // item
+    // order insert (standalone await, no chain) — default mockReturnThis is fine
+    // delivery insert (standalone await) — default mockReturnThis is fine
+    // order_lines insert (standalone await) — default mockReturnThis is fine
 
     await expect(createOrderSupaPush(mockOrder, '123 Fake St', period, items))
       .resolves.not.toThrow();
   });
 
   test('throws if address insertion fails', async () => {
-    mock.insert.mockReturnValueOnce(mock);
-    mock.single.mockResolvedValueOnce({ data: null, error: { message: 'Address error' } });
+    db.single.mockResolvedValueOnce({ data: null, error: { message: 'Address error' } });
     await expect(createOrderSupaPush(mockOrder, '123 Fake St', period, items))
       .rejects.toEqual({ message: 'Address error' });
   });
 
   test('throws if order insertion fails', async () => {
-    mock.insert
-      .mockReturnValueOnce(mock)
-      .mockResolvedValueOnce({ error: { message: 'Order DB Error' } });
-    mock.single.mockResolvedValueOnce({ data: { addressID: 1 }, error: null });
+    // address succeeds
+    db.single.mockResolvedValueOnce({ data: { addressID: 1 }, error: null });
+    // order insert is standalone (no chain), so mockReturnThis returns the mock object.
+    // We need to make the order insert specifically fail. We override insert once:
+    db.insert
+      .mockReturnValueOnce(db)                                         // address insert chain continues
+      .mockResolvedValueOnce({ error: { message: 'Order DB Error' } }); // order insert is standalone
+
     await expect(createOrderSupaPush(mockOrder, '123 Fake St', period, items))
       .rejects.toThrow('Order Table Error: Order DB Error');
   });
 });
 
-
+// ---------------------------------------------------------------------------
 // getOrderByIdSupa
-
+// ---------------------------------------------------------------------------
 describe('getOrderByIdSupa', () => {
   test('returns null for invalid UUID', async () => {
     expect(await getOrderByIdSupa('not-a-uuid')).toBeNull();
@@ -118,149 +154,146 @@ describe('getOrderByIdSupa', () => {
 
   test('returns order data on success', async () => {
     const mockOrder = { orderId: '550e8400-e29b-41d4-a716-446655440000', status: 'OPEN' };
-    mock.maybeSingle.mockResolvedValueOnce({ data: mockOrder, error: null });
+    db.maybeSingle.mockResolvedValueOnce({ data: mockOrder, error: null });
     expect(await getOrderByIdSupa('550e8400-e29b-41d4-a716-446655440000')).toEqual(mockOrder);
   });
 
   test('treats PGRST116 as null (no rows found)', async () => {
-    mock.maybeSingle.mockResolvedValueOnce({ data: null, error: { code: 'PGRST116' } });
+    db.maybeSingle.mockResolvedValueOnce({ data: null, error: { code: 'PGRST116' } });
     expect(await getOrderByIdSupa('550e8400-e29b-41d4-a716-446655440000')).toBeNull();
   });
 
   test('re-throws other Supabase errors', async () => {
-    mock.maybeSingle.mockResolvedValueOnce({ 
-      data: null, error: { code: 'OTHER', message: 'Fatal' } 
-    });
+    db.maybeSingle.mockResolvedValueOnce({ data: null, error: { code: 'OTHER', message: 'Fatal' } });
     await expect(getOrderByIdSupa('550e8400-e29b-41d4-a716-446655440000'))
       .rejects.toEqual({ code: 'OTHER', message: 'Fatal' });
   });
 });
 
-
+// ---------------------------------------------------------------------------
 // getUserByIdSupa / getOrgByUserId / createOrganisationSupa
-
+// ---------------------------------------------------------------------------
 describe('User and Org helpers', () => {
   test('getUserByIdSupa returns contact data', async () => {
-    mock.maybeSingle.mockResolvedValueOnce({ data: { contactId: 1 }, error: null });
+    db.maybeSingle.mockResolvedValueOnce({ data: { contactId: 1 }, error: null });
     expect(await getUserByIdSupa(1)).toEqual({ contactId: 1 });
   });
 
   test('getOrgByUserId returns org data for owner', async () => {
-    mock.single.mockResolvedValueOnce({ data: { orgId: 100 }, error: null });
+    db.single.mockResolvedValueOnce({ data: { orgId: 100 }, error: null });
     expect(await getOrgByUserId(1)).toEqual({ data: { orgId: 100 }, error: null });
   });
 
-  test('createOrganisationSupa inserts org and owner member row', async () => {
-    mock.single.mockResolvedValueOnce({ data: { orgId: 1 }, error: null });
-    // second insert (organisation_members) — just needs to not throw
-    mock.insert.mockResolvedValueOnce({ error: null });
+  test('createOrganisationSupa inserts org then adds owner to organisation_members', async () => {
+    // Chain: from('orgs').insert([...]).select().single()  — single is terminal
+    db.single.mockResolvedValueOnce({ data: { orgId: 1 }, error: null });
+    // Chain: from('org_members').insert([...])            — standalone, mockReturnThis is fine
 
     const res = await createOrganisationSupa(1, 'John');
     expect(res).toEqual({ orgId: 1 });
-    // ensure organisation_members insert was called
-    expect(mock.insert).toHaveBeenCalledWith(
+    // The owner row must have been inserted with role OWNER
+    expect(db.insert).toHaveBeenCalledWith(
       expect.arrayContaining([expect.objectContaining({ role: 'OWNER' })])
     );
   });
 
-  test('createOrganisationSupa throws InvalidSupabase on org insert error', async () => {
-    mock.single.mockResolvedValueOnce({ data: null, error: { message: 'Org failed' } });
+  test('createOrganisationSupa throws InvalidSupabase when org insert errors', async () => {
+    db.single.mockResolvedValueOnce({ data: null, error: { message: 'Org failed' } });
     await expect(createOrganisationSupa(1, 'John')).rejects.toThrow(InvalidSupabase);
   });
 });
 
-
+// ---------------------------------------------------------------------------
 // getUserRoleInOrg
-
+// ---------------------------------------------------------------------------
 describe('getUserRoleInOrg', () => {
   test('returns null if org does not exist', async () => {
-    mock.maybeSingle.mockResolvedValueOnce({ data: null, error: null }); // org check
+    db.maybeSingle.mockResolvedValueOnce({ data: null, error: null });
     expect(await getUserRoleInOrg(1, 99)).toBeNull();
   });
 
-  test('returns OWNER when user is the org contact', async () => {
-    mock.maybeSingle.mockResolvedValueOnce({ data: { contactId: 1 }, error: null });
+  test('returns OWNER when user is the org contactId', async () => {
+    db.maybeSingle.mockResolvedValueOnce({ data: { contactId: 1 }, error: null });
     expect(await getUserRoleInOrg(1, 10)).toBe('OWNER');
   });
 
   test('returns ADMIN when found in organisation_members with ADMIN role', async () => {
-    mock.maybeSingle
-      // org owner is 999
-      .mockResolvedValueOnce({ data: { contactId: 999 }, error: null })
-      // member row
-      .mockResolvedValueOnce({ data: { role: 'ADMIN' }, error: null });
+    db.maybeSingle
+      .mockResolvedValueOnce({ data: { contactId: 999 }, error: null }) // org: owner is 999
+      .mockResolvedValueOnce({ data: { role: 'ADMIN' }, error: null });  // member row
     expect(await getUserRoleInOrg(1, 10)).toBe('ADMIN');
   });
 
   test('returns MEMBER when found in organisation_members with MEMBER role', async () => {
-    mock.maybeSingle
+    db.maybeSingle
       .mockResolvedValueOnce({ data: { contactId: 999 }, error: null })
       .mockResolvedValueOnce({ data: { role: 'MEMBER' }, error: null });
     expect(await getUserRoleInOrg(1, 10)).toBe('MEMBER');
   });
 
   test('returns null when user is not owner and not in organisation_members', async () => {
-    mock.maybeSingle
+    db.maybeSingle
       .mockResolvedValueOnce({ data: { contactId: 999 }, error: null })
       .mockResolvedValueOnce({ data: null, error: null });
     expect(await getUserRoleInOrg(1, 10)).toBeNull();
   });
 });
 
-
+// ---------------------------------------------------------------------------
 // updateOrderStatus / updateOrderSupa
-
+// ---------------------------------------------------------------------------
 describe('updateOrderStatus and updateOrderSupa', () => {
   test('updateOrderStatus succeeds', async () => {
-    mock.eq.mockResolvedValueOnce({ data: { status: 'CLOSED' }, error: null });
+    // from('orders').update().eq() — eq is terminal
+    db.eq.mockResolvedValueOnce({ data: { status: 'CLOSED' }, error: null });
     expect(await updateOrderStatus('uuid', 'CLOSED')).toEqual({ status: 'CLOSED' });
   });
 
   test('updateOrderStatus throws InvalidSupabase on error', async () => {
-    mock.eq.mockResolvedValueOnce({ data: null, error: { message: 'Update failed' } });
+    db.eq.mockResolvedValueOnce({ data: null, error: { message: 'Update failed' } });
     await expect(updateOrderStatus('uuid', 'CLOSED')).rejects.toThrow(InvalidSupabase);
   });
 
-  test('updateOrderSupa updates order, delivery and address', async () => {
-    mock.eq
-      .mockResolvedValueOnce({ data: {}, error: null }) // order update
-      .mockReturnValueOnce(mock) // delivery chain
-      .mockResolvedValueOnce({ data: {}, error: null }); // addr update
-    mock.single.mockResolvedValueOnce({ data: { deliveryAddressID: 99 }, error: null });
+  test('updateOrderSupa updates order, delivery and address successfully', async () => {
+    // Promise.all runs two chains concurrently:
+    //   A) from('orders').update().eq()          — eq terminal, default mockReturnThis → error=undefined ✓
+    //   B) from('deliveries').update().eq().select().single() — single terminal
+    // Then:
+    //   C) from('addresses').update().eq()       — eq terminal, default mockReturnThis → error=undefined ✓
 
+    db.single.mockResolvedValueOnce({ data: { deliveryAddressID: 99 }, error: null });
     await expect(updateOrderSupa('uuid', 'New St', { startDateTime: 1, endDateTime: 2 }, 'CLOSED'))
       .resolves.not.toThrow();
   });
 
-  test('updateOrderSupa throws if order update fails', async () => {
-    mock.eq
-      .mockResolvedValueOnce({ error: { message: 'Order update fail' } })
-      .mockReturnValueOnce(mock);
-    mock.single.mockResolvedValueOnce({ data: { deliveryAddressID: 99 }, error: null });
-
+  test('updateOrderSupa throws when delivery update single returns an error', async () => {
+    // Simulate the delivery query failing (single returns an error object)
+    db.single.mockResolvedValueOnce({ data: null, error: { message: 'delivery error' } });
     await expect(updateOrderSupa('uuid', 'New St', { startDateTime: 1, endDateTime: 2 }, 'CLOSED'))
-      .rejects.toEqual({ message: 'Order update fail' });
+      .rejects.toEqual({ message: 'delivery error' });
   });
 });
 
-
+// ---------------------------------------------------------------------------
 // deleteOrderSupa
-
+// ---------------------------------------------------------------------------
 describe('deleteOrderSupa', () => {
   test('deletes UBL and order successfully', async () => {
-    mock.storage.remove.mockResolvedValueOnce({ data: {}, error: null });
-    mock.eq.mockResolvedValueOnce({ data: {}, error: null });
+    // storage.remove: terminal
+    db.storage.remove.mockResolvedValueOnce({ data: {}, error: null });
+    // from('orders').delete().eq() — eq terminal, default mockReturnThis → error=undefined ✓
     await expect(deleteOrderSupa('uuid')).resolves.not.toThrow();
   });
 
   test('throws if UBL storage delete fails', async () => {
-    mock.storage.remove.mockResolvedValueOnce({ data: null, error: { message: 'Storage error' } });
+    db.storage.remove.mockResolvedValueOnce({ data: null, error: { message: 'Storage error' } });
     await expect(deleteOrderSupa('uuid')).rejects.toEqual({ message: 'Storage error' });
   });
 
   test('throws if order DB delete fails', async () => {
-    mock.storage.remove.mockResolvedValueOnce({ data: {}, error: null });
-    mock.eq.mockResolvedValueOnce({ data: null, error: { message: 'DB delete error' } });
+    db.storage.remove.mockResolvedValueOnce({ data: {}, error: null });
+    // Override eq to return an error for the delete terminal call
+    db.eq.mockResolvedValueOnce({ data: null, error: { message: 'DB delete error' } });
     await expect(deleteOrderSupa('uuid')).rejects.toEqual({ message: 'DB delete error' });
   });
 });

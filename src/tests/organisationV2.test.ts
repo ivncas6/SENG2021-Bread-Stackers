@@ -1,17 +1,28 @@
 /**
- * orgManagement.test.ts
+ * orgManagement.test.ts  (deployed as src/tests/organisationV2.test.ts)
  *
- * Mocking strategy:
- *   jest.mock('../userHelper')       → getUserIdFromSession
- *   jest.mock('../orgPermissions')   → all role guards (requireOrgMember etc.)
- *   jest.mock('../supabase', ...)    → only when we need to control DB reads
- *                                     inside organisation.ts itself (e.g. address
- *                                     existence checks, contact lookups)
+ * MOCK CHAIN RULES applied here:
  *
- * Because organisation.ts still calls supabase directly for some DB reads that
- * are NOT permission-related (e.g. "does this address exist?", "does this user
- * exist?") we keep the Supabase mock but limit it to those specific calls.
- * Permission calls go entirely through the mocked orgPermissions module.
+ * 1. beforeEach: jest.resetAllMocks() + re-setup mockReturnThis() for all
+ *    non-terminal Supabase chain methods. This prevents stale queued values
+ *    from failed tests bleeding into subsequent tests.
+ *
+ * 2. mockResolvedValueOnce is ONLY called on terminal methods:
+ *    - maybeSingle  (always terminal)
+ *    - single       (always terminal)
+ *    - limit        (always terminal)
+ *    - eq           ONLY when it is the very last call before the await
+ *
+ * 3. For non-terminal eq calls in a chain that ends with maybeSingle, the
+ *    default mockReturnThis() is fine — eq returns `this` and maybeSingle
+ *    remains accessible on the chain.
+ *
+ * 4. Standalone inserts (no .select().single() after) do NOT need a mock —
+ *    insert returns `this` (mock object), `await mockObject` resolves to the
+ *    mock object, and `{ error } = mockObject` gives error=undefined (falsy).
+ *
+ * 5. orgPermissions is fully mocked so Supabase is NEVER hit for permission
+ *    checks — only for the business-logic DB calls inside organisation.ts.
  */
 
 import { APIGatewayProxyEvent } from 'aws-lambda';
@@ -29,21 +40,20 @@ import * as userHelper from '../userHelper';
 import * as orgPermissions from '../orgPermissions';
 import { supabase } from '../supabase';
 import { InvalidInput, InvalidBusinessName, UnauthorisedError } from '../throwError';
-import { SupabaseMock } from '../interfaces';
 
 jest.mock('../userHelper');
 jest.mock('../orgPermissions');
 jest.mock('../supabase', () => ({
   supabase: {
-    from: jest.fn().mockReturnThis(),
-    select: jest.fn().mockReturnThis(),
-    insert: jest.fn().mockReturnThis(),
-    update: jest.fn().mockReturnThis(),
-    delete: jest.fn().mockReturnThis(),
-    eq: jest.fn().mockReturnThis(),
-    or: jest.fn().mockReturnThis(),
+    from: jest.fn(),
+    select: jest.fn(),
+    insert: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+    eq: jest.fn(),
+    or: jest.fn(),
     limit: jest.fn(),
-    in: jest.fn().mockReturnThis(),
+    in: jest.fn(),
     maybeSingle: jest.fn(),
     single: jest.fn(),
   },
@@ -51,13 +61,28 @@ jest.mock('../supabase', () => ({
 
 const mockedUserHelper = userHelper as jest.Mocked<typeof userHelper>;
 const mockedPerms = orgPermissions as jest.Mocked<typeof orgPermissions>;
-const db = supabase as unknown as SupabaseMock & {
-  or: jest.Mock; limit: jest.Mock; in: jest.Mock;
+const db = supabase as never as {
+  from: jest.Mock; select: jest.Mock; insert: jest.Mock; update: jest.Mock;
+  delete: jest.Mock; eq: jest.Mock; or: jest.Mock; limit: jest.Mock;
+  in: jest.Mock; maybeSingle: jest.Mock; single: jest.Mock;
 };
 
 const SESSION = 'valid-session';
 const USER_ID = 1;
 const ORG_ID = 10;
+const TARGET_USER = 42;
+
+function setupChainDefaults() {
+  db.from.mockReturnThis();
+  db.select.mockReturnThis();
+  db.insert.mockReturnThis();
+  db.update.mockReturnThis();
+  db.delete.mockReturnThis();
+  db.eq.mockReturnThis();
+  db.or.mockReturnThis();
+  db.in.mockReturnThis();
+  // limit, maybeSingle, single intentionally left without default (must be set per-test)
+}
 
 function setupBase() {
   mockedUserHelper.getUserIdFromSession.mockResolvedValue(USER_ID);
@@ -67,7 +92,8 @@ function setupBase() {
 }
 
 beforeEach(() => {
-  jest.clearAllMocks();
+  jest.resetAllMocks();
+  setupChainDefaults();
   setupBase();
 });
 
@@ -80,25 +106,30 @@ function makeEvent(overrides: Partial<APIGatewayProxyEvent>): APIGatewayProxyEve
   } as unknown as APIGatewayProxyEvent;
 }
 
-
+// ---------------------------------------------------------------------------
 // createOrganisation
-
+// ---------------------------------------------------------------------------
 describe('createOrganisation', () => {
-  test('creates org and adds owner to members', async () => {
-    db.maybeSingle.mockResolvedValueOnce({ data: { addressID: 1 }, error: null }); // address check
-    db.single.mockResolvedValueOnce({ data: { orgId: 99 }, error: null });           // org insert
-    db.insert.mockResolvedValueOnce({ error: null });                               // member insert
+  test('creates org and adds owner to organisation_members', async () => {
+    // Chain 1: from('addresses').select().eq().maybeSingle()  — terminal: maybeSingle
+    db.maybeSingle.mockResolvedValueOnce({ data: { addressID: 1 }, error: null });
+    // Chain 2: from('orgs').insert([...]).select().single()   — terminal: single
+    db.single.mockResolvedValueOnce({ data: { orgId: 99 }, error: null });
+    // Chain 3: from('org_members').insert([...])              — standalone, no mock needed
 
     const result = await createOrganisation(SESSION, 'My Shop', 1);
     expect(result).toEqual({ orgId: 99 });
-    // owner must be added to organisation_members
     expect(db.insert).toHaveBeenCalledWith(
       expect.arrayContaining([expect.objectContaining({ role: 'OWNER' })])
     );
   });
 
-  test('throws InvalidBusinessName on special chars', async () => {
+  test('throws InvalidBusinessName on special characters', async () => {
     await expect(createOrganisation(SESSION, 'Bad@Name!', 1)).rejects.toThrow(InvalidBusinessName);
+  });
+
+  test('throws InvalidBusinessName when name is too short', async () => {
+    await expect(createOrganisation(SESSION, 'X', 1)).rejects.toThrow(InvalidBusinessName);
   });
 
   test('throws InvalidInput when address does not exist', async () => {
@@ -108,28 +139,29 @@ describe('createOrganisation', () => {
 
   test('throws UnauthorisedError on invalid session', async () => {
     mockedUserHelper.getUserIdFromSession.mockResolvedValue(null as never);
-    await expect(createOrganisation('bad', 'Good Name', 1)).rejects.toThrow(UnauthorisedError);
+    await expect(createOrganisation('bad-session', 'Good Name', 1)).rejects.toThrow(UnauthorisedError);
   });
 });
 
-
+// ---------------------------------------------------------------------------
 // updateOrganisation
-
+// ---------------------------------------------------------------------------
 describe('updateOrganisation', () => {
   test('updates org when caller is ADMIN or OWNER', async () => {
-    mockedPerms.requireOrgAdminOrOwner.mockResolvedValue(undefined);
-    db.maybeSingle.mockResolvedValueOnce({ data: { addressID: 2 }, error: null }); // address check
-    db.eq.mockResolvedValueOnce({ error: null }); // update
+    // Chain: from('addresses').select().eq().maybeSingle() — terminal: maybeSingle
+    // Note: eq() for address check is non-terminal (default mockReturnThis) ✓
+    db.maybeSingle.mockResolvedValueOnce({ data: { addressID: 2 }, error: null });
+    // from('orgs').update({...}).eq() — terminal eq, default mockReturnThis → error=undefined ✓
 
     const result = await updateOrganisation(SESSION, ORG_ID, 'New Name', 2);
     expect(result).toEqual({ orgId: ORG_ID });
     expect(mockedPerms.requireOrgAdminOrOwner).toHaveBeenCalledWith(USER_ID, ORG_ID);
+    expect(db.update).toHaveBeenCalledWith({ orgName: 'New Name', addressId: 2 });
   });
 
   test('throws UnauthorisedError when caller is plain MEMBER', async () => {
     mockedPerms.requireOrgAdminOrOwner.mockRejectedValue(new UnauthorisedError('Admin or owner'));
-    await expect(updateOrganisation(SESSION, ORG_ID, 'New Name', 2))
-      .rejects.toThrow(UnauthorisedError);
+    await expect(updateOrganisation(SESSION, ORG_ID, 'New Name', 2)).rejects.toThrow(UnauthorisedError);
   });
 
   test('throws InvalidInput when new address does not exist', async () => {
@@ -142,52 +174,49 @@ describe('updateOrganisation', () => {
   });
 });
 
-
+// ---------------------------------------------------------------------------
 // deleteOrganisation
-
+// ---------------------------------------------------------------------------
 describe('deleteOrganisation', () => {
-  test('deletes org when caller is OWNER and no orders', async () => {
-    (db as never as { limit: jest.Mock }).limit.mockResolvedValueOnce({ data: [], error: null });
-    db.eq.mockResolvedValueOnce({ error: null });
+  test('deletes org when caller is OWNER and no attached orders', async () => {
+    // from('orders').select().or().limit() — terminal: limit
+    db.limit.mockResolvedValueOnce({ data: [], error: null });
+    // from('orgs').delete().eq()           — terminal eq, default → error=undefined ✓
 
     const result = await deleteOrganisation(SESSION, ORG_ID);
     expect(result).toEqual({});
     expect(mockedPerms.requireOrgOwner).toHaveBeenCalledWith(USER_ID, ORG_ID);
   });
 
-  test('throws UnauthorisedError when caller is ADMIN', async () => {
-    mockedPerms.requireOrgOwner.mockRejectedValue(
-      new UnauthorisedError('Only the organisation owner')
-    );
-    await expect(deleteOrganisation(SESSION, ORG_ID))
-      .rejects.toThrow(UnauthorisedError);
+  test('throws UnauthorisedError when caller is not OWNER', async () => {
+    mockedPerms.requireOrgOwner.mockRejectedValue(new UnauthorisedError('Only the organisation owner'));
+    await expect(deleteOrganisation(SESSION, ORG_ID)).rejects.toThrow(UnauthorisedError);
   });
 
-  test('throws InvalidInput when orders still exist', async () => {
-    (db as never as { limit: jest.Mock }).limit.mockResolvedValueOnce({
-      data: [{ orderId: 'some-order' }], error: null,
-    });
+  test('throws InvalidInput when orders are still attached', async () => {
+    db.limit.mockResolvedValueOnce({ data: [{ orderId: 'some-order' }], error: null });
     await expect(deleteOrganisation(SESSION, ORG_ID)).rejects.toThrow(InvalidInput);
+    expect(db.delete).not.toHaveBeenCalled();
   });
 });
 
-
+// ---------------------------------------------------------------------------
 // addOrgUser
-
+// ---------------------------------------------------------------------------
 describe('addOrgUser', () => {
-  const TARGET_USER = 42;
-
   test('adds member when caller is ADMIN or OWNER', async () => {
+    // Chain 1: from('contacts').select().eq().maybeSingle()      — terminal: maybeSingle
+    // Chain 2: from('org_members').select().eq().eq().maybeSingle() — terminal: maybeSingle
+    //          Both eq calls in chain 2 use default mockReturnThis ✓
+    // Chain 3: from('org_members').insert([...])                 — standalone, no mock needed
     db.maybeSingle
-      // user exists
-      .mockResolvedValueOnce({ data: { contactId: TARGET_USER }, error: null })
-      // not already member
-      .mockResolvedValueOnce({ data: null, error: null });
-    db.insert.mockResolvedValueOnce({ error: null });
+      .mockResolvedValueOnce({ data: { contactId: TARGET_USER }, error: null }) // user exists
+      .mockResolvedValueOnce({ data: null, error: null });                       // not a member yet
 
     const result = await addOrgUser(SESSION, TARGET_USER, ORG_ID);
     expect(result).toEqual({});
-    // check the role written is uppercase MEMBER not lowercase
+    expect(mockedPerms.requireOrgAdminOrOwner).toHaveBeenCalledWith(USER_ID, ORG_ID);
+    // Role must be uppercase MEMBER (DB CHECK constraint)
     expect(db.insert).toHaveBeenCalledWith(
       expect.arrayContaining([expect.objectContaining({ role: 'MEMBER' })])
     );
@@ -205,36 +234,36 @@ describe('addOrgUser', () => {
 
   test('throws InvalidInput when user is already a member', async () => {
     db.maybeSingle
-      .mockResolvedValueOnce({ data: { contactId: TARGET_USER }, error: null }) // user exists
-      .mockResolvedValueOnce({ data: { id: 1 }, error: null });                  // already member
+      .mockResolvedValueOnce({ data: { contactId: TARGET_USER }, error: null })
+      .mockResolvedValueOnce({ data: { id: 1 }, error: null }); // already member
     await expect(addOrgUser(SESSION, TARGET_USER, ORG_ID)).rejects.toThrow(InvalidInput);
   });
 });
 
+// ---------------------------------------------------------------------------
 // deleteOrgUser
+// ---------------------------------------------------------------------------
 describe('deleteOrgUser', () => {
-  const TARGET_USER = 42;
-
   test('removes member when caller is ADMIN or OWNER', async () => {
+    // Chain 1: from('orgs').select().eq().maybeSingle()         — terminal: maybeSingle
+    // Chain 2: from('org_members').select().eq().eq().maybeSingle() — terminal: maybeSingle
+    // Chain 3: from('org_members').delete().eq().eq()            — both eq non-terminal then terminal
+    //          default mockReturnThis for all eq calls → error=undefined ✓
     db.maybeSingle
-      // org owner is 999 (not target)
-      .mockResolvedValueOnce({ data: { contactId: 999 }, error: null })
-      // member exists
-      .mockResolvedValueOnce({ data: { id: 5 }, error: null });   
-    db.delete.mockReturnThis();
-    db.eq.mockResolvedValueOnce({ error: null });
+      .mockResolvedValueOnce({ data: { contactId: 999 }, error: null }) // owner is 999 (≠ target)
+      .mockResolvedValueOnce({ data: { id: 5 }, error: null });          // member row exists
 
     const result = await deleteOrgUser(SESSION, TARGET_USER, ORG_ID);
     expect(result).toEqual({});
   });
 
-  test('throws when caller is plain MEMBER', async () => {
+  test('throws UnauthorisedError when caller is plain MEMBER', async () => {
     mockedPerms.requireOrgAdminOrOwner.mockRejectedValue(new UnauthorisedError('Admin or owner'));
     await expect(deleteOrgUser(SESSION, TARGET_USER, ORG_ID)).rejects.toThrow(UnauthorisedError);
   });
 
   test('throws InvalidInput when trying to remove the owner', async () => {
-    // org owner IS the target user
+    // org owner IS the target user — function guards against this
     db.maybeSingle.mockResolvedValueOnce({ data: { contactId: TARGET_USER }, error: null });
     await expect(deleteOrgUser(SESSION, TARGET_USER, ORG_ID)).rejects.toThrow(InvalidInput);
   });
@@ -243,22 +272,28 @@ describe('deleteOrgUser', () => {
     db.maybeSingle
       .mockResolvedValueOnce({ data: { contactId: 999 }, error: null }) // owner is 999
       .mockResolvedValueOnce({ data: null, error: null });                // not a member
-    await expect(deleteOrgUser(SESSION, TARGET_USER, ORG_ID))
-      .rejects.toThrow(InvalidInput);
+    await expect(deleteOrgUser(SESSION, TARGET_USER, ORG_ID)).rejects.toThrow(InvalidInput);
   });
 });
 
+// ---------------------------------------------------------------------------
 // listOrgUsers
+// ---------------------------------------------------------------------------
 describe('listOrgUsers', () => {
   test('returns all members including owner', async () => {
-    // org owner
+    // Chain 1: from('orgs').select().eq().maybeSingle()  — terminal: maybeSingle
+    // Chain 2: from('org_members').select().eq()         — terminal: eq
+    //          FIRST eq (chain 1) is non-terminal → default mockReturnThis ✓
+    //          SECOND eq (chain 2) is terminal → mockResolvedValueOnce
+    // Chain 3: from('contacts').select().in()            — terminal: in
     db.maybeSingle.mockResolvedValueOnce({ data: { contactId: USER_ID }, error: null });
-    // member rows
-    db.eq.mockResolvedValueOnce({ data: [{ contactId: 2 }], error: null });
+    // eq in chain 1 uses default (non-terminal). eq in chain 2 is terminal:
+    db.eq.mockReturnValueOnce(db)                                         // chain 1 eq (non-terminal)
+      .mockResolvedValueOnce({ data: [{ contactId: 2 }], error: null });  // chain 2 eq (terminal)
     db.in.mockResolvedValueOnce({
       data: [
         { contactId: USER_ID, firstName: 'A', lastName: 'B', email: 'a@b.com', telephone: '000' },
-        { contactId: 2, firstName: 'C', lastName: 'D', email: 'c@d.com', telephone: '111' },
+        { contactId: 2,       firstName: 'C', lastName: 'D', email: 'c@d.com', telephone: '111' },
       ],
       error: null,
     });
@@ -273,14 +308,13 @@ describe('listOrgUsers', () => {
   });
 });
 
-
+// ---------------------------------------------------------------------------
 // Lambda handlers
-
-describe('Lambda: createOrganisationHandler (V2)', () => {
+// ---------------------------------------------------------------------------
+describe('Lambda: createOrganisationHandler', () => {
   test('200 on success', async () => {
     db.maybeSingle.mockResolvedValueOnce({ data: { addressID: 1 }, error: null });
     db.single.mockResolvedValueOnce({ data: { orgId: 99 }, error: null });
-    db.insert.mockResolvedValueOnce({ error: null });
 
     const event = makeEvent({ body: JSON.stringify({ orgName: 'My Shop', addressId: 1 }) });
     const res = await createOrganisationHandler(event);
@@ -300,10 +334,9 @@ describe('Lambda: createOrganisationHandler (V2)', () => {
   });
 });
 
-describe('Lambda: updateOrganisationHandler (V2)', () => {
+describe('Lambda: updateOrganisationHandler', () => {
   test('200 on success', async () => {
     db.maybeSingle.mockResolvedValueOnce({ data: { addressID: 2 }, error: null });
-    db.eq.mockResolvedValueOnce({ error: null });
 
     const event = makeEvent({ body: JSON.stringify({ orgName: 'Updated', addressId: 2 }) });
     const res = await updateOrganisationHandler(event);
@@ -315,18 +348,17 @@ describe('Lambda: updateOrganisationHandler (V2)', () => {
     expect(res.statusCode).toBe(401);
   });
 
-  test('401 when caller is MEMBER', async () => {
+  test('401 when caller is plain MEMBER', async () => {
     mockedPerms.requireOrgAdminOrOwner.mockRejectedValue(new UnauthorisedError('Admin or owner'));
-    const event = makeEvent({ body: JSON.stringify({ orgName: 'New', addressId: 1 }) });
+    const event = makeEvent({ body: JSON.stringify({ orgName: 'New Name', addressId: 1 }) });
     const res = await updateOrganisationHandler(event);
     expect(res.statusCode).toBe(401);
   });
 });
 
-describe('Lambda: deleteOrganisationHandler (V2)', () => {
+describe('Lambda: deleteOrganisationHandler', () => {
   test('200 on success', async () => {
-    (db as never as { limit: jest.Mock }).limit.mockResolvedValueOnce({ data: [], error: null });
-    db.eq.mockResolvedValueOnce({ error: null });
+    db.limit.mockResolvedValueOnce({ data: [], error: null });
 
     const res = await deleteOrganisationHandler(makeEvent({}));
     expect(res.statusCode).toBe(200);
@@ -338,22 +370,19 @@ describe('Lambda: deleteOrganisationHandler (V2)', () => {
   });
 
   test('401 when caller is ADMIN (not OWNER)', async () => {
-    mockedPerms.requireOrgOwner.mockRejectedValue(
-      new UnauthorisedError('Only the organisation owner')
-    );
+    mockedPerms.requireOrgOwner.mockRejectedValue(new UnauthorisedError('Only the organisation owner'));
     const res = await deleteOrganisationHandler(makeEvent({}));
     expect(res.statusCode).toBe(401);
   });
 });
 
-describe('Lambda: addOrgUserHandler (V2)', () => {
+describe('Lambda: addOrgUserHandler', () => {
   test('200 on success', async () => {
     db.maybeSingle
-      .mockResolvedValueOnce({ data: { contactId: 42 }, error: null })
+      .mockResolvedValueOnce({ data: { contactId: TARGET_USER }, error: null })
       .mockResolvedValueOnce({ data: null, error: null });
-    db.insert.mockResolvedValueOnce({ error: null });
 
-    const event = makeEvent({ body: JSON.stringify({ userId: 42 }) });
+    const event = makeEvent({ body: JSON.stringify({ userId: TARGET_USER }) });
     const res = await addOrgUserHandler(event);
     expect(res.statusCode).toBe(200);
   });
@@ -363,22 +392,20 @@ describe('Lambda: addOrgUserHandler (V2)', () => {
     expect(res.statusCode).toBe(401);
   });
 
-  test('400 when userId missing', async () => {
+  test('400 when userId is missing from body', async () => {
     const event = makeEvent({ body: JSON.stringify({}) });
     const res = await addOrgUserHandler(event);
     expect(res.statusCode).toBe(400);
   });
 });
 
-describe('Lambda: deleteOrgUserHandler (V2)', () => {
+describe('Lambda: deleteOrgUserHandler', () => {
   test('200 on success', async () => {
     db.maybeSingle
       .mockResolvedValueOnce({ data: { contactId: 999 }, error: null })
       .mockResolvedValueOnce({ data: { id: 5 }, error: null });
-    db.delete.mockReturnThis();
-    db.eq.mockResolvedValueOnce({ error: null });
 
-    const event = makeEvent({ pathParameters: { orgId: String(ORG_ID), userId: '42' } });
+    const event = makeEvent({ pathParameters: { orgId: String(ORG_ID), userId: String(TARGET_USER) } });
     const res = await deleteOrgUserHandler(event);
     expect(res.statusCode).toBe(200);
   });
@@ -389,14 +416,13 @@ describe('Lambda: deleteOrgUserHandler (V2)', () => {
   });
 });
 
-describe('Lambda: listOrgUsersHandler (V2)', () => {
+describe('Lambda: listOrgUsersHandler', () => {
   test('200 returns user list', async () => {
     db.maybeSingle.mockResolvedValueOnce({ data: { contactId: USER_ID }, error: null });
-    db.eq.mockResolvedValueOnce({ data: [{ contactId: 2 }], error: null });
+    db.eq.mockReturnValueOnce(db)
+      .mockResolvedValueOnce({ data: [{ contactId: 2 }], error: null });
     db.in.mockResolvedValueOnce({
-      data: [
-        { contactId: USER_ID, firstName: 'A', lastName: 'B', email: 'a@b.com', telephone: '000' },
-      ],
+      data: [{ contactId: USER_ID, firstName: 'A', lastName: 'B', email: 'a@b.com', telephone: '000' }],
       error: null,
     });
 
