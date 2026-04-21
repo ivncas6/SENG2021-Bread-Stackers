@@ -43,6 +43,7 @@ const mockEvent: Partial<APIGatewayProxyEvent> = {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  jest.spyOn(console, 'error').mockImplementation(() => {});
 });
 
 async function setupMockUser() {

@@ -19,6 +19,7 @@ let testIdx = 0;
 
 beforeEach(() => {
   jest.clearAllMocks();
+  jest.spyOn(console, 'error').mockImplementation(() => {});
 });
 
 // fake data

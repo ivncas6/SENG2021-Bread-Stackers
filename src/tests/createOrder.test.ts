@@ -47,6 +47,7 @@ beforeEach(() => {
   mockedDataStore.getOrgByUserId.mockResolvedValue({ data: { orgId: 10 }, error: null } as never);
   mockedDataStore.createOrderSupaPush.mockResolvedValue();
   mockedGenerateUBL.createOrderUBLXML.mockImplementation();
+  jest.spyOn(console, 'error').mockImplementation(() => {});
 });
 
 describe('Backend logic test for Creating an Order', () => {

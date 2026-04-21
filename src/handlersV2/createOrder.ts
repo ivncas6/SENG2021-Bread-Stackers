@@ -4,6 +4,10 @@ import { ReqItem, ReqDeliveryPeriod } from '../interfaces';
 import { UnauthorisedError } from '../throwError';
 import { handleErrorResponse, jsonResponse } from '../handlerHelpers';
 
+/**
+ * Handler only concerns itself with parsing and HTTP plumbing.
+ * All business-rule validation (items, address, period) lives in orderV2.ts.
+ */
 export const createOrderHandler = async (event: APIGatewayProxyEvent) => {
   try {
     const session = event.headers?.session;

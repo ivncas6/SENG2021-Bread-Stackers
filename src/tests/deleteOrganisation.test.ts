@@ -19,13 +19,13 @@ jest.mock('../supabase', () => ({
   },
 }));
 
-const mockedUserHelper  = userHelper as jest.Mocked<typeof userHelper>;
-const mockedPerms       = orgPermissions as jest.Mocked<typeof orgPermissions>;
-const mockedLimit       = (supabase as never as { limit: jest.Mock }).limit;
+const mockedUserHelper = userHelper as jest.Mocked<typeof userHelper>;
+const mockedPerms = orgPermissions as jest.Mocked<typeof orgPermissions>;
+const mockedLimit = (supabase as never as { limit: jest.Mock }).limit;
 
 const mockSession = 'valid-session';
-const mockUserId  = 123;
-const mockOrgId   = 456;
+const mockUserId = 123;
+const mockOrgId = 456;
 
 beforeEach(() => {
   jest.resetAllMocks();
@@ -36,6 +36,7 @@ beforeEach(() => {
   mockedUserHelper.getUserIdFromSession.mockResolvedValue(mockUserId);
   // default: caller is owner
   mockedPerms.requireOrgOwner.mockResolvedValue(undefined);
+  jest.spyOn(console, 'error').mockImplementation(() => {});
 });
 
 describe('Backend: deleteOrganisation', () => {

@@ -10,6 +10,7 @@ import {
 import { requireOrgMember } from './orgPermissions';
 import {
   InvalidDeliveryAddr,
+  InvalidInput,
   InvalidOrderId,
   InvalidRequestPeriod,
   InvalidSupabase,
@@ -26,12 +27,37 @@ import { uploadUBLForOrder, getSignedUBLUrl } from './generateUBL';
  *    callers must first create an address via POST /v2/address
  *  - Auth uses requireOrgMember so any member of the org can act
  *  - UBL helpers skip the redundant permission check
+ *  - Items are validated here in the business layer (not the handler)
  */
 
 
 // helpers
 
-// verify order belongs to given org. Throws if not.
+// Validates the items array. Throws InvalidInput (400) on any problem.
+// Kept here in the business layer so the rule applies regardless of
+// which handler calls createOrder or updateOrder.
+function validateItems(items: ReqItem[]): void {
+  if (!Array.isArray(items) || items.length === 0) {
+    throw new InvalidInput('At least one item is required');
+  }
+  for (const item of items) {
+    if (!item.name || typeof item.name !== 'string' || item.name.trim().length === 0) {
+      throw new InvalidInput('Each item must have a non-empty name');
+    }
+    if (typeof item.unitPrice !== 'number' || item.unitPrice < 0) {
+      throw new InvalidInput('Each item must have a non-negative unitPrice');
+    }
+    if (
+      typeof item.quantity !== 'number' ||
+      item.quantity <= 0 ||
+      !Number.isInteger(item.quantity)
+    ) {
+      throw new InvalidInput('Each item must have a positive integer quantity');
+    }
+  }
+}
+
+// Verifies the order exists and belongs to the given org. Throws if not.
 async function assertOrderBelongsToOrg(orderId: string, orgId: number): Promise<Order> {
   const order = await getOrderByIdSupa(orderId);
   if (!order) {
@@ -55,6 +81,9 @@ export async function createOrder(
 ): Promise<createOrderReturn> {
   const userId = await getUserIdFromSession(session);
   await requireOrgMember(userId, orgId);
+
+  // Validate items in the business layer so any caller gets the same error.
+  validateItems(items);
 
   if (!Number.isInteger(deliveryAddressId) || deliveryAddressId <= 0) {
     throw new InvalidDeliveryAddr('deliveryAddressId must be a positive integer');

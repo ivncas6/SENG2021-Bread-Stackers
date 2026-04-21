@@ -40,6 +40,7 @@ beforeEach(() => {
 
   mockedUserHelper.getUserIdFromSession.mockResolvedValue(mockUserId);
   mockedPerms.requireOrgAdminOrOwner.mockResolvedValue(undefined);
+  jest.spyOn(console, 'error').mockImplementation(() => {});
 });
 
 describe('Backend: updateOrganisation', () => {

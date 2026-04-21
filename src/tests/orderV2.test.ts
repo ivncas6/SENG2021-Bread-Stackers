@@ -14,7 +14,8 @@ import * as orgPermissions from '../orgPermissions';
 import * as dataStore from '../dataStore';
 import * as generateUBL from '../generateUBL';
 import { supabase } from '../supabase';
-import { UnauthorisedError, InvalidOrderId, InvalidRequestPeriod } from '../throwError';
+import { UnauthorisedError, InvalidOrderId, 
+  InvalidRequestPeriod, InvalidInput } from '../throwError';
 import { Order } from '../interfaces';
 import { SupabaseMock } from '../interfaces';
 
@@ -37,7 +38,7 @@ const SESSION = 'valid-session';
 const USER_ID = 1;
 const ORG_ID = 10;
 const ORDER_ID = '550e8400-e29b-41d4-a716-446655440000';
-const ADDRESS_ID = 5;                                         // ← replaces raw address string
+const ADDRESS_ID = 5;
 const DELIVERY_PERIOD = { startDateTime: 1_000_000, endDateTime: 2_000_000 };
 const ITEMS = [{ name: 'Widget', description: 'A widget', unitPrice: 10, quantity: 2 }];
 
@@ -80,6 +81,7 @@ function setupHappyPath() {
 beforeEach(() => {
   jest.clearAllMocks();
   setupHappyPath();
+  jest.spyOn(console, 'error').mockImplementation(() => {});
 });
 
 
@@ -430,5 +432,94 @@ describe('Lambda: generateUBLHandler (V2)', () => {
     mockedPerms.requireOrgMember.mockRejectedValue(new UnauthorisedError('not a member'));
     const res = await generateUBLHandler(makeEvent({}));
     expect(res.statusCode).toBe(401);
+  });
+
+  test('throws InvalidInput when items array is empty', async () => {
+    await expect(createOrder(ORG_ID, 'AUD', SESSION, ADDRESS_ID, DELIVERY_PERIOD, []))
+      .rejects.toThrow(InvalidInput);
+    await expect(createOrder(ORG_ID, 'AUD', SESSION, ADDRESS_ID, DELIVERY_PERIOD, []))
+      .rejects.toThrow('At least one item is required');
+  });
+ 
+  test('InvalidInput - items not an array (undefined from missing body field)', async () => {
+    // Simulates body.items being undefined - the handler passes it straight through.
+    await expect(
+      createOrder(ORG_ID, 'AUD', SESSION, ADDRESS_ID, DELIVERY_PERIOD, undefined as never)
+    ).rejects.toThrow(InvalidInput);
+  });
+ 
+  test('throws InvalidInput when an item has an empty name', async () => {
+    const badItems = [{ name: '', description: 'desc', unitPrice: 5, quantity: 1 }];
+    await expect(createOrder(ORG_ID, 'AUD', SESSION, ADDRESS_ID, DELIVERY_PERIOD, badItems))
+      .rejects.toThrow('non-empty name');
+  });
+ 
+  test('throws InvalidInput when an item has a negative unitPrice', async () => {
+    const badItems = [{ name: 'Widget', description: 'desc', unitPrice: -1, quantity: 1 }];
+    await expect(createOrder(ORG_ID, 'AUD', SESSION, ADDRESS_ID, DELIVERY_PERIOD, badItems))
+      .rejects.toThrow('non-negative unitPrice');
+  });
+ 
+  test('throws InvalidInput when an item has a zero quantity', async () => {
+    const badItems = [{ name: 'Widget', description: 'desc', unitPrice: 5, quantity: 0 }];
+    await expect(createOrder(ORG_ID, 'AUD', SESSION, ADDRESS_ID, DELIVERY_PERIOD, badItems))
+      .rejects.toThrow('positive integer quantity');
+  });
+ 
+  test('throws InvalidInput when an item has a fractional quantity', async () => {
+    const badItems = [{ name: 'Widget', description: 'desc', unitPrice: 5, quantity: 1.5 }];
+    await expect(createOrder(ORG_ID, 'AUD', SESSION, ADDRESS_ID, DELIVERY_PERIOD, badItems))
+      .rejects.toThrow('positive integer quantity');
+  });
+ 
+  test('accepts items with zero unitPrice (free items are valid)', async () => {
+    const freeItems = [{ name: 'Freebie', description: 'gratis', unitPrice: 0, quantity: 1 }];
+    const result = await createOrder(
+      ORG_ID, 'AUD', SESSION, ADDRESS_ID, DELIVERY_PERIOD, freeItems
+    );
+    expect(result).toHaveProperty('orderId');
+  });
+ 
+  test('400 when items array is empty', async () => {
+    const event = makeEvent({
+      pathParameters: { orgId: String(ORG_ID) },
+      body: JSON.stringify({
+        currency: 'AUD',
+        deliveryAddressId: ADDRESS_ID,
+        reqDeliveryPeriod: DELIVERY_PERIOD,
+        items: [],
+      }),
+    });
+    const res = await createOrderHandler(event);
+    expect(res.statusCode).toBe(400);
+    expect(JSON.parse(res.body)).toHaveProperty('error');
+  });
+ 
+  test('400 when items field is missing from body entirely', async () => {
+    const event = makeEvent({
+      pathParameters: { orgId: String(ORG_ID) },
+      body: JSON.stringify({
+        currency: 'AUD',
+        deliveryAddressId: ADDRESS_ID,
+        reqDeliveryPeriod: DELIVERY_PERIOD,
+        // items intentionally omitted
+      }),
+    });
+    const res = await createOrderHandler(event);
+    expect(res.statusCode).toBe(400);
+  });
+ 
+  test('400 when an item has invalid fields', async () => {
+    const event = makeEvent({
+      pathParameters: { orgId: String(ORG_ID) },
+      body: JSON.stringify({
+        currency: 'AUD',
+        deliveryAddressId: ADDRESS_ID,
+        reqDeliveryPeriod: DELIVERY_PERIOD,
+        items: [{ name: '', unitPrice: -5, quantity: 0 }],
+      }),
+    });
+    const res = await createOrderHandler(event);
+    expect(res.statusCode).toBe(400);
   });
 });

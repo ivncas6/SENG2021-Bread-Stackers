@@ -80,6 +80,7 @@ beforeEach(() => {
   jest.resetAllMocks();
   setupChainDefaults();
   setupBase();
+  jest.spyOn(console, 'error').mockImplementation(() => {});
 });
 
 function makeEvent(overrides: Partial<APIGatewayProxyEvent>): APIGatewayProxyEvent {

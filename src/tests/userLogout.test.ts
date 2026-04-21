@@ -17,6 +17,7 @@ const MOCK_SESSION = 'valid-session-123';
 
 beforeEach(() => {
   jest.clearAllMocks();
+  jest.spyOn(console, 'error').mockImplementation(() => {});
 });
 
 describe('Backend logic test for userLogout', () => {

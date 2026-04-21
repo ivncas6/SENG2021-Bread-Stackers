@@ -58,6 +58,7 @@ function setupChainDefaults() {
 beforeEach(() => {
   jest.resetAllMocks();
   setupChainDefaults();
+  jest.spyOn(console, 'error').mockImplementation(() => {});
 });
 
 

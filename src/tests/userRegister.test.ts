@@ -34,6 +34,7 @@ beforeEach(async () => {
   jest.clearAllMocks();
   // restore mock to default
   mockedSupabase.single.mockResolvedValue({ data: null, error: null });
+  jest.spyOn(console, 'error').mockImplementation(() => {});
 });
 
 //this is backend logic tests 

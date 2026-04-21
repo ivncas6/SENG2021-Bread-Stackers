@@ -27,6 +27,7 @@ describe('Backend: createOrganisation', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockedUserHelper.getUserIdFromSession.mockResolvedValue(123);
+    jest.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   test('successfully creates organisation', async () => {
