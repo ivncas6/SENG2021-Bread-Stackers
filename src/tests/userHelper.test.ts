@@ -33,6 +33,7 @@ const mockedJwt = jwt as jest.Mocked<typeof jwt>;
 describe('userHelper - Auth & Sessions', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   test('jwtClean executes supabase delete correctly', async () => {
@@ -105,6 +106,7 @@ describe('userHelper - Validations', () => {
     // setup valid session verify for the email/phone checks
     mockedJwt.verify.mockReturnValue({ userId: 1, jti: '123' } as never);
     mockSupabase.maybeSingle.mockResolvedValue({ data: null, error: null }); 
+    jest.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   describe('Name Validation', () => {

@@ -24,6 +24,7 @@ let testIdx = 0;
 
 beforeEach(() => {
   jest.clearAllMocks();
+  jest.spyOn(console, 'error').mockImplementation(() => {});
 });
 
 // helper for mock data

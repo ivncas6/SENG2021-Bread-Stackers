@@ -1,5 +1,5 @@
 import { EmptyObject, ErrorObject, SessionId } from './interfaces';
-import { createOrganisationSupa, getUserByIdSupa } from './dataStore';
+import { getUserByIdSupa } from './dataStore';
 import {
   InvalidEmail,
   InvalidPhone,
@@ -64,19 +64,6 @@ export async function userRegister(nameFirst: string, nameLast: string, email: s
     .single();
   
   if (error) throw new Error(error.message);
-
-  try {
-    const org = await createOrganisationSupa(newUser.contactId, `${nameFirst} ${nameLast}`);
-    if (!org) {
-      throw new Error('Database returned no data for organization creation');
-    }
-  } catch (e: unknown) {
-    // We pass the original error 'e' into the 'cause' property
-    throw new Error(`User created, but Org failed: ${e instanceof Error ? 
-      e.message : String(e)}`, { 
-      cause: e 
-    });
-  }
 
   return await createNewSession(newUser.contactId);
 }

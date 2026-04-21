@@ -28,6 +28,7 @@ const mockedSupabase = supabase as never;
 
 beforeEach(() => {
   jest.clearAllMocks();
+  jest.spyOn(console, 'error').mockImplementation(() => {});
 });
 
 // fake data helper function

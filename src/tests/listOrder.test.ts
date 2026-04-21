@@ -28,6 +28,7 @@ beforeEach(() => {
       eq: mockSupabaseEq
     })
   });
+  jest.spyOn(console, 'error').mockImplementation(() => {});
 });
 
 async function createOrderAndUser() {

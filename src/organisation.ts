@@ -2,32 +2,42 @@ import { supabase } from './supabase';
 import { InvalidBusinessName, InvalidInput, 
   InvalidSupabase, UnauthorisedError } from './throwError';
 import { getUserIdFromSession } from './userHelper';
-import { ErrorObject } from './interfaces';
+import { requireOrgAdminOrOwner, requireOrgOwner, requireOrgMember } from './orgPermissions';
+import { ErrorObject, OrgRole } from './interfaces';
 
-function InvalidBusinessname(businessName: string): ErrorObject | null {
+function validateBusinessName(businessName: string): ErrorObject | null {
   const charRange: RegExp = /^[a-zA-Z0-9\s\-']+$/;
   if (!charRange.test(businessName)) {
     throw new InvalidBusinessName('invalid business name -> includes special characters');
   }
   if (businessName.length < 2) {
-    throw new InvalidBusinessName('Last name is less than 2 characters');
+    throw new InvalidBusinessName('Business name is less than 2 characters');
   }
   if (businessName.length > 125) {
-    throw new InvalidBusinessName('name is more than 125 characters');
+    throw new InvalidBusinessName('Business name is more than 125 characters');
   }
   return null;
 }
 
 export async function createOrganisation(session: string, orgName: string, addressId: number) {
-  // invalidate session
   const userId = await getUserIdFromSession(session);
   if (!userId) {
     throw new UnauthorisedError('Invalid user session');
   }
 
-  InvalidBusinessname(orgName);
+  validateBusinessName(orgName);
 
-  // find if address in database
+  // Guard: duplicate name
+  const { data: dupOrg } = await supabase
+    .from('organisations')
+    .select('orgId')
+    .eq('orgName', orgName)
+    .maybeSingle();
+
+  if (dupOrg) {
+    throw new InvalidBusinessName('An organisation with this name already exists');
+  }
+
   const { data: addressData, error: addressError } = await supabase
     .from('addresses')
     .select('addressID')
@@ -38,7 +48,6 @@ export async function createOrganisation(session: string, orgName: string, addre
     throw new InvalidInput('Provided addressId does not exist');
   }
 
-  // insert org
   const { data, error } = await supabase
     .from('organisations')
     .insert([{ 
@@ -50,38 +59,41 @@ export async function createOrganisation(session: string, orgName: string, addre
     .single();
 
   if (error) throw new InvalidSupabase(`Org Creation Failed: ${error.message}`);
+
+  // Add the creator as OWNER in organisation_members
+  await supabase
+    .from('organisation_members')
+    .insert([{ orgId: data.orgId, contactId: userId, role: 'OWNER' }]);
     
   return { orgId: data.orgId };
 }
 
-export async function updateOrganisation(session: string, orgId: 
-    number, orgName: string, addressId: number) {
-  // invalid sesion
+export async function updateOrganisation(
+  session: string,
+  orgId: number,
+  orgName: string,
+  addressId: number
+) {
   const userId = await getUserIdFromSession(session);
-  if (!userId) {
-    throw new UnauthorisedError('Invalid user session');
-  }
+  if (!userId) throw new UnauthorisedError('Invalid user session');
 
-  // org belongs to user
-  const { data: orgData, error: orgError } = await supabase
+  // ADMIN or OWNER can update org details
+  await requireOrgAdminOrOwner(userId, orgId);
+
+  validateBusinessName(orgName);
+
+  // Guard: duplicate name (exclude the org being updated)
+  const { data: dupOrg } = await supabase
     .from('organisations')
-    .select('orgId, contactId')
-    .eq('orgId', orgId)
+    .select('orgId')
+    .eq('orgName', orgName)
+    .neq('orgId', orgId)
     .maybeSingle();
 
-  if (orgError) throw orgError;
-
-  if (!orgData) {
-    throw new InvalidInput('no attributed orgId found');
+  if (dupOrg) {
+    throw new InvalidBusinessName('An organisation with this name already exists');
   }
 
-  if (orgData.contactId !== userId) {
-    throw new UnauthorisedError('You do not have permission to modify this organization');
-  }
-
-  InvalidBusinessname(orgName);
-
-  // verify new address exists
   const { data: addressData } = await supabase
     .from('addresses')
     .select('addressID')
@@ -92,7 +104,6 @@ export async function updateOrganisation(session: string, orgId:
     throw new InvalidInput('Provided addressId does not exist');
   }
 
-  // update org
   const { error } = await supabase
     .from('organisations')
     .update({ 
@@ -107,28 +118,12 @@ export async function updateOrganisation(session: string, orgId:
 }
 
 export async function deleteOrganisation(session: string, orgId: number) {
-  // invalid session
   const userId = await getUserIdFromSession(session);
-  if (!userId) {
-    throw new UnauthorisedError('Invalid user session');
-  }
+  if (!userId) throw new UnauthorisedError('Invalid user session');
 
-  // check org belongs to user and org exists
-  const { data: orgData } = await supabase
-    .from('organisations')
-    .select('orgId, contactId')
-    .eq('orgId', orgId)
-    .maybeSingle();
+  // Only OWNER can delete an organisation
+  await requireOrgOwner(userId, orgId);
 
-  if (!orgData) {
-    throw new InvalidInput('No organisation attributed to orgId');
-  }
-
-  if (orgData.contactId !== userId) {
-    throw new UnauthorisedError('You do not have permission to delete this organization');
-  }
-
-  // check if orders are attached - no delete if orders exist
   const { data: orders } = await supabase
     .from('orders')
     .select('orderId')
@@ -140,7 +135,6 @@ export async function deleteOrganisation(session: string, orgId: number) {
       'Cannot delete organization: There are existing orders associated with it.');
   }
 
-  // delete org
   const { error } = await supabase
     .from('organisations')
     .delete()
@@ -151,113 +145,143 @@ export async function deleteOrganisation(session: string, orgId: number) {
   return {};
 }
 
-/* TODO below. Make sure to check for errors (think permissions, 
-and if parameters are valid input). Look at Supabase table and Database to understand*/
-
-/* uncomment this and the other * / below to start workign 
-// add and edit users in organisations -> might be kindsa built in alr
-export async function addOrgUser(session: string, userId: string, orgId: string) {
-
-  // invalid session
+/**
+ * Adds a user to an organisation by their email address.
+ * Accepts email instead of userId so the caller does not need to know the
+ * internal contactId — they only need to know the user's email.
+ * ADMIN or OWNER can add members.
+ */
+export async function addOrgUser(session: string, email: string, orgId: number) {
   const currUserId = await getUserIdFromSession(session);
-  if (!currUserId) {
-    throw new UnauthorisedError('Invalid user session');
-  }
-    
+  if (!currUserId) throw new UnauthorisedError('Invalid user session');
 
-  // userId already exists in org
-}
-*/
+  // ADMIN or OWNER can add members
+  await requireOrgAdminOrOwner(currUserId, orgId);
 
-export async function addOrgUser(session: string, userId: number, orgId: number) {
-  // check the caller has a valid session
-  const currUserId = await getUserIdFromSession(session);
-  if (!currUserId) {
-    throw new UnauthorisedError('Invalid user session');
-  }
-
-  // check the organisation exists, and get its owner
-  const { data: orgData, error: orgError } = await supabase
-    .from('organisations')
-    .select('orgId, contactId')
-    .eq('orgId', orgId)
-    .maybeSingle();
-
-  if (orgError) throw orgError;
-  if (!orgData) {
-    throw new InvalidInput('No organisation attributed to orgId');
-  }
-
-  // caller must be the owner of the org
-  if (orgData.contactId !== currUserId) {
-    throw new UnauthorisedError('You do not have permission to modify this organisation');
-  }
-
-  // the user being added must actually exist
+  // Look up the target user by email — no need for caller to know the userId
   const { data: userData } = await supabase
     .from('contacts')
     .select('contactId')
-    .eq('contactId', userId)
+    .eq('email', email)
     .maybeSingle();
 
   if (!userData) {
-    throw new InvalidInput('Provided userId does not exist');
+    throw new InvalidInput('No user found with that email address');
   }
 
-  // the user must not already be a member
+  const targetUserId: number = userData.contactId;
+
   const { data: existing } = await supabase
     .from('organisation_members')
     .select('id')
     .eq('orgId', orgId)
-    .eq('contactId', userId)
+    .eq('contactId', targetUserId)
     .maybeSingle();
 
   if (existing) {
     throw new InvalidInput('User is already a member of this organisation');
   }
 
-  // insert the new membership row
   const { error } = await supabase
     .from('organisation_members')
-    .insert([{ orgId: orgId, contactId: userId, role: 'member' }]);
+    .insert([{ orgId: orgId, contactId: targetUserId, role: 'MEMBER' }]);
 
   if (error) throw new InvalidSupabase(`Add Org User Failed: ${error.message}`);
 
   return {};
 }
 
-
-export async function deleteOrgUser(session: string, userId: number, orgId: number) {
-  // check the caller has a valid session
+/**
+ * Updates the role of an existing organisation member.
+ * - Only OWNER or ADMIN can call this and change to ADMIN / MEMBER. OWNER STAYS OWNER
+ * - A user cannot demote themselves if they are the only ADMIN/OWNER (guard below).
+ */
+export async function updateOrgUserRole(
+  session: string,
+  targetUserId: number,
+  orgId: number,
+  role: OrgRole
+) {
   const currUserId = await getUserIdFromSession(session);
-  if (!currUserId) {
-    throw new UnauthorisedError('Invalid user session');
+  if (!currUserId) throw new UnauthorisedError('Invalid user session');
+
+  await requireOrgAdminOrOwner(currUserId, orgId);
+
+  if (role !== 'ADMIN' && role !== 'MEMBER') {
+    throw new InvalidInput('Role must be ADMIN or MEMBER');
   }
 
-  // check the organisation exists, and get its owner
-  const { data: orgData, error: orgError } = await supabase
+  // protect the org owner from role changes
+  const { data: orgData } = await supabase
     .from('organisations')
-    .select('orgId, contactId')
+    .select('contactId')
     .eq('orgId', orgId)
     .maybeSingle();
 
-  if (orgError) throw orgError;
-  if (!orgData) {
-    throw new InvalidInput('No organisation attributed to orgId');
+  if (orgData && orgData.contactId === targetUserId) {
+    throw new InvalidInput('Cannot change the role of the organisation owner');
   }
 
-  // caller must be the owner of the org
-  if (orgData.contactId !== currUserId) {
-    throw new UnauthorisedError('You do not have permission to modify this organisation');
+  // Confirm the target is actually a member
+  const { data: existing } = await supabase
+    .from('organisation_members')
+    .select('id, role')
+    .eq('orgId', orgId)
+    .eq('contactId', targetUserId)
+    .maybeSingle();
+
+  if (!existing) {
+    throw new InvalidInput('User is not a member of this organisation');
   }
 
-  // can't remove the owner via this function
-  if (orgData.contactId === userId) {
+  // Guard: prevent ADMIN from demoting themselves if only elevated user.
+  // OWNER always exists, so this only matters when an ADMIN tries to demote themselves
+  // to MEMBER and would leave no other admin.
+  if (currUserId === targetUserId && existing.role === 'ADMIN' && role === 'MEMBER') {
+    const { data: admins } = await supabase
+      .from('organisation_members')
+      .select('contactId')
+      .eq('orgId', orgId)
+      .eq('role', 'ADMIN');
+
+    // If the caller is the only ADMIN (owner still exists, so org isn't leaderless,
+    if (admins && admins.length === 1) {
+      throw new InvalidInput(
+        'You are the only admin. Promote another member before demoting yourself.'
+      );
+    }
+  }
+
+  const { error } = await supabase
+    .from('organisation_members')
+    .update({ role })
+    .eq('orgId', orgId)
+    .eq('contactId', targetUserId);
+
+  if (error) throw new InvalidSupabase(`Update role failed: ${error.message}`);
+
+  return {};
+}
+
+export async function deleteOrgUser(session: string, userId: number, orgId: number) {
+  const currUserId = await getUserIdFromSession(session);
+  if (!currUserId) throw new UnauthorisedError('Invalid user session');
+
+  // ADMIN or OWNER can remove members
+  await requireOrgAdminOrOwner(currUserId, orgId);
+
+  // Get owner to protect them
+  const { data: orgData } = await supabase
+    .from('organisations')
+    .select('contactId')
+    .eq('orgId', orgId)
+    .maybeSingle();
+
+  if (orgData && orgData.contactId === userId) {
     throw new InvalidInput(
       'Cannot remove the organisation owner. Delete the organisation instead.');
   }
 
-  // the user must actually be a member currently
   const { data: existing } = await supabase
     .from('organisation_members')
     .select('id')
@@ -269,7 +293,6 @@ export async function deleteOrgUser(session: string, userId: number, orgId: numb
     throw new InvalidInput('User is not a member of this organisation');
   }
 
-  // delete the membership row
   const { error } = await supabase
     .from('organisation_members')
     .delete()
@@ -281,65 +304,53 @@ export async function deleteOrgUser(session: string, userId: number, orgId: numb
   return {};
 }
 
-
-
+// lists all members of an organisation, including their role.
 export async function listOrgUsers(session: string, orgId: number) {
-  // check the caller has a valid session
   const userId = await getUserIdFromSession(session);
-  if (!userId) {
-    throw new UnauthorisedError('Invalid user session');
-  }
+  if (!userId) throw new UnauthorisedError('Invalid user session');
 
-  // check the organisation exists, and get its owner
-  const { data: orgData } = await supabase
-    .from('organisations')
-    .select('orgId, contactId')
-    .eq('orgId', orgId)
-    .maybeSingle();
+  // any member (including MEMBER role) can list the org's users
+  await requireOrgMember(userId, orgId);
 
-  if (!orgData) {
-    throw new InvalidInput('No organisation attributed to orgId');
-  }
-
-  // caller must be the owner OR a member
-  let isAuthorised = orgData.contactId === userId;
-  if (!isAuthorised) {
-    const { data: membership } = await supabase
-      .from('organisation_members')
-      .select('id')
-      .eq('orgId', orgId)
-      .eq('contactId', userId)
-      .maybeSingle();
-    isAuthorised = Boolean(membership);
-  }
-  if (!isAuthorised) {
-    throw new UnauthorisedError(
-      'You do not have permission to view this organisation\'s users');
-  }
-
-  // collect all member ids: the owner + everyone in organisation_members
+  // fetch all member rows with roles from organisation_members
   const { data: memberRows, error: memberError } = await supabase
     .from('organisation_members')
-    .select('contactId')
+    .select('contactId, role')
     .eq('orgId', orgId);
 
   if (memberError) {
     throw new InvalidSupabase(`List Org Users Failed: ${memberError.message}`);
   }
 
-  const memberIds = new Set<number>(
-    (memberRows ?? []).map((r: { contactId: number }) => r.contactId));
-  memberIds.add(orgData.contactId);
+  if (!memberRows || memberRows.length === 0) {
+    return { users: [] };
+  }
 
-  // fetch contact details for everyone in the set
+  // Build a role map so we can attach role to each contact
+  const roleMap = new Map<number, string>(
+    (memberRows as { contactId: number; role: string }[])
+      .map(r => [r.contactId, r.role])
+  );
+
   const { data: contactsData, error: contactsError } = await supabase
     .from('contacts')
     .select('contactId, firstName, lastName, email, telephone')
-    .in('contactId', Array.from(memberIds));
+    .in('contactId', Array.from(roleMap.keys()));
 
   if (contactsError) {
     throw new InvalidSupabase(`List Org Users Failed: ${contactsError.message}`);
   }
 
-  return { users: contactsData ?? [] };
+  const users = (contactsData ?? []).map((c: {
+    contactId: number;
+    firstName: string;
+    lastName: string;
+    email: string;
+    telephone: string;
+  }) => ({
+    ...c,
+    role: roleMap.get(c.contactId) ?? 'MEMBER',
+  }));
+
+  return { users };
 }

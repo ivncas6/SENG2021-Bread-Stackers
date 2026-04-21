@@ -21,7 +21,17 @@ export interface Organisation {
   orgId: number; // PK
   orgName: string;
   addressId: number; // FK
-  contactId:  number; // FK
+  contactId:  number; // FK (owner)
+}
+
+// Roles used in organisation_members table
+export type OrgRole = 'OWNER' | 'ADMIN' | 'MEMBER';
+
+export interface OrgMember {
+  id: number;
+  orgId: number;
+  contactId: number;
+  role: OrgRole;
 }
 
 export interface Order {
@@ -125,4 +135,3 @@ export interface createOrderReturn {
 export interface SessionId {
     session: string,
 }
-

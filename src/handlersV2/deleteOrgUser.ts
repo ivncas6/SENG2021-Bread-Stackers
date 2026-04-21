@@ -4,18 +4,18 @@ import { handleErrorResponse, jsonResponse } from '../handlerHelpers';
 
 export const deleteOrgUserHandler = async (event: APIGatewayProxyEvent) => {
   try {
-    const orgId = parseInt(event.pathParameters!.orgId!);
-    const userId = parseInt(event.pathParameters!.userId!);
-    const session = event.headers.session;
+    const session = event.headers?.session;
+    if (!session) return jsonResponse(401, { error: 'Session header missing' });
 
-    if (!session) {
-      return jsonResponse(401, { error: 'provided session is not valid' });
+    const orgId = parseInt(event.pathParameters?.orgId ?? '');
+    const userId = parseInt(event.pathParameters?.userId ?? '');
+    if (isNaN(orgId) || isNaN(userId)) {
+      return jsonResponse(400, { error: 'Invalid orgId or userId in path' });
     }
 
     const result = await deleteOrgUser(session, userId, orgId);
-
     return jsonResponse(200, result);
-  } catch (e: unknown) {
+  } catch (e) {
     return handleErrorResponse(e);
   }
 };

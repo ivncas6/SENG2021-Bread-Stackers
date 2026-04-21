@@ -1,8 +1,12 @@
 swagger: "2.0"
 info:
   title: Order Creation Service
-  description: Important operations required to manage order creation data effectively by letting the user to create, retrieve, list, update and cancel (delete) orders when needed. Please ensure to input your api key on the "Authorize" field.
-  version: 1.0.1
+  description: >
+    API for managing order creation data. Supports creating, retrieving, listing, updating,
+    and cancelling orders, user account management, organisation management, and reusable
+    address management.
+    Please enter your API key in the **Authorize** field before making requests.
+  version: 2.0.0
 
 host: "tx12cup9z0.execute-api.ap-southeast-2.amazonaws.com"
 basePath: "/Sprint3"
@@ -18,238 +22,172 @@ securityDefinitions:
 security:
   - ApiKeyAuth: []
 
+# Tag definitions (ordered by version, then domain) 
+
 tags:
-  - name: PHASE 1
-  - name: Users
-    description: Deals with all the user related operations which includes user register, login, update and logout
-  - name: Orders
-    description: Deals with all the order related operations which includes creating, viewing, listing, updating and cancelling any order
-  - name: Other
+  - name: v0 - Users
+    description: Register, login, update profile and logout (V0)
+  - name: v0 - Orders
+    description: Create, view, list, update, cancel and export orders (V0)
+  - name: v1 - Users
+    description: User profile management improvements (V1)
+  - name: v1 - Orders
+    description: Streamlined order creation without requiring user details in body (V1)
+  - name: v2 - Organisations
+    description: Organisation management - create, update, delete and manage members
+  - name: v2 - Orders
+    description: Organisation-scoped order management with address references (V2)
+  - name: v2 - Addresses
+    description: Reusable address management - create once, reference from orders and organisations
+
+# Shared definitions 
 
 definitions:
+
+  # Users 
+
   userRegister:
     type: object
     properties:
-      firstName:
-        type: string
-        example: Anna
-      lastName: 
-        type: string
-        example: Smith
-      email:
-        type: string
-        example: anna123@gmail.com
-      telephone:
-        type: string
-        example: "0412345678"
-      password: 
-        type: string
-        example: h3llow0rld
+      firstName:  { type: string, example: Anna }
+      lastName:   { type: string, example: Smith }
+      email:      { type: string, example: anna123@gmail.com }
+      telephone:  { type: string, example: "0412345678" }
+      password:   { type: string, example: h3llow0rld }
 
-  error400:
+  userLogIn:
     type: object
     properties:
-      error:
-        type: string
-        example: "INVALID_EMAIL"
+      email:    { type: string, example: anna123@gmail.com }
+      password: { type: string, example: h3llow0rld }
 
-  error401:
+  userUpdate:
     type: object
     properties:
-      error:
-        type: string
-        example: "Unauthorised access"
+      email:     { type: string, example: anna123@gmail.com }
+      firstName: { type: string, example: Brianna }
+      lastName:  { type: string, example: Lee }
+      telephone: { type: string, example: "0412345678" }
 
   session:
     type: object
     properties:
-      session: 
-        type: string
-        example: "eyJhbGciOiJIUzI1NiIsInR5c..."
-  
-  userLogIn:
-    type: object
-    properties:
-      email:
-        type: string
-        example: anna123@gmail.com
-      password: 
-        type: string
-        example: h3llow0rld
-  
+      session: { type: string, example: "eyJhbGciOiJIUzI1NiIsInR5c..." }
+
+  # Shared primitives 
+
   emptyObj:
     type: object
     properties: {}
-  
-  userUpdate:
+
+  error400:
     type: object
     properties:
-      email:
-        type: string
-        example: anna123@gmail.com
-      firstName:
-        type: string
-        example: Brianna
-      lastName:
-        type: string
-        example: Lee
-      telephone:
-        type: string
-        example: "0412345678"
-  
-  orderId:
+      error: { type: string, example: "INVALID_EMAIL" }
+
+  error401:
     type: object
     properties:
-      orderId:
-        type: string
-        example: "550e8400-e29b-41d4-a716-446655440000"
-  
-  orderItem: 
+      error: { type: string, example: "Unauthorised access" }
+
+  # Orders (V0 / V1) ─
+
+  orderItem:
     type: object
     properties:
-      name: 
-        type: string
-        example: Chocolate Bar
-      description:
-        type: string
-        example: Milk Chocolate
-      unitPrice:
-        type: number
-        example: 10
-      quantity:
-        type: number
-        example: 1
-  
+      name:        { type: string, example: Chocolate Bar }
+      description: { type: string, example: Milk Chocolate }
+      unitPrice:   { type: number, example: 10 }
+      quantity:    { type: number, example: 1 }
+
   orderCreate:
     type: object
     properties:
-      currency:
-        type: string
-        example: AUD
-      deliveryAddress:
-        type: string
-        example: 123 Street Name, Kensington
+      currency:        { type: string, example: AUD }
+      deliveryAddress: { type: string, example: "123 Street Name, Kensington" }
       user:
         type: object
         properties:
-          firstName:
-            type: string
-            example: Anna
-          lastName:
-            type: string
-            example: Smith
-          telephone:
-            type: string
-            example: "0412345678"
-          email: 
-            type: string
-            example: anna123@gmail.com
+          firstName: { type: string, example: Anna }
+          lastName:  { type: string, example: Smith }
+          telephone: { type: string, example: "0412345678" }
+          email:     { type: string, example: anna123@gmail.com }
       reqDeliveryPeriod:
         type: object
-        properties: 
-          startDateTime: 
-            type: number
-            example: 1773100800000
-          endDateTime:
-            type: number
-            example: 1773619200000
-      items:
-        type: array
-        items:
-            $ref: '#/definitions/orderItem'
-  
-  orderCreateV2:
-    type: object
-    required:
-      - currency
-      - deliveryAddress
-      - items
-    properties:
-      currency:
-        type: string
-        example: AUD
-      deliveryAddress:
-        type: string
-        example: 123 Street Name, Kensington
-      reqDeliveryPeriod:
-        type: object
-        properties: 
+        properties:
           startDateTime: { type: number, example: 1773100800000 }
-          endDateTime: { type: number, example: 1773619200000 }
+          endDateTime:   { type: number, example: 1773619200000 }
       items:
         type: array
         items:
           $ref: '#/definitions/orderItem'
-  
-  orderView:
+
+  orderCreateV1:
     type: object
+    required: [currency, deliveryAddress, items]
     properties:
-      orderId:
-        type: string
-        example: "550e8400-e29b-41d4-a716-446655440000"
-      status:
-        type: string
-        example: OPEN
-      issuedDate:
-        type: string
-        example: "2026-03-16"
-      issuedTime:
-        type: string
-        example: "16:10:05"
-      currency:
-        type: string
-        example: AUD
-      taxExclusive:
-        type: number
-        example: 100
-      taxInclusive:
-        type: number
-        example: 110
-      finalPrice:
-        type: number
-        example: 110
-      address:
-        type: string
-        example: 123 Street Name, Kensington
-      userDetails:
+      currency:        { type: string, example: AUD }
+      deliveryAddress: { type: string, example: "123 Street Name, Kensington" }
+      reqDeliveryPeriod:
         type: object
-        properties: 
-          firstName: { type: string, example: "Anna" }
-          lastName: { type: string, example: "Smith" }
-          telephone: { type: string, example: "0412345678" }
-          email: { type: string, example: "anna123@gmail.com" }
-      deliveryDetails:
-        type: object
-        properties: 
+        properties:
           startDateTime: { type: number, example: 1773100800000 }
-          endDateTime: { type: number, example: 1773619200000 }
+          endDateTime:   { type: number, example: 1773619200000 }
       items:
         type: array
         items:
-            $ref: '#/definitions/orderItem'
-  
+          $ref: '#/definitions/orderItem'
+
+  orderView:
+    type: object
+    properties:
+      orderId:        { type: string, example: "550e8400-e29b-41d4-a716-446655440000" }
+      status:         { type: string, example: OPEN }
+      issuedDate:     { type: string, example: "2026-03-16" }
+      issuedTime:     { type: string, example: "16:10:05" }
+      currency:       { type: string, example: AUD }
+      taxExclusive:   { type: number, example: 100 }
+      taxInclusive:   { type: number, example: 110 }
+      finalPrice:     { type: number, example: 110 }
+      address:        { type: string, example: "123 Street Name, Kensington" }
+      userDetails:
+        type: object
+        properties:
+          firstName: { type: string, example: Anna }
+          lastName:  { type: string, example: Smith }
+          telephone: { type: string, example: "0412345678" }
+          email:     { type: string, example: anna123@gmail.com }
+      deliveryDetails:
+        type: object
+        properties:
+          startDateTime: { type: number, example: 1773100800000 }
+          endDateTime:   { type: number, example: 1773619200000 }
+      items:
+        type: array
+        items:
+          $ref: '#/definitions/orderItem'
+
   orderCancel:
     type: object
     properties:
-      reason:
-        type: string
-        example: Change of Mind
+      reason: { type: string, example: Change of Mind }
 
   orderUpdate:
     type: object
     properties:
-      deliveryAddress:
-        type: string
-        example: 123 Street Name, Kensington
+      deliveryAddress:   { type: string, example: "123 Street Name, Kensington" }
       reqDeliveryPeriod:
         type: object
-        properties: 
+        properties:
           startDateTime: { type: number, example: 1773100800000 }
-          endDateTime: { type: number, example: 1773619200000 }
-      status:
-        type: string
-        example: "UPDATED"
-  
+          endDateTime:   { type: number, example: 1773619200000 }
+      status: { type: string, example: "UPDATED" }
+
+  orderId:
+    type: object
+    properties:
+      orderId: { type: string, example: "550e8400-e29b-41d4-a716-446655440000" }
+
   orderList:
     type: object
     properties:
@@ -258,17 +196,197 @@ definitions:
         items:
           type: object
           properties:
-            orderId: { type: string, example: "550e8400-e29b-41d4-a716-446655440000" }
-            status: { type: string, example: "OPEN" }
+            orderId:    { type: string, example: "550e8400-e29b-41d4-a716-446655440000" }
+            status:     { type: string, example: "OPEN" }
             issuedDate: { type: string, example: "2026-03-16" }
             finalPrice: { type: number, example: 110 }
-            currency: { type: string, example: "AUD" }
+            currency:   { type: string, example: "AUD" }
+
+  signedUrl:
+    type: object
+    properties:
+      signedUrl: { type: string, example: "https://storage.example.com/order-123.xml?token=abc" }
+
+  # Orders (V2) 
+
+  orderCreateV2:
+    type: object
+    required: [currency, deliveryAddressId, items]
+    description: >
+      V2 order creation. Uses a pre-existing addressId (from POST /v2/address)
+      instead of an inline address string.
+    properties:
+      currency:
+        type: string
+        example: AUD
+      deliveryAddressId:
+        type: integer
+        example: 5
+        description: ID of an existing address record created via POST /v2/address
+      reqDeliveryPeriod:
+        type: object
+        properties:
+          startDateTime: { type: number, example: 1773100800000 }
+          endDateTime:   { type: number, example: 1773619200000 }
+      items:
+        type: array
+        items:
+          $ref: '#/definitions/orderItem'
+
+  orderUpdateV2:
+    type: object
+    description: V2 order update. References an existing address by ID.
+    properties:
+      deliveryAddressId:
+        type: integer
+        example: 5
+        description: ID of an existing address record
+      reqDeliveryPeriod:
+        type: object
+        properties:
+          startDateTime: { type: number, example: 1773100800000 }
+          endDateTime:   { type: number, example: 1773619200000 }
+      status: { type: string, example: "UPDATED" }
+
+  orderViewV2:
+    type: object
+    description: V2 order view response - includes deliveryAddressId for cross-referencing.
+    properties:
+      orderId:           { type: string,  example: "550e8400-e29b-41d4-a716-446655440000" }
+      status:            { type: string,  example: OPEN }
+      issuedDate:        { type: string,  example: "2026-03-16" }
+      issuedTime:        { type: string,  example: "16:10:05" }
+      currency:          { type: string,  example: AUD }
+      taxExclusive:      { type: number,  example: 100 }
+      taxInclusive:      { type: number,  example: 110 }
+      finalPrice:        { type: number,  example: 110 }
+      address:           { type: string,  example: "123 Street Name, Kensington" }
+      deliveryAddressId: { type: integer, example: 5 }
+      userDetails:
+        type: object
+        properties:
+          firstName: { type: string, example: Anna }
+          lastName:  { type: string, example: Smith }
+          telephone: { type: string, example: "0412345678" }
+          email:     { type: string, example: anna123@gmail.com }
+      deliveryDetails:
+        type: object
+        properties:
+          startDateTime: { type: number, example: 1773100800000 }
+          endDateTime:   { type: number, example: 1773619200000 }
+      items:
+        type: array
+        items:
+          $ref: '#/definitions/orderItem'
+
+  # Organisations 
+
+  orgCreate:
+    type: object
+    required: [orgName, addressId]
+    properties:
+      orgName:   { type: string,  example: "Bread Stackers HQ" }
+      addressId: { type: integer, example: 1 }
+
+  orgUpdate:
+    type: object
+    required: [orgName, addressId]
+    properties:
+      orgName:   { type: string,  example: "New Name Ltd" }
+      addressId: { type: integer, example: 2 }
+
+  orgId:
+    type: object
+    properties:
+      orgId: { type: integer, example: 42 }
+
+  orgUserAdd:
+    type: object
+    required: [email]
+    properties:
+      email:
+        type: string
+        example: user@example.com
+        description: Email address of the user to add to the organisation
+
+  orgUserRoleUpdate:
+    type: object
+    required: [role]
+    properties:
+      role:
+        type: string
+        enum: [ADMIN, MEMBER]
+        example: ADMIN
+        description: >
+          New role for the member. OWNER cannot be assigned via this endpoint —
+          ownership transfers only through organisation deletion.
+
+  orgUserList:
+    type: object
+    properties:
+      users:
+        type: array
+        items:
+          type: object
+          properties:
+            contactId: { type: integer, example: 7 }
+            firstName: { type: string,  example: Anna }
+            lastName:  { type: string,  example: Smith }
+            email:     { type: string,  example: anna@example.com }
+            telephone: { type: string,  example: "0412345678" }
+
+  # Addresses 
+
+  addressCreate:
+    type: object
+    required: [street]
+    properties:
+      street:   { type: string, example: "123 Main Street" }
+      city:     { type: string, example: Sydney }
+      postcode: { type: string, example: "2000" }
+      country:  { type: string, example: AUS }
+
+  addressUpdate:
+    type: object
+    description: All fields are optional - only supplied fields are updated.
+    properties:
+      street:   { type: string, example: "456 New Road" }
+      city:     { type: string, example: Melbourne }
+      postcode: { type: string, example: "3000" }
+      country:  { type: string, example: AUS }
+
+  addressView:
+    type: object
+    properties:
+      addressID: { type: integer, example: 5 }
+      street:    { type: string,  example: "123 Main Street" }
+      city:      { type: string,  example: Sydney }
+      postcode:  { type: string,  example: "2000" }
+      country:   { type: string,  example: AUS }
+
+  addressList:
+    type: object
+    properties:
+      addresses:
+        type: array
+        items:
+          $ref: '#/definitions/addressView'
+
+  addressId:
+    type: object
+    properties:
+      addressId: { type: integer, example: 5 }
+
+# Paths ─
 
 paths:
+
+  # V0 - Users
+
   /v0/user/register:
     post:
-      tags: [Users]
-      summary: Register a new user 
+      tags: ["v0 - Users"]
+      summary: Register a new user
       parameters:
         - in: body
           name: body
@@ -292,7 +410,7 @@ paths:
 
   /v0/user/login:
     post:
-      tags: [Users]
+      tags: ["v0 - Users"]
       summary: Login an existing user
       parameters:
         - in: body
@@ -314,12 +432,12 @@ paths:
             $ref: '#/definitions/error400'
         401:
           description: "**UNAUTHORISED**"
-          schema: 
+          schema:
             $ref: '#/definitions/error401'
-  
+
   /v0/user/details:
     put:
-      tags: [Users]
+      tags: ["v0 - Users"]
       summary: Update user details
       parameters:
         - in: header
@@ -342,13 +460,13 @@ paths:
             $ref: '#/definitions/error400'
         401:
           description: "**UNAUTHORISED**"
-          schema: 
+          schema:
             $ref: '#/definitions/error401'
-  
+
   /v0/user/logout:
     post:
-      tags: [Users]
-      summary: Logs out an existing user
+      tags: ["v0 - Users"]
+      summary: Logout the current user
       parameters:
         - in: header
           name: session
@@ -361,13 +479,15 @@ paths:
             $ref: '#/definitions/emptyObj'
         401:
           description: "**UNAUTHORISED**"
-          schema: 
+          schema:
             $ref: '#/definitions/error401'
-  
+
+  # V0 - Orders
+
   /v0/order:
     post:
-      tags: [Orders]
-      summary: Creates an Order
+      tags: ["v0 - Orders"]
+      summary: Create an order (includes user details in body)
       parameters:
         - in: header
           name: session
@@ -385,21 +505,40 @@ paths:
             $ref: '#/definitions/orderId'
         400:
           description: |
-             "**INVALID INPUT**"
-             - INVALID_EMAIL
-             - INVALID_MOBILE_NO
-             - INVALID_ITEM
+            **INVALID INPUT**
+            - INVALID_EMAIL
+            - INVALID_MOBILE_NO
+            - INVALID_ITEM
           schema:
             $ref: '#/definitions/error400'
         401:
           description: "**UNAUTHORISED**"
-          schema: 
+          schema:
+            $ref: '#/definitions/error401'
+
+  /v0/order/list:
+    get:
+      tags: ["v0 - Orders"]
+      summary: List all orders for the current user
+      parameters:
+        - in: header
+          name: session
+          required: true
+          type: string
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/orderList'
+        401:
+          description: "**UNAUTHORISED**"
+          schema:
             $ref: '#/definitions/error401'
 
   /v0/order/{orderId}:
     get:
-      tags: [Orders]
-      summary: View order information 
+      tags: ["v0 - Orders"]
+      summary: View order details
       parameters:
         - in: path
           name: orderId
@@ -420,43 +559,12 @@ paths:
             $ref: '#/definitions/error400'
         401:
           description: "**UNAUTHORISED**"
-          schema: 
+          schema:
             $ref: '#/definitions/error401'
 
-    delete:
-      tags: [Orders]
-      summary: Cancel an order 
-      parameters:
-        - in: path
-          name: orderId
-          required: true
-          type: string
-        - in: header
-          name: session
-          required: true
-          type: string
-        - in: body
-          name: body
-          required: true
-          schema:
-            $ref: '#/definitions/orderCancel'
-      responses:
-        200:
-          description: "**SUCCESS**"
-          schema:
-            $ref: '#/definitions/orderCancel'
-        400:
-          description: "**INVALID INPUT**"
-          schema:
-            $ref: '#/definitions/error400'
-        401:
-          description: "**UNAUTHORISED**"
-          schema: 
-            $ref: '#/definitions/error401'
-            
     put:
-      tags: [Orders]
-      summary: Update an order 
+      tags: ["v0 - Orders"]
+      summary: Update an order
       parameters:
         - in: path
           name: orderId
@@ -482,12 +590,44 @@ paths:
             $ref: '#/definitions/error400'
         401:
           description: "**UNAUTHORISED**"
-          schema: 
+          schema:
             $ref: '#/definitions/error401'
+
+    delete:
+      tags: ["v0 - Orders"]
+      summary: Cancel (delete) an order
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          type: string
+        - in: header
+          name: session
+          required: true
+          type: string
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/orderCancel'
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/orderCancel'
+        400:
+          description: "**INVALID INPUT**"
+          schema:
+            $ref: '#/definitions/error400'
+        401:
+          description: "**UNAUTHORISED**"
+          schema:
+            $ref: '#/definitions/error401'
+
   /v0/order/{orderId}/ubl:
     get:
-      tags: [Orders]
-      summary: Generate UBL for an order
+      tags: ["v0 - Orders"]
+      summary: Get signed URL for an order's UBL document
       parameters:
         - in: path
           name: orderId
@@ -501,11 +641,7 @@ paths:
         200:
           description: "**SUCCESS**"
           schema:
-            type: object
-            properties:
-              url:
-                type: string
-                example: "https://ubl-bucket.s3.amazonaws.com/order-123.xml"
+            $ref: '#/definitions/signedUrl'
         400:
           description: "**INVALID INPUT**"
           schema:
@@ -515,59 +651,12 @@ paths:
           schema:
             $ref: '#/definitions/error401'
 
-  /v0/order/list:
-    get:
-      tags: [Orders]
-      summary: Get the list of all orders
-      parameters:
-        - in: header
-          name: session
-          required: true
-          type: string
-      responses:
-        200:
-          description: "**SUCCESS**"
-          schema:
-            $ref: '#/definitions/orderList'
-        401:
-          description: "**UNAUTHORISED**"
-          schema: 
-            $ref: '#/definitions/error401'
-  
-  /v1/order:
-    post:
-      tags: [Orders]
-      summary: Creates an Order
-      parameters:
-        - in: header
-          name: session
-          required: true
-          type: string
-        - in: body
-          name: body
-          required: true
-          schema:
-            $ref: '#/definitions/orderCreateV2'
-      responses:
-        200:
-          description: "**SUCCESS**"
-          schema:
-            $ref: '#/definitions/orderId'
-        400:
-          description: |
-             "**INVALID INPUT**"
-             - INVALID_ITEM
-          schema:
-            $ref: '#/definitions/error400'
-        401:
-          description: "**UNAUTHORISED**"
-          schema: 
-            $ref: '#/definitions/error401'
+  # V1 - Users
 
   /v1/user/details:
     put:
-      tags: [Users]
-      summary: Update user details
+      tags: ["v1 - Users"]
+      summary: Update user details (V1 - partial update, omitted fields unchanged)
       parameters:
         - in: header
           name: session
@@ -589,6 +678,620 @@ paths:
             $ref: '#/definitions/error400'
         401:
           description: "**UNAUTHORISED**"
-          schema: 
+          schema:
             $ref: '#/definitions/error401'
-    
+
+  # V1 - Orders
+
+  /v1/order:
+    post:
+      tags: ["v1 - Orders"]
+      summary: Create an order (V1 - user details taken from session, not body)
+      parameters:
+        - in: header
+          name: session
+          required: true
+          type: string
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/orderCreateV1'
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/orderId'
+        400:
+          description: |
+            **INVALID INPUT**
+            - INVALID_ITEM
+          schema:
+            $ref: '#/definitions/error400'
+        401:
+          description: "**UNAUTHORISED**"
+          schema:
+            $ref: '#/definitions/error401'
+
+  # V2 - Organisations
+
+  /v2/organisation:
+    post:
+      tags: ["v2 - Organisations"]
+      summary: Create a new organisation (caller becomes OWNER)
+      parameters:
+        - in: header
+          name: session
+          required: true
+          type: string
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/orgCreate'
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/orgId'
+        400:
+          description: |
+            **INVALID INPUT**
+            - INVALID_BUSINESS_NAME
+            - Duplicate organisation name
+            - Address not found
+          schema:
+            $ref: '#/definitions/error400'
+        401:
+          description: "**UNAUTHORISED**"
+          schema:
+            $ref: '#/definitions/error401'
+
+  /v2/organisation/{orgId}:
+    put:
+      tags: ["v2 - Organisations"]
+      summary: Update organisation details (ADMIN or OWNER only)
+      parameters:
+        - in: path
+          name: orgId
+          required: true
+          type: integer
+        - in: header
+          name: session
+          required: true
+          type: string
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/orgUpdate'
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/orgId'
+        400:
+          description: |
+            **INVALID INPUT**
+            - INVALID_BUSINESS_NAME
+            - Duplicate organisation name
+            - Address not found
+          schema:
+            $ref: '#/definitions/error400'
+        401:
+          description: "**UNAUTHORISED**"
+          schema:
+            $ref: '#/definitions/error401'
+
+    delete:
+      tags: ["v2 - Organisations"]
+      summary: Delete an organisation (OWNER only, no active orders)
+      parameters:
+        - in: path
+          name: orgId
+          required: true
+          type: integer
+        - in: header
+          name: session
+          required: true
+          type: string
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/emptyObj'
+        400:
+          description: "**INVALID INPUT** – active orders exist"
+          schema:
+            $ref: '#/definitions/error400'
+        401:
+          description: "**UNAUTHORISED**"
+          schema:
+            $ref: '#/definitions/error401'
+
+  /v2/organisation/{orgId}/members:
+    get:
+      tags: ["v2 - Organisations"]
+      summary: List all members of an organisation (any member)
+      parameters:
+        - in: path
+          name: orgId
+          required: true
+          type: integer
+        - in: header
+          name: session
+          required: true
+          type: string
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/orgUserList'
+        401:
+          description: "**UNAUTHORISED**"
+          schema:
+            $ref: '#/definitions/error401'
+
+    post:
+      tags: ["v2 - Organisations"]
+      summary: Add a user to an organisation by email (ADMIN or OWNER only)
+      parameters:
+        - in: path
+          name: orgId
+          required: true
+          type: integer
+        - in: header
+          name: session
+          required: true
+          type: string
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/orgUserAdd'
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/emptyObj'
+        400:
+          description: |
+            **INVALID INPUT**
+            - email is required
+            - No user found with that email address
+            - User is already a member of this organisation
+          schema:
+            $ref: '#/definitions/error400'
+        401:
+          description: "**UNAUTHORISED**"
+          schema:
+            $ref: '#/definitions/error401'
+
+  /v2/organisation/{orgId}/members/{userId}:
+    put:
+      tags: ["v2 - Organisations"]
+      summary: Update a member's role (ADMIN or OWNER only)
+      description: >
+        Sets the role of an existing organisation member to ADMIN or MEMBER.
+        The OWNER's role cannot be changed via this endpoint.
+        An admin cannot demote themselves if they are the only admin.
+      parameters:
+        - in: path
+          name: orgId
+          required: true
+          type: integer
+        - in: path
+          name: userId
+          required: true
+          type: integer
+        - in: header
+          name: session
+          required: true
+          type: string
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/orgUserRoleUpdate'
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/emptyObj'
+        400:
+          description: |
+            **INVALID INPUT**
+            - Role must be ADMIN or MEMBER
+            - Cannot change the role of the organisation owner
+            - User is not a member of this organisation
+            - You are the only admin (self-demotion blocked)
+          schema:
+            $ref: '#/definitions/error400'
+        401:
+          description: "**UNAUTHORISED**"
+          schema:
+            $ref: '#/definitions/error401'
+
+    delete:
+      tags: ["v2 - Organisations"]
+      summary: Remove a user from an organisation (ADMIN or OWNER only)
+      parameters:
+        - in: path
+          name: orgId
+          required: true
+          type: integer
+        - in: path
+          name: userId
+          required: true
+          type: integer
+        - in: header
+          name: session
+          required: true
+          type: string
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/emptyObj'
+        400:
+          description: "**INVALID INPUT** – user not a member or is the owner"
+          schema:
+            $ref: '#/definitions/error400'
+        401:
+          description: "**UNAUTHORISED**"
+          schema:
+            $ref: '#/definitions/error401'
+
+  # V2 - Orders
+
+  /v2/organisation/{orgId}/order:
+    post:
+      tags: ["v2 - Orders"]
+      summary: Create an order for an organisation (any member)
+      description: >
+        Uses `deliveryAddressId` to reference a pre-existing address. Create the address
+        first via `POST /v2/address` if needed.
+      parameters:
+        - in: path
+          name: orgId
+          required: true
+          type: integer
+        - in: header
+          name: session
+          required: true
+          type: string
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/orderCreateV2'
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/orderId'
+        400:
+          description: "**INVALID INPUT**"
+          schema:
+            $ref: '#/definitions/error400'
+        401:
+          description: "**UNAUTHORISED**"
+          schema:
+            $ref: '#/definitions/error401'
+
+  /v2/organisation/{orgId}/order/list:
+    get:
+      tags: ["v2 - Orders"]
+      summary: List all orders for an organisation (any member)
+      parameters:
+        - in: path
+          name: orgId
+          required: true
+          type: integer
+        - in: header
+          name: session
+          required: true
+          type: string
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/orderList'
+        401:
+          description: "**UNAUTHORISED**"
+          schema:
+            $ref: '#/definitions/error401'
+
+  /v2/organisation/{orgId}/order/{orderId}:
+    get:
+      tags: ["v2 - Orders"]
+      summary: View order details (any member) - response includes deliveryAddressId
+      parameters:
+        - in: path
+          name: orgId
+          required: true
+          type: integer
+        - in: path
+          name: orderId
+          required: true
+          type: string
+        - in: header
+          name: session
+          required: true
+          type: string
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/orderViewV2'
+        400:
+          description: "**INVALID INPUT**"
+          schema:
+            $ref: '#/definitions/error400'
+        401:
+          description: "**UNAUTHORISED**"
+          schema:
+            $ref: '#/definitions/error401'
+
+    put:
+      tags: ["v2 - Orders"]
+      summary: Update an order (any member)
+      parameters:
+        - in: path
+          name: orgId
+          required: true
+          type: integer
+        - in: path
+          name: orderId
+          required: true
+          type: string
+        - in: header
+          name: session
+          required: true
+          type: string
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/orderUpdateV2'
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/emptyObj'
+        400:
+          description: "**INVALID INPUT**"
+          schema:
+            $ref: '#/definitions/error400'
+        401:
+          description: "**UNAUTHORISED**"
+          schema:
+            $ref: '#/definitions/error401'
+
+    delete:
+      tags: ["v2 - Orders"]
+      summary: Cancel an order (any member)
+      parameters:
+        - in: path
+          name: orgId
+          required: true
+          type: integer
+        - in: path
+          name: orderId
+          required: true
+          type: string
+        - in: header
+          name: session
+          required: true
+          type: string
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/orderCancel'
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/orderCancel'
+        400:
+          description: "**INVALID INPUT**"
+          schema:
+            $ref: '#/definitions/error400'
+        401:
+          description: "**UNAUTHORISED**"
+          schema:
+            $ref: '#/definitions/error401'
+
+  /v2/organisation/{orgId}/order/{orderId}/ubl:
+    get:
+      tags: ["v2 - Orders"]
+      summary: Get a signed URL for an order's UBL document (any member)
+      parameters:
+        - in: path
+          name: orgId
+          required: true
+          type: integer
+        - in: path
+          name: orderId
+          required: true
+          type: string
+        - in: header
+          name: session
+          required: true
+          type: string
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/signedUrl'
+        400:
+          description: "**INVALID INPUT**"
+          schema:
+            $ref: '#/definitions/error400'
+        401:
+          description: "**UNAUTHORISED**"
+          schema:
+            $ref: '#/definitions/error401'
+
+  # special address function that connects orgs to addresses
+
+  /v2/organisation/{orgId}/address:
+    get:
+      tags: ["v2 - Addresses"]
+      summary: List all addresses associated with an organisation
+      description: >
+        Returns the organisation's own registered address plus every unique
+        delivery address used across the organisation's past orders.
+        Use this to populate address dropdowns in the frontend.
+      parameters:
+        - in: path
+          name: orgId
+          required: true
+          type: integer
+        - in: header
+          name: session
+          required: true
+          type: string
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/addressList'
+        400:
+          description: "**INVALID INPUT** – invalid orgId"
+          schema:
+            $ref: '#/definitions/error400'
+        401:
+          description: "**UNAUTHORISED** – not a member or bad session"
+          schema:
+            $ref: '#/definitions/error401'
+
+  # V2 - Addresses
+
+  /v2/address:
+    post:
+      tags: ["v2 - Addresses"]
+      summary: Create a new reusable address
+      description: >
+        Creates an address record that can then be referenced by its `addressId` when
+        creating or updating V2 orders, or when creating an organisation.
+      parameters:
+        - in: header
+          name: session
+          required: true
+          type: string
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/addressCreate'
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/addressId'
+        400:
+          description: |
+            **INVALID INPUT**
+            - Street is required
+            - Street address is too long
+          schema:
+            $ref: '#/definitions/error400'
+        401:
+          description: "**UNAUTHORISED**"
+          schema:
+            $ref: '#/definitions/error401'
+
+  /v2/address/{addressId}:
+    get:
+      tags: ["v2 - Addresses"]
+      summary: Retrieve an address by ID
+      parameters:
+        - in: path
+          name: addressId
+          required: true
+          type: integer
+        - in: header
+          name: session
+          required: true
+          type: string
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/addressView'
+        400:
+          description: "**INVALID INPUT** – address not found"
+          schema:
+            $ref: '#/definitions/error400'
+        401:
+          description: "**UNAUTHORISED**"
+          schema:
+            $ref: '#/definitions/error401'
+
+    put:
+      tags: ["v2 - Addresses"]
+      summary: Update address fields (any authenticated user)
+      description: All fields are optional - only fields included in the body are updated.
+      parameters:
+        - in: path
+          name: addressId
+          required: true
+          type: integer
+        - in: header
+          name: session
+          required: true
+          type: string
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/addressUpdate'
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/addressId'
+        400:
+          description: |
+            **INVALID INPUT**
+            - Address not found
+            - No fields provided for update
+            - Street address is too long
+          schema:
+            $ref: '#/definitions/error400'
+        401:
+          description: "**UNAUTHORISED**"
+          schema:
+            $ref: '#/definitions/error401'
+
+    delete:
+      tags: ["v2 - Addresses"]
+      summary: Delete an address (only if not in use by any order or organisation)
+      parameters:
+        - in: path
+          name: addressId
+          required: true
+          type: integer
+        - in: header
+          name: session
+          required: true
+          type: string
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/emptyObj'
+        400:
+          description: |
+            **INVALID INPUT**
+            - Address not found
+            - Address in use by an existing order delivery
+            - Address in use by an organisation
+          schema:
+            $ref: '#/definitions/error400'
+        401:
+          description: "**UNAUTHORISED**"
+          schema:
+            $ref: '#/definitions/error401'

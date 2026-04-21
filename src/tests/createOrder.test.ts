@@ -1,6 +1,6 @@
 import { createOrder } from '../order';
 import { createOrderHandler } from '../handlers/createOrder';
-import { createOrderHandler as v2create } from '../handlersV2/createOrder';
+import { createOrderHandler as v2create } from '../handlersV1/createOrder';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import mockEvent from './mocks/createOrderMock.json';
 import { InvalidRequestPeriod, UnauthorisedError } from '../throwError';
@@ -47,6 +47,7 @@ beforeEach(() => {
   mockedDataStore.getOrgByUserId.mockResolvedValue({ data: { orgId: 10 }, error: null } as never);
   mockedDataStore.createOrderSupaPush.mockResolvedValue();
   mockedGenerateUBL.createOrderUBLXML.mockImplementation();
+  jest.spyOn(console, 'error').mockImplementation(() => {});
 });
 
 describe('Backend logic test for Creating an Order', () => {
