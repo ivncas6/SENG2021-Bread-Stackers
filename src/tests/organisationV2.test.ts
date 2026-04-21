@@ -1,28 +1,12 @@
 /**
- * orgManagement.test.ts  (deployed as src/tests/organisationV2.test.ts)
+ * organisationV2.test.ts
  *
- * MOCK CHAIN RULES applied here:
- *
- * 1. beforeEach: jest.resetAllMocks() + re-setup mockReturnThis() for all
- *    non-terminal Supabase chain methods. This prevents stale queued values
- *    from failed tests bleeding into subsequent tests.
- *
- * 2. mockResolvedValueOnce is ONLY called on terminal methods:
- *    - maybeSingle  (always terminal)
- *    - single       (always terminal)
- *    - limit        (always terminal)
- *    - eq           ONLY when it is the very last call before the await
- *
- * 3. For non-terminal eq calls in a chain that ends with maybeSingle, the
- *    default mockReturnThis() is fine - eq returns `this` and maybeSingle
- *    remains accessible on the chain.
- *
- * 4. Standalone inserts (no .select().single() after) do NOT need a mock -
- *    insert returns `this` (mock object), `await mockObject` resolves to the
- *    mock object, and `{ error } = mockObject` gives error=undefined (falsy).
- *
- * 5. orgPermissions is fully mocked so Supabase is NEVER hit for permission
- *    checks - only for the business-logic DB calls inside organisation.ts.
+ * MOCK CHAIN RULES:
+ * 1. beforeEach: jest.resetAllMocks() + re-setup mockReturnThis() for all non-terminal methods.
+ * 2. mockResolvedValueOnce is ONLY called on terminal methods.
+ * 3. createOrganisation now checks for a duplicate name BEFORE the address check, so
+ *    maybeSingle calls are: (1) dup-name check, (2) address check.
+ * 4. updateOrganisation uses neq for the dup-name check (excludes the current orgId).
  */
 
 import { APIGatewayProxyEvent } from 'aws-lambda';
@@ -51,6 +35,7 @@ jest.mock('../supabase', () => ({
     update: jest.fn(),
     delete: jest.fn(),
     eq: jest.fn(),
+    neq: jest.fn(),     // ← required for updateOrganisation dup-name check
     or: jest.fn(),
     limit: jest.fn(),
     in: jest.fn(),
@@ -63,7 +48,7 @@ const mockedUserHelper = userHelper as jest.Mocked<typeof userHelper>;
 const mockedPerms = orgPermissions as jest.Mocked<typeof orgPermissions>;
 const db = supabase as never as {
   from: jest.Mock; select: jest.Mock; insert: jest.Mock; update: jest.Mock;
-  delete: jest.Mock; eq: jest.Mock; or: jest.Mock; limit: jest.Mock;
+  delete: jest.Mock; eq: jest.Mock; neq: jest.Mock; or: jest.Mock; limit: jest.Mock;
   in: jest.Mock; maybeSingle: jest.Mock; single: jest.Mock;
 };
 
@@ -79,9 +64,9 @@ function setupChainDefaults() {
   db.update.mockReturnThis();
   db.delete.mockReturnThis();
   db.eq.mockReturnThis();
+  db.neq.mockReturnThis();
   db.or.mockReturnThis();
   db.in.mockReturnThis();
-  // limit, maybeSingle, single intentionally left without default (must be set per-test)
 }
 
 function setupBase() {
@@ -107,11 +92,15 @@ function makeEvent(overrides: Partial<APIGatewayProxyEvent>): APIGatewayProxyEve
 }
 
 
-// createOrganisation
+// createOrganisation 
 
 describe('createOrganisation', () => {
   test('creates org and adds owner to organisation_members', async () => {
+    // 1. dup-name check: no duplicate
+    db.maybeSingle.mockResolvedValueOnce({ data: null, error: null });
+    // 2. address check: found
     db.maybeSingle.mockResolvedValueOnce({ data: { addressID: 1 }, error: null });
+    // 3. org insert
     db.single.mockResolvedValueOnce({ data: { orgId: 99 }, error: null });
 
     const result = await createOrganisation(SESSION, 'My Shop', 1);
@@ -129,8 +118,17 @@ describe('createOrganisation', () => {
     await expect(createOrganisation(SESSION, 'X', 1)).rejects.toThrow(InvalidBusinessName);
   });
 
+  test('throws InvalidBusinessName on duplicate name', async () => {
+    // dup-name check finds an existing org
+    db.maybeSingle.mockResolvedValueOnce({ data: { orgId: 77 }, error: null });
+    await expect(createOrganisation(SESSION, 'Taken Name', 1))
+      .rejects.toThrow('already exists');
+  });
+
   test('throws InvalidInput when address does not exist', async () => {
-    db.maybeSingle.mockResolvedValueOnce({ data: null, error: null });
+    db.maybeSingle
+      .mockResolvedValueOnce({ data: null, error: null })  // no dup
+      .mockResolvedValueOnce({ data: null, error: null }); // address not found
     await expect(createOrganisation(SESSION, 'Good Name', 99)).rejects.toThrow(InvalidInput);
   });
 
@@ -142,10 +140,13 @@ describe('createOrganisation', () => {
 });
 
 
-// updateOrganisation
+// updateOrganisation 
 
 describe('updateOrganisation', () => {
   test('updates org when caller is ADMIN or OWNER', async () => {
+    // 1. dup-name check: no duplicate
+    db.maybeSingle.mockResolvedValueOnce({ data: null, error: null });
+    // 2. address check: found
     db.maybeSingle.mockResolvedValueOnce({ data: { addressID: 2 }, error: null });
 
     const result = await updateOrganisation(SESSION, ORG_ID, 'New Name', 2);
@@ -160,8 +161,17 @@ describe('updateOrganisation', () => {
       .rejects.toThrow(UnauthorisedError);
   });
 
+  test('throws InvalidBusinessName on duplicate name', async () => {
+    // dup-name check finds a DIFFERENT org with same name
+    db.maybeSingle.mockResolvedValueOnce({ data: { orgId: 999 }, error: null });
+    await expect(updateOrganisation(SESSION, ORG_ID, 'Taken Name', 2))
+      .rejects.toThrow('already exists');
+  });
+
   test('throws InvalidInput when new address does not exist', async () => {
-    db.maybeSingle.mockResolvedValueOnce({ data: null, error: null });
+    db.maybeSingle
+      .mockResolvedValueOnce({ data: null, error: null })  // no dup
+      .mockResolvedValueOnce({ data: null, error: null }); // address not found
     await expect(updateOrganisation(SESSION, ORG_ID, 'New Name', 99)).rejects.toThrow(InvalidInput);
   });
 
@@ -171,13 +181,11 @@ describe('updateOrganisation', () => {
 });
 
 
-// deleteOrganisation
+// deleteOrganisation 
 
 describe('deleteOrganisation', () => {
   test('deletes org when caller is OWNER and no attached orders', async () => {
-    // from('orders').select().or().limit() - terminal: limit
     db.limit.mockResolvedValueOnce({ data: [], error: null });
-    // from('orgs').delete().eq()           - terminal eq, default → error=undefined ✓
 
     const result = await deleteOrganisation(SESSION, ORG_ID);
     expect(result).toEqual({});
@@ -210,7 +218,6 @@ describe('addOrgUser', () => {
     const result = await addOrgUser(SESSION, TARGET_USER, ORG_ID);
     expect(result).toEqual({});
     expect(mockedPerms.requireOrgAdminOrOwner).toHaveBeenCalledWith(USER_ID, ORG_ID);
-    // Role must be uppercase MEMBER (DB CHECK constraint)
     expect(db.insert).toHaveBeenCalledWith(
       expect.arrayContaining([expect.objectContaining({ role: 'MEMBER' })])
     );
@@ -222,14 +229,14 @@ describe('addOrgUser', () => {
   });
 
   test('throws InvalidInput when target user does not exist', async () => {
-    db.maybeSingle.mockResolvedValueOnce({ data: null, error: null }); // user not found
+    db.maybeSingle.mockResolvedValueOnce({ data: null, error: null });
     await expect(addOrgUser(SESSION, TARGET_USER, ORG_ID)).rejects.toThrow(InvalidInput);
   });
 
   test('throws InvalidInput when user is already a member', async () => {
     db.maybeSingle
       .mockResolvedValueOnce({ data: { contactId: TARGET_USER }, error: null })
-      .mockResolvedValueOnce({ data: { id: 1 }, error: null }); // already member
+      .mockResolvedValueOnce({ data: { id: 1 }, error: null });
     await expect(addOrgUser(SESSION, TARGET_USER, ORG_ID)).rejects.toThrow(InvalidInput);
   });
 });
@@ -253,15 +260,14 @@ describe('deleteOrgUser', () => {
   });
 
   test('throws InvalidInput when trying to remove the owner', async () => {
-    // org owner IS the target user - function guards against this
     db.maybeSingle.mockResolvedValueOnce({ data: { contactId: TARGET_USER }, error: null });
     await expect(deleteOrgUser(SESSION, TARGET_USER, ORG_ID)).rejects.toThrow(InvalidInput);
   });
 
   test('throws InvalidInput when target is not a member', async () => {
     db.maybeSingle
-      .mockResolvedValueOnce({ data: { contactId: 999 }, error: null }) // owner is 999
-      .mockResolvedValueOnce({ data: null, error: null });                // not a member
+      .mockResolvedValueOnce({ data: { contactId: 999 }, error: null })
+      .mockResolvedValueOnce({ data: null, error: null });
     await expect(deleteOrgUser(SESSION, TARGET_USER, ORG_ID)).rejects.toThrow(InvalidInput);
   });
 });
@@ -297,7 +303,9 @@ describe('listOrgUsers', () => {
 
 describe('Lambda: createOrganisationHandler', () => {
   test('200 on success', async () => {
-    db.maybeSingle.mockResolvedValueOnce({ data: { addressID: 1 }, error: null });
+    db.maybeSingle
+      .mockResolvedValueOnce({ data: null, error: null })               // no dup
+      .mockResolvedValueOnce({ data: { addressID: 1 }, error: null });  // address found
     db.single.mockResolvedValueOnce({ data: { orgId: 99 }, error: null });
 
     const event = makeEvent({ body: JSON.stringify({ orgName: 'My Shop', addressId: 1 }) });
@@ -316,11 +324,20 @@ describe('Lambda: createOrganisationHandler', () => {
     const res = await createOrganisationHandler(event);
     expect(res.statusCode).toBe(400);
   });
+
+  test('400 on duplicate name', async () => {
+    db.maybeSingle.mockResolvedValueOnce({ data: { orgId: 77 }, error: null });
+    const event = makeEvent({ body: JSON.stringify({ orgName: 'Taken', addressId: 1 }) });
+    const res = await createOrganisationHandler(event);
+    expect(res.statusCode).toBe(400);
+  });
 });
 
 describe('Lambda: updateOrganisationHandler', () => {
   test('200 on success', async () => {
-    db.maybeSingle.mockResolvedValueOnce({ data: { addressID: 2 }, error: null });
+    db.maybeSingle
+      .mockResolvedValueOnce({ data: null, error: null })
+      .mockResolvedValueOnce({ data: { addressID: 2 }, error: null });
 
     const event = makeEvent({ body: JSON.stringify({ orgName: 'Updated', addressId: 2 }) });
     const res = await updateOrganisationHandler(event);
@@ -391,8 +408,8 @@ describe('Lambda: deleteOrgUserHandler', () => {
       .mockResolvedValueOnce({ data: { contactId: 999 }, error: null })
       .mockResolvedValueOnce({ data: { id: 5 }, error: null });
 
-    const event = makeEvent({ pathParameters: 
-      { orgId: String(ORG_ID), userId: String(TARGET_USER) } 
+    const event = makeEvent({
+      pathParameters: { orgId: String(ORG_ID), userId: String(TARGET_USER) }
     });
     const res = await deleteOrgUserHandler(event);
     expect(res.statusCode).toBe(200);

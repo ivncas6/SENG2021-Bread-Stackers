@@ -30,9 +30,11 @@ describe('Backend: createOrganisation', () => {
   });
 
   test('successfully creates organisation', async () => {
-    // mock address exists check
+    // 1. duplicate name check: none found
+    mockedSupabase.maybeSingle.mockResolvedValueOnce({ data: null, error: null });
+    // 2. address exists check
     mockedSupabase.maybeSingle.mockResolvedValueOnce({ data: { addressID: 1 }, error: null });
-    // mock insert success
+    // 3. insert success
     mockedSupabase.single.mockResolvedValueOnce({ data: { orgId: 999 }, error: null });
 
     const res = await createOrganisation(mockSession, 'Valid Name', 1);
@@ -50,8 +52,17 @@ describe('Backend: createOrganisation', () => {
       .rejects.toThrow(InvalidBusinessName);
   });
 
+  test('throws InvalidBusinessName on duplicate name', async () => {
+    // duplicate check returns an existing org
+    mockedSupabase.maybeSingle.mockResolvedValueOnce({ data: { orgId: 77 }, error: null });
+    await expect(createOrganisation(mockSession, 'Taken Name', 1))
+      .rejects.toThrow('already exists');
+  });
+
   test('throws InvalidInput if addressId does not exist', async () => {
-    // Mock address check returning null
+    // duplicate check: no duplicate
+    mockedSupabase.maybeSingle.mockResolvedValueOnce({ data: null, error: null });
+    // address check: not found
     mockedSupabase.maybeSingle.mockResolvedValueOnce({ data: null, error: null });
     await expect(createOrganisation(mockSession, 'Valid Name', 99)).rejects.toThrow(InvalidInput);
   });
@@ -60,7 +71,10 @@ describe('Backend: createOrganisation', () => {
 describe('Lambda: createOrganisationHandler', () => {
   test('returns 200 on success', async () => {
     mockedUserHelper.getUserIdFromSession.mockResolvedValue(123);
-    mockedSupabase.maybeSingle.mockResolvedValueOnce({ data: { addressID: 1 }, error: null });
+    // dup check + address check + insert
+    mockedSupabase.maybeSingle
+      .mockResolvedValueOnce({ data: null, error: null })
+      .mockResolvedValueOnce({ data: { addressID: 1 }, error: null });
     mockedSupabase.single.mockResolvedValueOnce({ data: { orgId: 999 }, error: null });
 
     const event = {

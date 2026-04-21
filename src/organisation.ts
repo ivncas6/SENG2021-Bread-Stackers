@@ -27,6 +27,17 @@ export async function createOrganisation(session: string, orgName: string, addre
 
   validateBusinessName(orgName);
 
+  // Guard: duplicate name
+  const { data: dupOrg } = await supabase
+    .from('organisations')
+    .select('orgId')
+    .eq('orgName', orgName)
+    .maybeSingle();
+
+  if (dupOrg) {
+    throw new InvalidBusinessName('An organisation with this name already exists');
+  }
+
   const { data: addressData, error: addressError } = await supabase
     .from('addresses')
     .select('addressID')
@@ -49,7 +60,7 @@ export async function createOrganisation(session: string, orgName: string, addre
 
   if (error) throw new InvalidSupabase(`Org Creation Failed: ${error.message}`);
 
-  // add creator as OWNER in organisation_members
+  // Add the creator as OWNER in organisation_members
   await supabase
     .from('organisation_members')
     .insert([{ orgId: data.orgId, contactId: userId, role: 'OWNER' }]);
@@ -71,13 +82,14 @@ export async function updateOrganisation(
 
   validateBusinessName(orgName);
 
-  // check duplicate name
+  // Guard: duplicate name (exclude the org being updated)
   const { data: dupOrg } = await supabase
     .from('organisations')
     .select('orgId')
     .eq('orgName', orgName)
+    .neq('orgId', orgId)
     .maybeSingle();
- 
+
   if (dupOrg) {
     throw new InvalidBusinessName('An organisation with this name already exists');
   }
@@ -161,7 +173,6 @@ export async function addOrgUser(session: string, userId: number, orgId: number)
     throw new InvalidInput('User is already a member of this organisation');
   }
 
-  // FIX: was 'member' (lowercase) which violates the DB CHECK constraint
   const { error } = await supabase
     .from('organisation_members')
     .insert([{ orgId: orgId, contactId: userId, role: 'MEMBER' }]);
