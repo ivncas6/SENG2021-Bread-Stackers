@@ -37,6 +37,7 @@ const SESSION = 'valid-session';
 const USER_ID = 1;
 const ORG_ID = 10;
 const ORDER_ID = '550e8400-e29b-41d4-a716-446655440000';
+const ADDRESS_ID = 5;                                         // ← replaces raw address string
 const DELIVERY_PERIOD = { startDateTime: 1_000_000, endDateTime: 2_000_000 };
 const ITEMS = [{ name: 'Widget', description: 'A widget', unitPrice: 10, quantity: 2 }];
 
@@ -50,7 +51,12 @@ const MOCK_ORDER: Partial<Order> = {
   taxExclusive: 20,
   taxInclusive: 22,
   finalPrice: 22,
-  deliveries: [{ startDate: '1000000', endDate: '2000000', addresses: { street: '1 Test St' } }],
+  deliveries: [{
+    deliveryAddressID: ADDRESS_ID,
+    startDate: '1000000',
+    endDate: '2000000',
+    addresses: { street: '1 Test St' },
+  }],
   organisations: { contacts: 
     { firstName: 'A', lastName: 'B', telephone: '0400000000', email: 'a@b.com' } 
   },
@@ -64,8 +70,8 @@ function setupHappyPath() {
   mockedPerms.requireOrgAdminOrOwner.mockResolvedValue(undefined);
   mockedPerms.requireOrgOwner.mockResolvedValue(undefined);
   mockedDataStore.getOrderByIdSupa.mockResolvedValue(MOCK_ORDER as Order);
-  mockedDataStore.createOrderSupaPush.mockResolvedValue(undefined);
-  mockedDataStore.updateOrderSupa.mockResolvedValue(undefined);
+  mockedDataStore.createOrderSupaPushV2.mockResolvedValue(undefined);
+  mockedDataStore.updateOrderSupaV2.mockResolvedValue(undefined);
   mockedDataStore.deleteOrderSupa.mockResolvedValue(undefined);
   mockedUBL.uploadUBLForOrder.mockResolvedValue(null);
   mockedUBL.getSignedUBLUrl.mockResolvedValue('https://signed-url.example.com');
@@ -81,29 +87,30 @@ beforeEach(() => {
 
 describe('createOrder (V2 business logic)', () => {
   test('returns orderId on success', async () => {
-    const result = await createOrder(ORG_ID, 'AUD', SESSION, '1 Test St', DELIVERY_PERIOD, ITEMS);
+    const result = await createOrder(ORG_ID, 'AUD', SESSION, ADDRESS_ID, DELIVERY_PERIOD, ITEMS);
     expect(result).toEqual({ orderId: expect.any(String) });
     expect(mockedPerms.requireOrgMember).toHaveBeenCalledWith(USER_ID, ORG_ID);
-    expect(mockedDataStore.createOrderSupaPush).toHaveBeenCalled();
+    expect(mockedDataStore.createOrderSupaPushV2).toHaveBeenCalled();
     expect(mockedUBL.uploadUBLForOrder).toHaveBeenCalled();
   });
 
   test('throws UnauthorisedError when user is not a member', async () => {
     mockedPerms.requireOrgMember.mockRejectedValue(new UnauthorisedError('not a member'));
-    await expect(createOrder(ORG_ID, 'AUD', SESSION, '1 Test St', DELIVERY_PERIOD, ITEMS))
+    await expect(createOrder(ORG_ID, 'AUD', SESSION, ADDRESS_ID, DELIVERY_PERIOD, ITEMS))
       .rejects.toThrow(UnauthorisedError);
   });
 
   test('throws InvalidRequestPeriod when end <= start', async () => {
     const badPeriod = { startDateTime: 2_000_000, endDateTime: 1_000_000 };
-    await expect(createOrder(ORG_ID, 'AUD', SESSION, '1 Test St', badPeriod, ITEMS))
+    await expect(createOrder(ORG_ID, 'AUD', SESSION, ADDRESS_ID, badPeriod, ITEMS))
       .rejects.toThrow(InvalidRequestPeriod);
   });
 
-  test('throws when delivery address is too long', async () => {
-    const longAddr = 'A'.repeat(201);
-    await expect(createOrder(ORG_ID, 'AUD', SESSION, longAddr, DELIVERY_PERIOD, ITEMS))
-      .rejects.toThrow('too long');
+  test('throws when deliveryAddressId is not a positive integer', async () => {
+    await expect(createOrder(ORG_ID, 'AUD', SESSION, -1, DELIVERY_PERIOD, ITEMS))
+      .rejects.toThrow('positive integer');
+    await expect(createOrder(ORG_ID, 'AUD', SESSION, 0, DELIVERY_PERIOD, ITEMS))
+      .rejects.toThrow('positive integer');
   });
 });
 
@@ -123,7 +130,7 @@ describe('cancelOrder (V2 business logic)', () => {
       .rejects.toThrow(UnauthorisedError);
   });
 
-  test('throws InvalidOrderId when order belongs to different org', async () => {
+  test('throws UnauthorisedError when order belongs to different org', async () => {
     mockedDataStore.getOrderByIdSupa.mockResolvedValue({ ...MOCK_ORDER, buyerOrgID: 999 } as Order);
     await expect(cancelOrder(ORG_ID, ORDER_ID, 'reason', SESSION))
       .rejects.toThrow(UnauthorisedError);
@@ -146,13 +153,12 @@ describe('getOrderInfo (V2 business logic)', () => {
     expect(result.status).toBe('OPEN');
     expect(result.items).toHaveLength(1);
     expect(result.address).toBe('1 Test St');
+    expect(result.deliveryAddressId).toBe(ADDRESS_ID);
     expect(result.userDetails.firstName).toBe('A');
   });
 
   test('throws UnauthorisedError when not a member', async () => {
-    mockedPerms.requireOrgMember.mockRejectedValue(
-      new UnauthorisedError('not a member')
-    );
+    mockedPerms.requireOrgMember.mockRejectedValue(new UnauthorisedError('not a member'));
     await expect(getOrderInfo(ORG_ID, SESSION, ORDER_ID))
       .rejects.toThrow(UnauthorisedError);
   });
@@ -189,40 +195,39 @@ describe('listOrders (V2 business logic)', () => {
   });
 
   test('throws UnauthorisedError when not a member', async () => {
-    mockedPerms.requireOrgMember.mockRejectedValue(
-      new UnauthorisedError('not a member')
-    );
+    mockedPerms.requireOrgMember.mockRejectedValue(new UnauthorisedError('not a member'));
     await expect(listOrders(ORG_ID, SESSION)).rejects.toThrow(UnauthorisedError);
   });
 });
 
 
 // updateOrder
+
 describe('updateOrder (V2 business logic)', () => {
   test('returns empty object on success', async () => {
-    const result = await updateOrder(ORG_ID, SESSION, ORDER_ID, '2 New St',
+    const result = await updateOrder(ORG_ID, SESSION, ORDER_ID, ADDRESS_ID,
       DELIVERY_PERIOD, 'UPDATED');
     expect(result).toEqual({});
-    expect(mockedDataStore.updateOrderSupa).toHaveBeenCalledWith(
-      ORDER_ID, '2 New St', DELIVERY_PERIOD, 'UPDATED'
+    expect(mockedDataStore.updateOrderSupaV2).toHaveBeenCalledWith(
+      ORDER_ID, ADDRESS_ID, DELIVERY_PERIOD, 'UPDATED'
     );
     expect(mockedUBL.uploadUBLForOrder).toHaveBeenCalled();
   });
 
-  test('throws when delivery address is empty', async () => {
-    await expect(updateOrder(ORG_ID, SESSION, ORDER_ID, '   ', DELIVERY_PERIOD, 'UPDATED'))
-      .rejects.toThrow('empty');
+  test('throws when deliveryAddressId is invalid', async () => {
+    await expect(updateOrder(ORG_ID, SESSION, ORDER_ID, 0, DELIVERY_PERIOD, 'UPDATED'))
+      .rejects.toThrow('positive integer');
   });
 
   test('throws InvalidRequestPeriod when end <= start', async () => {
     const badPeriod = { startDateTime: 5, endDateTime: 5 };
-    await expect(updateOrder(ORG_ID, SESSION, ORDER_ID, '1 St', badPeriod, 'UPDATED'))
+    await expect(updateOrder(ORG_ID, SESSION, ORDER_ID, ADDRESS_ID, badPeriod, 'UPDATED'))
       .rejects.toThrow(InvalidRequestPeriod);
   });
 
   test('throws when not a member', async () => {
     mockedPerms.requireOrgMember.mockRejectedValue(new UnauthorisedError('not a member'));
-    await expect(updateOrder(ORG_ID, SESSION, ORDER_ID, '1 St', DELIVERY_PERIOD, 'UPDATED'))
+    await expect(updateOrder(ORG_ID, SESSION, ORDER_ID, ADDRESS_ID, DELIVERY_PERIOD, 'UPDATED'))
       .rejects.toThrow(UnauthorisedError);
   });
 });
@@ -244,8 +249,7 @@ describe('getOrderUBL (V2 business logic)', () => {
 });
 
 
-// Lambda handlers - one happy path + one error path per handler
-
+// Lambda handlers
 
 function makeEvent(overrides: Partial<APIGatewayProxyEvent>): APIGatewayProxyEvent {
   return {
@@ -260,8 +264,12 @@ describe('Lambda: createOrderHandler (V2)', () => {
   test('200 on success', async () => {
     const event = makeEvent({
       pathParameters: { orgId: String(ORG_ID) },
-      body: JSON.stringify({ currency: 'AUD', deliveryAddress: '1 St',
-        reqDeliveryPeriod: DELIVERY_PERIOD, items: ITEMS }),
+      body: JSON.stringify({
+        currency: 'AUD',
+        deliveryAddressId: ADDRESS_ID,
+        reqDeliveryPeriod: DELIVERY_PERIOD,
+        items: ITEMS,
+      }),
     });
     const res = await createOrderHandler(event);
     expect(res.statusCode).toBe(200);
@@ -278,12 +286,28 @@ describe('Lambda: createOrderHandler (V2)', () => {
     expect(res.statusCode).toBe(400);
   });
 
+  test('400 when deliveryAddressId is missing or not a number', async () => {
+    const event = makeEvent({
+      pathParameters: { orgId: String(ORG_ID) },
+      body: JSON.stringify({
+        currency: 'AUD',
+        deliveryAddressId: 'not-a-number',
+        reqDeliveryPeriod: DELIVERY_PERIOD,
+        items: ITEMS,
+      }),
+    });
+    const res = await createOrderHandler(event);
+    expect(res.statusCode).toBe(400);
+  });
+
   test('401 when not a member', async () => {
     mockedPerms.requireOrgMember.mockRejectedValue(new UnauthorisedError('not a member'));
     const event = makeEvent({
       pathParameters: { orgId: String(ORG_ID) },
-      body: JSON.stringify({ currency: 'AUD', deliveryAddress: '1 St',
-        reqDeliveryPeriod: DELIVERY_PERIOD, items: ITEMS }),
+      body: JSON.stringify({
+        currency: 'AUD', deliveryAddressId: ADDRESS_ID,
+        reqDeliveryPeriod: DELIVERY_PERIOD, items: ITEMS,
+      }),
     });
     const res = await createOrderHandler(event);
     expect(res.statusCode).toBe(401);
@@ -311,10 +335,12 @@ describe('Lambda: cancelOrderHandler (V2)', () => {
 });
 
 describe('Lambda: getOrderInfoHandler (V2)', () => {
-  test('200 on success', async () => {
+  test('200 on success with deliveryAddressId in response', async () => {
     const res = await getOrderInfoHandler(makeEvent({}));
     expect(res.statusCode).toBe(200);
-    expect(JSON.parse(res.body)).toHaveProperty('orderId', ORDER_ID);
+    const body = JSON.parse(res.body);
+    expect(body).toHaveProperty('orderId', ORDER_ID);
+    expect(body).toHaveProperty('deliveryAddressId', ADDRESS_ID);
   });
 
   test('401 when session missing', async () => {
@@ -352,8 +378,11 @@ describe('Lambda: listOrderHandler (V2)', () => {
 describe('Lambda: updateOrderHandler (V2)', () => {
   test('200 on success', async () => {
     const event = makeEvent({
-      body: JSON.stringify({ deliveryAddress: '2 New St', 
-        reqDeliveryPeriod: DELIVERY_PERIOD, status: 'UPDATED' }),
+      body: JSON.stringify({
+        deliveryAddressId: ADDRESS_ID,
+        reqDeliveryPeriod: DELIVERY_PERIOD,
+        status: 'UPDATED',
+      }),
     });
     const res = await updateOrderHandler(event);
     expect(res.statusCode).toBe(200);
@@ -364,10 +393,21 @@ describe('Lambda: updateOrderHandler (V2)', () => {
     expect(res.statusCode).toBe(401);
   });
 
-  test('400 on invalid period', async () => {
+  test('400 when deliveryAddressId is missing', async () => {
     const event = makeEvent({
-      body: JSON.stringify({ deliveryAddress: '2 St', reqDeliveryPeriod: 
-        { startDateTime: 5, endDateTime: 5 }, status: 'X' }),
+      body: JSON.stringify({ reqDeliveryPeriod: DELIVERY_PERIOD, status: 'X' }),
+    });
+    const res = await updateOrderHandler(event);
+    expect(res.statusCode).toBe(400);
+  });
+
+  test('400 on invalid delivery period', async () => {
+    const event = makeEvent({
+      body: JSON.stringify({
+        deliveryAddressId: ADDRESS_ID,
+        reqDeliveryPeriod: { startDateTime: 5, endDateTime: 5 },
+        status: 'X',
+      }),
     });
     const res = await updateOrderHandler(event);
     expect(res.statusCode).toBe(400);

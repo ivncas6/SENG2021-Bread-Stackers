@@ -14,12 +14,16 @@ export const createOrderHandler = async (event: APIGatewayProxyEvent) => {
 
     const body = JSON.parse(event.body ?? '{}');
     const currency: string = body.currency;
-    const deliveryAddress: string = body.deliveryAddress;
+    const deliveryAddressId: number = parseInt(body.deliveryAddressId);
     const reqDeliveryPeriod: ReqDeliveryPeriod = body.reqDeliveryPeriod;
     const items: ReqItem[] = body.items;
 
+    if (isNaN(deliveryAddressId)) {
+      return jsonResponse(400, { error: 'deliveryAddressId must be a valid integer' });
+    }
+
     const result = await createOrder(
-      orgId, currency, session, deliveryAddress, reqDeliveryPeriod, items
+      orgId, currency, session, deliveryAddressId, reqDeliveryPeriod, items
     );
     return jsonResponse(200, result);
   } catch (e) {

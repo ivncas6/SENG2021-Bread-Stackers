@@ -15,9 +15,15 @@ export const updateOrderHandler = async (event: APIGatewayProxyEvent) => {
     }
 
     const body = JSON.parse(event.body ?? '{}');
+    const deliveryAddressId: number = parseInt(body.deliveryAddressId);
+
+    if (isNaN(deliveryAddressId)) {
+      return jsonResponse(400, { error: 'deliveryAddressId must be a valid integer' });
+    }
+
     const result = await updateOrder(
       orgId, session, orderId,
-      body.deliveryAddress, body.reqDeliveryPeriod, body.status
+      deliveryAddressId, body.reqDeliveryPeriod, body.status
     );
     return jsonResponse(200, result);
   } catch (e) {
