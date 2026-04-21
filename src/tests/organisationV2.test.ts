@@ -80,9 +80,9 @@ function makeEvent(overrides: Partial<APIGatewayProxyEvent>): APIGatewayProxyEve
   } as unknown as APIGatewayProxyEvent;
 }
 
-// ---------------------------------------------------------------------------
+
 // createOrganisation
-// ---------------------------------------------------------------------------
+
 describe('createOrganisation', () => {
   test('creates org and adds owner to members', async () => {
     db.maybeSingle.mockResolvedValueOnce({ data: { addressID: 1 }, error: null }); // address check
@@ -112,9 +112,9 @@ describe('createOrganisation', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
+
 // updateOrganisation
-// ---------------------------------------------------------------------------
+
 describe('updateOrganisation', () => {
   test('updates org when caller is ADMIN or OWNER', async () => {
     mockedPerms.requireOrgAdminOrOwner.mockResolvedValue(undefined);
@@ -128,7 +128,8 @@ describe('updateOrganisation', () => {
 
   test('throws UnauthorisedError when caller is plain MEMBER', async () => {
     mockedPerms.requireOrgAdminOrOwner.mockRejectedValue(new UnauthorisedError('Admin or owner'));
-    await expect(updateOrganisation(SESSION, ORG_ID, 'New Name', 2)).rejects.toThrow(UnauthorisedError);
+    await expect(updateOrganisation(SESSION, ORG_ID, 'New Name', 2))
+      .rejects.toThrow(UnauthorisedError);
   });
 
   test('throws InvalidInput when new address does not exist', async () => {
@@ -141,9 +142,9 @@ describe('updateOrganisation', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
+
 // deleteOrganisation
-// ---------------------------------------------------------------------------
+
 describe('deleteOrganisation', () => {
   test('deletes org when caller is OWNER and no orders', async () => {
     (db as never as { limit: jest.Mock }).limit.mockResolvedValueOnce({ data: [], error: null });
@@ -155,8 +156,11 @@ describe('deleteOrganisation', () => {
   });
 
   test('throws UnauthorisedError when caller is ADMIN', async () => {
-    mockedPerms.requireOrgOwner.mockRejectedValue(new UnauthorisedError('Only the organisation owner'));
-    await expect(deleteOrganisation(SESSION, ORG_ID)).rejects.toThrow(UnauthorisedError);
+    mockedPerms.requireOrgOwner.mockRejectedValue(
+      new UnauthorisedError('Only the organisation owner')
+    );
+    await expect(deleteOrganisation(SESSION, ORG_ID))
+      .rejects.toThrow(UnauthorisedError);
   });
 
   test('throws InvalidInput when orders still exist', async () => {
@@ -167,16 +171,18 @@ describe('deleteOrganisation', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
+
 // addOrgUser
-// ---------------------------------------------------------------------------
+
 describe('addOrgUser', () => {
   const TARGET_USER = 42;
 
   test('adds member when caller is ADMIN or OWNER', async () => {
     db.maybeSingle
-      .mockResolvedValueOnce({ data: { contactId: TARGET_USER }, error: null }) // user exists
-      .mockResolvedValueOnce({ data: null, error: null });                       // not already member
+      // user exists
+      .mockResolvedValueOnce({ data: { contactId: TARGET_USER }, error: null })
+      // not already member
+      .mockResolvedValueOnce({ data: null, error: null });
     db.insert.mockResolvedValueOnce({ error: null });
 
     const result = await addOrgUser(SESSION, TARGET_USER, ORG_ID);
@@ -205,16 +211,16 @@ describe('addOrgUser', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
 // deleteOrgUser
-// ---------------------------------------------------------------------------
 describe('deleteOrgUser', () => {
   const TARGET_USER = 42;
 
   test('removes member when caller is ADMIN or OWNER', async () => {
     db.maybeSingle
-      .mockResolvedValueOnce({ data: { contactId: 999 }, error: null }) // org owner is 999 (not target)
-      .mockResolvedValueOnce({ data: { id: 5 }, error: null });          // member exists
+      // org owner is 999 (not target)
+      .mockResolvedValueOnce({ data: { contactId: 999 }, error: null })
+      // member exists
+      .mockResolvedValueOnce({ data: { id: 5 }, error: null });   
     db.delete.mockReturnThis();
     db.eq.mockResolvedValueOnce({ error: null });
 
@@ -237,17 +243,18 @@ describe('deleteOrgUser', () => {
     db.maybeSingle
       .mockResolvedValueOnce({ data: { contactId: 999 }, error: null }) // owner is 999
       .mockResolvedValueOnce({ data: null, error: null });                // not a member
-    await expect(deleteOrgUser(SESSION, TARGET_USER, ORG_ID)).rejects.toThrow(InvalidInput);
+    await expect(deleteOrgUser(SESSION, TARGET_USER, ORG_ID))
+      .rejects.toThrow(InvalidInput);
   });
 });
 
-// ---------------------------------------------------------------------------
 // listOrgUsers
-// ---------------------------------------------------------------------------
 describe('listOrgUsers', () => {
   test('returns all members including owner', async () => {
-    db.maybeSingle.mockResolvedValueOnce({ data: { contactId: USER_ID }, error: null }); // org owner
-    db.eq.mockResolvedValueOnce({ data: [{ contactId: 2 }], error: null });               // member rows
+    // org owner
+    db.maybeSingle.mockResolvedValueOnce({ data: { contactId: USER_ID }, error: null });
+    // member rows
+    db.eq.mockResolvedValueOnce({ data: [{ contactId: 2 }], error: null });
     db.in.mockResolvedValueOnce({
       data: [
         { contactId: USER_ID, firstName: 'A', lastName: 'B', email: 'a@b.com', telephone: '000' },
@@ -266,9 +273,9 @@ describe('listOrgUsers', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
+
 // Lambda handlers
-// ---------------------------------------------------------------------------
+
 describe('Lambda: createOrganisationHandler (V2)', () => {
   test('200 on success', async () => {
     db.maybeSingle.mockResolvedValueOnce({ data: { addressID: 1 }, error: null });
@@ -331,7 +338,9 @@ describe('Lambda: deleteOrganisationHandler (V2)', () => {
   });
 
   test('401 when caller is ADMIN (not OWNER)', async () => {
-    mockedPerms.requireOrgOwner.mockRejectedValue(new UnauthorisedError('Only the organisation owner'));
+    mockedPerms.requireOrgOwner.mockRejectedValue(
+      new UnauthorisedError('Only the organisation owner')
+    );
     const res = await deleteOrganisationHandler(makeEvent({}));
     expect(res.statusCode).toBe(401);
   });

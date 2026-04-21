@@ -48,9 +48,9 @@ const mock = supabase as never;
 
 beforeEach(() => jest.clearAllMocks());
 
-// ---------------------------------------------------------------------------
+
 // Local data
-// ---------------------------------------------------------------------------
+
 describe('Local data helpers', () => {
   test('getData returns empty data structure', () => {
     const d = getData();
@@ -67,9 +67,9 @@ describe('Local data helpers', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
+
 // createOrderSupaPush
-// ---------------------------------------------------------------------------
+
 describe('createOrderSupaPush', () => {
   const mockOrder = { orderId: 'uuid', currency: 'AUD', finalPrice: 100 } as never;
   const period = { startDateTime: 100, endDateTime: 200 };
@@ -108,9 +108,9 @@ describe('createOrderSupaPush', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
+
 // getOrderByIdSupa
-// ---------------------------------------------------------------------------
+
 describe('getOrderByIdSupa', () => {
   test('returns null for invalid UUID', async () => {
     expect(await getOrderByIdSupa('not-a-uuid')).toBeNull();
@@ -128,15 +128,17 @@ describe('getOrderByIdSupa', () => {
   });
 
   test('re-throws other Supabase errors', async () => {
-    mock.maybeSingle.mockResolvedValueOnce({ data: null, error: { code: 'OTHER', message: 'Fatal' } });
+    mock.maybeSingle.mockResolvedValueOnce({ 
+      data: null, error: { code: 'OTHER', message: 'Fatal' } 
+    });
     await expect(getOrderByIdSupa('550e8400-e29b-41d4-a716-446655440000'))
       .rejects.toEqual({ code: 'OTHER', message: 'Fatal' });
   });
 });
 
-// ---------------------------------------------------------------------------
+
 // getUserByIdSupa / getOrgByUserId / createOrganisationSupa
-// ---------------------------------------------------------------------------
+
 describe('User and Org helpers', () => {
   test('getUserByIdSupa returns contact data', async () => {
     mock.maybeSingle.mockResolvedValueOnce({ data: { contactId: 1 }, error: null });
@@ -167,9 +169,9 @@ describe('User and Org helpers', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
+
 // getUserRoleInOrg
-// ---------------------------------------------------------------------------
+
 describe('getUserRoleInOrg', () => {
   test('returns null if org does not exist', async () => {
     mock.maybeSingle.mockResolvedValueOnce({ data: null, error: null }); // org check
@@ -183,8 +185,10 @@ describe('getUserRoleInOrg', () => {
 
   test('returns ADMIN when found in organisation_members with ADMIN role', async () => {
     mock.maybeSingle
-      .mockResolvedValueOnce({ data: { contactId: 999 }, error: null }) // org owner is 999
-      .mockResolvedValueOnce({ data: { role: 'ADMIN' }, error: null }); // member row
+      // org owner is 999
+      .mockResolvedValueOnce({ data: { contactId: 999 }, error: null })
+      // member row
+      .mockResolvedValueOnce({ data: { role: 'ADMIN' }, error: null });
     expect(await getUserRoleInOrg(1, 10)).toBe('ADMIN');
   });
 
@@ -203,9 +207,9 @@ describe('getUserRoleInOrg', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
+
 // updateOrderStatus / updateOrderSupa
-// ---------------------------------------------------------------------------
+
 describe('updateOrderStatus and updateOrderSupa', () => {
   test('updateOrderStatus succeeds', async () => {
     mock.eq.mockResolvedValueOnce({ data: { status: 'CLOSED' }, error: null });
@@ -239,9 +243,9 @@ describe('updateOrderStatus and updateOrderSupa', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
+
 // deleteOrderSupa
-// ---------------------------------------------------------------------------
+
 describe('deleteOrderSupa', () => {
   test('deletes UBL and order successfully', async () => {
     mock.storage.remove.mockResolvedValueOnce({ data: {}, error: null });

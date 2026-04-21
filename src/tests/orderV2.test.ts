@@ -43,9 +43,9 @@ const mockedDataStore = dataStore as jest.Mocked<typeof dataStore>;
 const mockedUBL = generateUBL as jest.Mocked<typeof generateUBL>;
 const mockedSupabase = supabase as unknown as SupabaseMock;
 
-// ---------------------------------------------------------------------------
+
 // Shared test fixtures
-// ---------------------------------------------------------------------------
+
 const SESSION = 'valid-session';
 const USER_ID = 1;
 const ORG_ID = 10;
@@ -64,8 +64,11 @@ const MOCK_ORDER: Partial<Order> = {
   taxInclusive: 22,
   finalPrice: 22,
   deliveries: [{ startDate: '1000000', endDate: '2000000', addresses: { street: '1 Test St' } }],
-  organisations: { contacts: { firstName: 'A', lastName: 'B', telephone: '0400000000', email: 'a@b.com' } },
-  order_lines: [{ quantity: 2, items: { name: 'Widget', description: 'A widget', price: 10 } }] as never,
+  organisations: { contacts: 
+    { firstName: 'A', lastName: 'B', telephone: '0400000000', email: 'a@b.com' } 
+  },
+  order_lines: [{ quantity: 2, items: 
+    { name: 'Widget', description: 'A widget', price: 10 } }] as never,
 };
 
 function setupHappyPath() {
@@ -86,9 +89,9 @@ beforeEach(() => {
   setupHappyPath();
 });
 
-// ---------------------------------------------------------------------------
+
 // createOrder
-// ---------------------------------------------------------------------------
+
 describe('createOrder (V2 business logic)', () => {
   test('returns orderId on success', async () => {
     const result = await createOrder(ORG_ID, 'AUD', SESSION, '1 Test St', DELIVERY_PERIOD, ITEMS);
@@ -117,9 +120,9 @@ describe('createOrder (V2 business logic)', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
+
 // cancelOrder
-// ---------------------------------------------------------------------------
+
 describe('cancelOrder (V2 business logic)', () => {
   test('returns reason on success', async () => {
     const result = await cancelOrder(ORG_ID, ORDER_ID, 'Changed mind', SESSION);
@@ -129,23 +132,26 @@ describe('cancelOrder (V2 business logic)', () => {
 
   test('throws UnauthorisedError when not a member', async () => {
     mockedPerms.requireOrgMember.mockRejectedValue(new UnauthorisedError('not a member'));
-    await expect(cancelOrder(ORG_ID, ORDER_ID, 'reason', SESSION)).rejects.toThrow(UnauthorisedError);
+    await expect(cancelOrder(ORG_ID, ORDER_ID, 'reason', SESSION))
+      .rejects.toThrow(UnauthorisedError);
   });
 
   test('throws InvalidOrderId when order belongs to different org', async () => {
     mockedDataStore.getOrderByIdSupa.mockResolvedValue({ ...MOCK_ORDER, buyerOrgID: 999 } as Order);
-    await expect(cancelOrder(ORG_ID, ORDER_ID, 'reason', SESSION)).rejects.toThrow(UnauthorisedError);
+    await expect(cancelOrder(ORG_ID, ORDER_ID, 'reason', SESSION))
+      .rejects.toThrow(UnauthorisedError);
   });
 
   test('throws InvalidOrderId when order not found', async () => {
     mockedDataStore.getOrderByIdSupa.mockResolvedValue(null);
-    await expect(cancelOrder(ORG_ID, ORDER_ID, 'reason', SESSION)).rejects.toThrow(InvalidOrderId);
+    await expect(cancelOrder(ORG_ID, ORDER_ID, 'reason', SESSION))
+      .rejects.toThrow(InvalidOrderId);
   });
 });
 
-// ---------------------------------------------------------------------------
+
 // getOrderInfo
-// ---------------------------------------------------------------------------
+
 describe('getOrderInfo (V2 business logic)', () => {
   test('returns full order details on success', async () => {
     const result = await getOrderInfo(ORG_ID, SESSION, ORDER_ID);
@@ -157,19 +163,25 @@ describe('getOrderInfo (V2 business logic)', () => {
   });
 
   test('throws UnauthorisedError when not a member', async () => {
-    mockedPerms.requireOrgMember.mockRejectedValue(new UnauthorisedError('not a member'));
-    await expect(getOrderInfo(ORG_ID, SESSION, ORDER_ID)).rejects.toThrow(UnauthorisedError);
+    mockedPerms.requireOrgMember.mockRejectedValue(
+      new UnauthorisedError('not a member')
+    );
+    await expect(getOrderInfo(ORG_ID, SESSION, ORDER_ID))
+      .rejects.toThrow(UnauthorisedError);
   });
 
   test('throws when order belongs to different org', async () => {
-    mockedDataStore.getOrderByIdSupa.mockResolvedValue({ ...MOCK_ORDER, buyerOrgID: 999 } as Order);
-    await expect(getOrderInfo(ORG_ID, SESSION, ORDER_ID)).rejects.toThrow(UnauthorisedError);
+    mockedDataStore.getOrderByIdSupa.mockResolvedValue(
+      { ...MOCK_ORDER, buyerOrgID: 999 } as Order
+    );
+    await expect(getOrderInfo(ORG_ID, SESSION, ORDER_ID))
+      .rejects.toThrow(UnauthorisedError);
   });
 });
 
-// ---------------------------------------------------------------------------
+
 // listOrders
-// ---------------------------------------------------------------------------
+
 describe('listOrders (V2 business logic)', () => {
   function mockSupabaseList(orders: unknown[]) {
     const eqMock = jest.fn().mockResolvedValue({ data: orders, error: null });
@@ -190,17 +202,19 @@ describe('listOrders (V2 business logic)', () => {
   });
 
   test('throws UnauthorisedError when not a member', async () => {
-    mockedPerms.requireOrgMember.mockRejectedValue(new UnauthorisedError('not a member'));
+    mockedPerms.requireOrgMember.mockRejectedValue(
+      new UnauthorisedError('not a member')
+    );
     await expect(listOrders(ORG_ID, SESSION)).rejects.toThrow(UnauthorisedError);
   });
 });
 
-// ---------------------------------------------------------------------------
+
 // updateOrder
-// ---------------------------------------------------------------------------
 describe('updateOrder (V2 business logic)', () => {
   test('returns empty object on success', async () => {
-    const result = await updateOrder(ORG_ID, SESSION, ORDER_ID, '2 New St', DELIVERY_PERIOD, 'UPDATED');
+    const result = await updateOrder(ORG_ID, SESSION, ORDER_ID, '2 New St',
+      DELIVERY_PERIOD, 'UPDATED');
     expect(result).toEqual({});
     expect(mockedDataStore.updateOrderSupa).toHaveBeenCalledWith(
       ORDER_ID, '2 New St', DELIVERY_PERIOD, 'UPDATED'
@@ -226,9 +240,9 @@ describe('updateOrder (V2 business logic)', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
+
 // getOrderUBL
-// ---------------------------------------------------------------------------
+
 describe('getOrderUBL (V2 business logic)', () => {
   test('returns signed URL on success', async () => {
     const result = await getOrderUBL(ORG_ID, SESSION, ORDER_ID);
@@ -242,9 +256,9 @@ describe('getOrderUBL (V2 business logic)', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
+
 // Lambda handlers — one happy path + one error path per handler
-// ---------------------------------------------------------------------------
+
 
 function makeEvent(overrides: Partial<APIGatewayProxyEvent>): APIGatewayProxyEvent {
   return {
@@ -259,7 +273,8 @@ describe('Lambda: createOrderHandler (V2)', () => {
   test('200 on success', async () => {
     const event = makeEvent({
       pathParameters: { orgId: String(ORG_ID) },
-      body: JSON.stringify({ currency: 'AUD', deliveryAddress: '1 St', reqDeliveryPeriod: DELIVERY_PERIOD, items: ITEMS }),
+      body: JSON.stringify({ currency: 'AUD', deliveryAddress: '1 St',
+        reqDeliveryPeriod: DELIVERY_PERIOD, items: ITEMS }),
     });
     const res = await createOrderHandler(event);
     expect(res.statusCode).toBe(200);
@@ -280,7 +295,8 @@ describe('Lambda: createOrderHandler (V2)', () => {
     mockedPerms.requireOrgMember.mockRejectedValue(new UnauthorisedError('not a member'));
     const event = makeEvent({
       pathParameters: { orgId: String(ORG_ID) },
-      body: JSON.stringify({ currency: 'AUD', deliveryAddress: '1 St', reqDeliveryPeriod: DELIVERY_PERIOD, items: ITEMS }),
+      body: JSON.stringify({ currency: 'AUD', deliveryAddress: '1 St',
+        reqDeliveryPeriod: DELIVERY_PERIOD, items: ITEMS }),
     });
     const res = await createOrderHandler(event);
     expect(res.statusCode).toBe(401);
@@ -329,7 +345,8 @@ describe('Lambda: getOrderInfoHandler (V2)', () => {
 describe('Lambda: listOrderHandler (V2)', () => {
   function mockList(orders: unknown[]) {
     const eqMock = jest.fn().mockResolvedValue({ data: orders, error: null });
-    mockedSupabase.from.mockReturnValue({ select: jest.fn().mockReturnValue({ eq: eqMock }) } as never);
+    mockedSupabase.from.mockReturnValue({ select: jest.fn()
+      .mockReturnValue({ eq: eqMock }) } as never);
   }
 
   test('200 with order list', async () => {
@@ -348,7 +365,8 @@ describe('Lambda: listOrderHandler (V2)', () => {
 describe('Lambda: updateOrderHandler (V2)', () => {
   test('200 on success', async () => {
     const event = makeEvent({
-      body: JSON.stringify({ deliveryAddress: '2 New St', reqDeliveryPeriod: DELIVERY_PERIOD, status: 'UPDATED' }),
+      body: JSON.stringify({ deliveryAddress: '2 New St', 
+        reqDeliveryPeriod: DELIVERY_PERIOD, status: 'UPDATED' }),
     });
     const res = await updateOrderHandler(event);
     expect(res.statusCode).toBe(200);
@@ -361,7 +379,8 @@ describe('Lambda: updateOrderHandler (V2)', () => {
 
   test('400 on invalid period', async () => {
     const event = makeEvent({
-      body: JSON.stringify({ deliveryAddress: '2 St', reqDeliveryPeriod: { startDateTime: 5, endDateTime: 5 }, status: 'X' }),
+      body: JSON.stringify({ deliveryAddress: '2 St', reqDeliveryPeriod: 
+        { startDateTime: 5, endDateTime: 5 }, status: 'X' }),
     });
     const res = await updateOrderHandler(event);
     expect(res.statusCode).toBe(400);
