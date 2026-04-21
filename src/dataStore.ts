@@ -1,12 +1,12 @@
 import { isUUID } from 'validator';
-import { Address, Contact, Delivery, Item, Order, 
+import { Address, Contact, Delivery, Item, Order, OrgRole,
   OrderLine, ReqDeliveryPeriod, ReqItem, 
 } from './interfaces';
 import { UBLBucket, generateUBLOrderFilePath } from './generateUBL';
 import { supabase } from './supabase';
 import { InvalidSupabase } from './throwError';
 
-// local for testing
+// local memory
 
 export interface Data {
     users: Contact[];
@@ -47,7 +47,7 @@ export async function clearData() {
 
 export const getData = () : Data => data;
 
-// supaBase stuff
+// orders
 
 export async function createOrderSupaPush(
   order: Order,
@@ -91,9 +91,7 @@ export async function createOrderSupaPush(
       endDate: reqDeliveryPeriod.endDateTime.toString()
     }]);
 
-
   for (const i of items) {
-    // create the item to get an itemId
     const { data: itemData } = await supabase.from('items').insert([{
       name: i.name,
       price: i.unitPrice,
@@ -144,15 +142,6 @@ export async function getOrderByIdSupa(orderId: string): Promise<Order | null> {
   return data;
 }
 
-export async function getUserByIdSupa(userId: number) {
-  const { data } = await supabase
-    .from('contacts')
-    .select('*')
-    .eq('contactId', userId)
-    .maybeSingle();
-  return data;
-}
-
 export async function updateOrderStatus(orderId: string, newStatus: string) {
   const { data, error } = await supabase
     .from('orders')
@@ -169,7 +158,6 @@ export async function updateOrderSupa(
   reqDeliveryPeriod: ReqDeliveryPeriod,
   status: string 
 ) {
-  // promise all uses concurrency so run simult + fast
   const [orderRes, deliveryRes] = await Promise.all([
     supabase
       .from('orders')
@@ -187,11 +175,9 @@ export async function updateOrderSupa(
       .single()
   ]);
 
-  // throw
   if (orderRes.error) throw orderRes.error;
   if (deliveryRes.error) throw deliveryRes.error;
 
-  // update addr 
   const addressId = deliveryRes.data?.deliveryAddressID;
   
   if (addressId) {
@@ -205,7 +191,6 @@ export async function updateOrderSupa(
 }
 
 export async function deleteOrderSupa(orderId: string) {
-  // delete UBLs
   const filePath = await generateUBLOrderFilePath(orderId);
   const deleteUBL = await supabase
     .storage
@@ -225,6 +210,24 @@ export async function deleteOrderSupa(orderId: string) {
   }
 }
 
+// users & contacts
+
+export async function getUserByIdSupa(userId: number) {
+  const { data } = await supabase
+    .from('contacts')
+    .select('*')
+    .eq('contactId', userId)
+    .maybeSingle();
+  return data;
+}
+
+// organisations
+
+/**
+ * V0 compatibility: find the org that a user OWNS (organisations.contactId).
+ * Members added via organisation_members are NOT found here.
+ * Use getUserRoleInOrg for the full membership check.
+ */
 export async function getOrgByUserId(userId: number) {
   return await supabase
     .from('organisations')
@@ -233,6 +236,40 @@ export async function getOrgByUserId(userId: number) {
     .single();
 }
 
+/**
+ * Returns the calling user's role in the given org, or null if they are not
+ * a member. Checks both the owner column (organisations.contactId = OWNER)
+ * and the organisation_members table (ADMIN / MEMBER).
+ */
+export async function getUserRoleInOrg(
+  userId: number,
+  orgId: number
+): Promise<OrgRole | null> {
+  // First check if the org exists and if the user is the owner
+  const { data: orgData } = await supabase
+    .from('organisations')
+    .select('contactId')
+    .eq('orgId', orgId)
+    .maybeSingle();
+
+  if (!orgData) return null; // org does not exist
+
+  if (orgData.contactId === userId) return 'OWNER';
+
+  // Otherwise look in organisation_members
+  const { data: memberData } = await supabase
+    .from('organisation_members')
+    .select('role')
+    .eq('orgId', orgId)
+    .eq('contactId', userId)
+    .maybeSingle();
+
+  if (!memberData) return null;
+  return memberData.role as OrgRole;
+}
+
+/*Create an organisation and automatically add the creator as OWNER in 
+organisation_members. Called during user registration.*/
 export async function createOrganisationSupa(contactId: number, ownerName: string) {
   const { data, error } = await supabase
     .from('organisations')
@@ -244,5 +281,11 @@ export async function createOrganisationSupa(contactId: number, ownerName: strin
     .single();
 
   if (error) throw new InvalidSupabase(`Org Creation Failed: ${error.message}`);
+
+  // mirror the owner in organisation_members so role-based checks work
+  await supabase
+    .from('organisation_members')
+    .insert([{ orgId: data.orgId, contactId: contactId, role: 'OWNER' }]);
+
   return data;
 }
