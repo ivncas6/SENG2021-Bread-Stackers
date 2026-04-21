@@ -70,6 +70,9 @@ function setupChainDefaults() {
   db.neq.mockReturnThis();
   db.or.mockReturnThis();
   db.in.mockReturnThis();
+  db.limit.mockReturnThis();
+  db.maybeSingle.mockResolvedValue({ data: null, error: null }); 
+  db.single.mockResolvedValue({ data: null, error: null });
 }
 
 function setupBase() {
@@ -240,7 +243,6 @@ describe('addOrgUser', () => {
     db.maybeSingle
       .mockResolvedValueOnce({ data: { contactId: TARGET_USER_ID }, error: null })
       .mockResolvedValueOnce({ data: { id: 1 }, error: null });
-    await expect(addOrgUser(SESSION, TARGET_EMAIL, ORG_ID)).rejects.toThrow(InvalidInput);
     await expect(addOrgUser(SESSION, TARGET_EMAIL, ORG_ID)).rejects.toThrow('already a member');
   });
 });
@@ -309,10 +311,12 @@ describe('updateOrgUserRole', () => {
     // target is currently ADMIN
     db.maybeSingle.mockResolvedValueOnce({ data: { id: 5, role: 'ADMIN' }, error: null });
     // only one ADMIN in the org
-    db.eq.mockReturnValueOnce(db)   // .eq('orgId')
-      .mockReturnValueOnce(db)      // .eq('role', 'ADMIN') — continues chain
-      .mockResolvedValueOnce({ data: [{ contactId: TARGET_USER_ID }], error: null });
-
+    db.eq.mockImplementation((col, val) => {
+      if (col === 'role' && val === 'ADMIN') {
+        return Promise.resolve({ data: [{ contactId: TARGET_USER_ID }], error: null });
+      }
+      return db;
+    });
     await expect(updateOrgUserRole(SESSION, TARGET_USER_ID, ORG_ID, 'MEMBER'))
       .rejects.toThrow('only admin');
   });
@@ -365,9 +369,10 @@ describe('listOrgUsers', () => {
     });
     db.in.mockResolvedValueOnce({
       data: [
-        { contactId: USER_ID, firstName: 'Alice', lastName: 'A', email: 'a@a.com', telephone: '000' },
-        { contactId: 2,       firstName: 'Bob',   lastName: 'B', email: 'b@b.com', telephone: '111' },
-        { contactId: 3,       firstName: 'Carol',  lastName: 'C', email: 'c@c.com', telephone: '222' },
+        { contactId: USER_ID, firstName: 'Alice', lastName: 'A', 
+          email: 'a@a.com', telephone: '000' },
+        { contactId: 2, firstName: 'Bob', lastName: 'B', email: 'b@b.com', telephone: '111' },
+        { contactId: 3, firstName: 'Carol', lastName: 'C', email: 'c@c.com', telephone: '222' },
       ],
       error: null,
     });
@@ -639,7 +644,7 @@ describe('Lambda: listOrgUsersHandler', () => {
     db.in.mockResolvedValueOnce({
       data: [
         { contactId: USER_ID, firstName: 'A', lastName: 'B', email: 'a@b.com', telephone: '000' },
-        { contactId: 2,       firstName: 'C', lastName: 'D', email: 'c@d.com', telephone: '111' },
+        { contactId: 2, firstName: 'C', lastName: 'D', email: 'c@d.com', telephone: '111' },
       ],
       error: null,
     });

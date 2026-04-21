@@ -193,9 +193,7 @@ export async function addOrgUser(session: string, email: string, orgId: number) 
 
 /**
  * Updates the role of an existing organisation member.
- * - Only OWNER or ADMIN can call this.
- * - The OWNER's role cannot be changed (use deleteOrganisation to remove ownership).
- * - Valid target roles: 'ADMIN' | 'MEMBER'.
+ * - Only OWNER or ADMIN can call this and change to ADMIN / MEMBER. OWNER STAYS OWNER
  * - A user cannot demote themselves if they are the only ADMIN/OWNER (guard below).
  */
 export async function updateOrgUserRole(
@@ -236,8 +234,8 @@ export async function updateOrgUserRole(
     throw new InvalidInput('User is not a member of this organisation');
   }
 
-  // Guard: prevent an ADMIN from demoting themselves if they are the only elevated user.
-  // An OWNER always exists, so this only matters when an ADMIN tries to demote themselves
+  // Guard: prevent ADMIN from demoting themselves if only elevated user.
+  // OWNER always exists, so this only matters when an ADMIN tries to demote themselves
   // to MEMBER and would leave no other admin.
   if (currUserId === targetUserId && existing.role === 'ADMIN' && role === 'MEMBER') {
     const { data: admins } = await supabase
@@ -247,7 +245,6 @@ export async function updateOrgUserRole(
       .eq('role', 'ADMIN');
 
     // If the caller is the only ADMIN (owner still exists, so org isn't leaderless,
-    // but this is still a useful guard to prevent accidental self-demotion)
     if (admins && admins.length === 1) {
       throw new InvalidInput(
         'You are the only admin. Promote another member before demoting yourself.'
@@ -307,21 +304,15 @@ export async function deleteOrgUser(session: string, userId: number, orgId: numb
   return {};
 }
 
-/**
- * Lists all members of an organisation, including their role.
- * Queries organisation_members directly for both membership and role, then
- * joins with contacts for display fields. The org's owner (organisations.contactId)
- * is included via the OWNER row that is always inserted into organisation_members
- * at creation time.
- */
+// lists all members of an organisation, including their role.
 export async function listOrgUsers(session: string, orgId: number) {
   const userId = await getUserIdFromSession(session);
   if (!userId) throw new UnauthorisedError('Invalid user session');
 
-  // Any member (including MEMBER role) can list the org's users
+  // any member (including MEMBER role) can list the org's users
   await requireOrgMember(userId, orgId);
 
-  // Fetch all member rows with their roles from organisation_members
+  // fetch all member rows with roles from organisation_members
   const { data: memberRows, error: memberError } = await supabase
     .from('organisation_members')
     .select('contactId, role')

@@ -3,13 +3,6 @@ import { updateOrgUserRole } from '../organisation';
 import { handleErrorResponse, jsonResponse } from '../handlerHelpers';
 import { OrgRole } from '../interfaces';
 
-/**
- * PUT /v2/organisation/{orgId}/members/{userId}
- * Updates the role of an existing organisation member.
- * Body: { role: 'ADMIN' | 'MEMBER' }
- * Requires ADMIN or OWNER session.
- * The OWNER's role cannot be changed.
- */
 export const updateOrgUserHandler = async (event: APIGatewayProxyEvent) => {
   try {
     const session = event.headers?.session;
