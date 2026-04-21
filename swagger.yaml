@@ -302,9 +302,24 @@ definitions:
 
   orgUserAdd:
     type: object
-    required: [userId]
+    required: [email]
     properties:
-      userId: { type: integer, example: 7 }
+      email:
+        type: string
+        example: user@example.com
+        description: Email address of the user to add to the organisation
+
+  orgUserRoleUpdate:
+    type: object
+    required: [role]
+    properties:
+      role:
+        type: string
+        enum: [ADMIN, MEMBER]
+        example: ADMIN
+        description: >
+          New role for the member. OWNER cannot be assigned via this endpoint —
+          ownership transfers only through organisation deletion.
 
   orgUserList:
     type: object
@@ -819,7 +834,7 @@ paths:
 
     post:
       tags: ["v2 - Organisations"]
-      summary: Add a user to an organisation (ADMIN or OWNER only)
+      summary: Add a user to an organisation by email (ADMIN or OWNER only)
       parameters:
         - in: path
           name: orgId
@@ -840,7 +855,11 @@ paths:
           schema:
             $ref: '#/definitions/emptyObj'
         400:
-          description: "**INVALID INPUT** – user not found or already a member"
+          description: |
+            **INVALID INPUT**
+            - email is required
+            - No user found with that email address
+            - User is already a member of this organisation
           schema:
             $ref: '#/definitions/error400'
         401:
@@ -848,7 +867,51 @@ paths:
           schema:
             $ref: '#/definitions/error401'
 
-  /v2/organisation/{orgId}/members/{userId}:
+    /v2/organisation/{orgId}/members/{userId}:
+      put:
+        tags: ["v2 - Organisations"]
+        summary: Update a member's role (ADMIN or OWNER only)
+        description: >
+          Sets the role of an existing organisation member to ADMIN or MEMBER.
+          The OWNER's role cannot be changed via this endpoint.
+          An admin cannot demote themselves if they are the only admin.
+        parameters:
+          - in: path
+            name: orgId
+            required: true
+            type: integer
+          - in: path
+            name: userId
+            required: true
+            type: integer
+          - in: header
+            name: session
+            required: true
+            type: string
+          - in: body
+            name: body
+            required: true
+            schema:
+              $ref: '#/definitions/orgUserRoleUpdate'
+        responses:
+          200:
+            description: "**SUCCESS**"
+            schema:
+              $ref: '#/definitions/emptyObj'
+          400:
+            description: |
+              **INVALID INPUT**
+              - Role must be ADMIN or MEMBER
+              - Cannot change the role of the organisation owner
+              - User is not a member of this organisation
+              - You are the only admin (self-demotion blocked)
+            schema:
+              $ref: '#/definitions/error400'
+          401:
+            description: "**UNAUTHORISED**"
+            schema:
+              $ref: '#/definitions/error401'
+
     delete:
       tags: ["v2 - Organisations"]
       summary: Remove a user from an organisation (ADMIN or OWNER only)

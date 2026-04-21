@@ -386,6 +386,26 @@ Resources:
         Sourcemap: true
         EntryPoints:
           - src/handlersV2/addOrgUser.ts
+
+  updateOrgUserV2Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlersV2/updateOrgUser.updateOrgUserHandler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BreadStackersApi
+            Path: /v2/organisation/{orgId}/members/{userId}
+            Method: PUT
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints:
+          - src/handlersV2/updateOrgUser.ts
  
   deleteOrgUserV2Function:
     Type: AWS::Serverless::Function

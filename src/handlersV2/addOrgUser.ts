@@ -11,10 +11,13 @@ export const addOrgUserHandler = async (event: APIGatewayProxyEvent) => {
     if (isNaN(orgId)) return jsonResponse(400, { error: 'Invalid orgId in path' });
 
     const body = JSON.parse(event.body ?? '{}');
-    const userId = parseInt(body.userId);
-    if (isNaN(userId)) return jsonResponse(400, { error: 'Invalid userId in body' });
+    const { email } = body;
 
-    const result = await addOrgUser(session, userId, orgId);
+    if (!email || typeof email !== 'string' || email.trim().length === 0) {
+      return jsonResponse(400, { error: 'email is required in request body' });
+    }
+
+    const result = await addOrgUser(session, email.trim(), orgId);
     return jsonResponse(200, result);
   } catch (e) {
     return handleErrorResponse(e);
