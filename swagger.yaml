@@ -24,7 +24,7 @@ tags:
     description: Deals with all the user related operations which includes user register, login, update and logout
   - name: Orders
     description: Deals with all the order related operations which includes creating, viewing, listing, updating and cancelling any order
-  - name: Other
+  - name: Organisations
 
 definitions:
   userRegister:
@@ -654,7 +654,6 @@ paths:
 
   /v2/organisation:
     post:
-      tags: [Organisations]
       summary: Create a new organisation (caller becomes OWNER)
       parameters:
         - in: header
