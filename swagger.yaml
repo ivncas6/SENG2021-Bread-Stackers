@@ -349,6 +349,14 @@ definitions:
       postcode:  { type: string,  example: "2000" }
       country:   { type: string,  example: AUS }
 
+  addressList:
+    type: object
+    properties:
+      addresses:
+        type: array
+        items:
+          $ref: '#/definitions/addressView'
+
   addressId:
     type: object
     properties:
@@ -1060,6 +1068,39 @@ paths:
             $ref: '#/definitions/error400'
         401:
           description: "**UNAUTHORISED**"
+          schema:
+            $ref: '#/definitions/error401'
+
+  # special address function that connects orgs to addresses
+
+  /v2/organisation/{orgId}/address:
+    get:
+      tags: ["v2 - Addresses"]
+      summary: List all addresses associated with an organisation
+      description: >
+        Returns the organisation's own registered address plus every unique
+        delivery address used across the organisation's past orders.
+        Use this to populate address dropdowns in the frontend.
+      parameters:
+        - in: path
+          name: orgId
+          required: true
+          type: integer
+        - in: header
+          name: session
+          required: true
+          type: string
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/addressList'
+        400:
+          description: "**INVALID INPUT** – invalid orgId"
+          schema:
+            $ref: '#/definitions/error400'
+        401:
+          description: "**UNAUTHORISED** – not a member or bad session"
           schema:
             $ref: '#/definitions/error401'
 

@@ -399,7 +399,8 @@ describe('Lambda: listAddressHandler', () => {
     db.eq.mockReturnValueOnce(db);
     db.eq.mockResolvedValueOnce({ data: [], error: null });
     db.in.mockResolvedValueOnce({
-      data: [{ addressID: 1, street: '1 First St', city: 'Sydney', postcode: '2000', country: 'AUS' }],
+      data: [{ addressID: 1, street: '1 First St', city: 'Sydney',
+        postcode: '2000', country: 'AUS' }],
       error: null,
     });
 
@@ -474,7 +475,8 @@ describe('Lambda: updateAddressHandler', () => {
   test('200 on success', async () => {
     db.maybeSingle.mockResolvedValueOnce({ data: { addressID: ADDRESS_ID }, error: null });
 
-    const res = await updateAddressHandler(makeEvent({ body: JSON.stringify({ street: 'New St' }) }));
+    const res = await updateAddressHandler(makeEvent(
+      { body: JSON.stringify({ street: 'New St' }) }));
     expect(res.statusCode).toBe(200);
     expect(JSON.parse(res.body)).toEqual({ addressId: ADDRESS_ID });
   });
