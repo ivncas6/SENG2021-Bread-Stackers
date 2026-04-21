@@ -263,6 +263,64 @@ definitions:
             issuedDate: { type: string, example: "2026-03-16" }
             finalPrice: { type: number, example: 110 }
             currency: { type: string, example: "AUD" }
+    
+  orgCreate:
+    type: object
+    required: [orgName, addressId]
+    properties:
+      orgName:
+        type: string
+        example: "Bread Stackers HQ"
+      addressId:
+        type: integer
+        example: 1
+ 
+  orgUpdate:
+    type: object
+    required: [orgName, addressId]
+    properties:
+      orgName:
+        type: string
+        example: "New Name Ltd"
+      addressId:
+        type: integer
+        example: 2
+ 
+  orgId:
+    type: object
+    properties:
+      orgId:
+        type: integer
+        example: 42
+ 
+  orgUserAdd:
+    type: object
+    required: [userId]
+    properties:
+      userId:
+        type: integer
+        example: 7
+ 
+  orgUserList:
+    type: object
+    properties:
+      users:
+        type: array
+        items:
+          type: object
+          properties:
+            contactId:  { type: integer, example: 7 }
+            firstName:  { type: string,  example: "Anna" }
+            lastName:   { type: string,  example: "Smith" }
+            email:      { type: string,  example: "anna@example.com" }
+            telephone:  { type: string,  example: "0412345678" }
+ 
+  signedUrl:
+    type: object
+    properties:
+      signedUrl:
+        type: string
+        example: "https://storage.example.com/order-123.xml?token=abc"
 
 paths:
   /v0/user/register:
@@ -591,4 +649,363 @@ paths:
           description: "**UNAUTHORISED**"
           schema: 
             $ref: '#/definitions/error401'
-    
+
+  # V2 Routes
+
+  /v2/organisation:
+    post:
+      tags: [Organisations]
+      summary: Create a new organisation (caller becomes OWNER)
+      parameters:
+        - in: header
+          name: session
+          required: true
+          type: string
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/orgCreate'
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/orgId'
+        400:
+          description: "**INVALID INPUT** – bad name or missing address"
+          schema:
+            $ref: '#/definitions/error400'
+        401:
+          description: "**UNAUTHORISED**"
+          schema:
+            $ref: '#/definitions/error401'
+ 
+  /v2/organisation/{orgId}:
+    put:
+      tags: [Organisations]
+      summary: Update organisation details (ADMIN or OWNER only)
+      parameters:
+        - in: path
+          name: orgId
+          required: true
+          type: integer
+        - in: header
+          name: session
+          required: true
+          type: string
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/orgUpdate'
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/orgId'
+        400:
+          description: "**INVALID INPUT**"
+          schema:
+            $ref: '#/definitions/error400'
+        401:
+          description: "**UNAUTHORISED**"
+          schema:
+            $ref: '#/definitions/error401'
+ 
+    delete:
+      tags: [Organisations]
+      summary: Delete an organisation (OWNER only, no active orders)
+      parameters:
+        - in: path
+          name: orgId
+          required: true
+          type: integer
+        - in: header
+          name: session
+          required: true
+          type: string
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/emptyObj'
+        400:
+          description: "**INVALID INPUT** – active orders exist"
+          schema:
+            $ref: '#/definitions/error400'
+        401:
+          description: "**UNAUTHORISED**"
+          schema:
+            $ref: '#/definitions/error401'
+  
+  /v2/organisation/{orgId}/members:
+    get:
+      tags: [Organisations]
+      summary: List all members of an organisation (any member)
+      parameters:
+        - in: path
+          name: orgId
+          required: true
+          type: integer
+        - in: header
+          name: session
+          required: true
+          type: string
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/orgUserList'
+        401:
+          description: "**UNAUTHORISED**"
+          schema:
+            $ref: '#/definitions/error401'
+ 
+    post:
+      tags: [Organisations]
+      summary: Add a user to an organisation (ADMIN or OWNER only)
+      parameters:
+        - in: path
+          name: orgId
+          required: true
+          type: integer
+        - in: header
+          name: session
+          required: true
+          type: string
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/orgUserAdd'
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/emptyObj'
+        400:
+          description: "**INVALID INPUT** – user not found or already a member"
+          schema:
+            $ref: '#/definitions/error400'
+        401:
+          description: "**UNAUTHORISED**"
+          schema:
+            $ref: '#/definitions/error401'
+ 
+  /v2/organisation/{orgId}/members/{userId}:
+    delete:
+      tags: [Organisations]
+      summary: Remove a user from an organisation (ADMIN or OWNER only)
+      parameters:
+        - in: path
+          name: orgId
+          required: true
+          type: integer
+        - in: path
+          name: userId
+          required: true
+          type: integer
+        - in: header
+          name: session
+          required: true
+          type: string
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/emptyObj'
+        400:
+          description: "**INVALID INPUT** – user not a member or is the owner"
+          schema:
+            $ref: '#/definitions/error400'
+        401:
+          description: "**UNAUTHORISED**"
+          schema:
+            $ref: '#/definitions/error401'
+
+  /v2/organisation/{orgId}/order:
+    post:
+      tags: [Orders]
+      summary: Create an order for an organisation (any member)
+      parameters:
+        - in: path
+          name: orgId
+          required: true
+          type: integer
+        - in: header
+          name: session
+          required: true
+          type: string
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/orderCreateV2'
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/orderId'
+        400:
+          description: "**INVALID INPUT**"
+          schema:
+            $ref: '#/definitions/error400'
+        401:
+          description: "**UNAUTHORISED**"
+          schema:
+            $ref: '#/definitions/error401'
+ 
+  /v2/organisation/{orgId}/order/list:
+    get:
+      tags: [Orders]
+      summary: List all orders for an organisation (any member)
+      parameters:
+        - in: path
+          name: orgId
+          required: true
+          type: integer
+        - in: header
+          name: session
+          required: true
+          type: string
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/orderList'
+        401:
+          description: "**UNAUTHORISED**"
+          schema:
+            $ref: '#/definitions/error401'
+ 
+  /v2/organisation/{orgId}/order/{orderId}:
+    get:
+      tags: [Orders]
+      summary: View order details (any member of the org)
+      parameters:
+        - in: path
+          name: orgId
+          required: true
+          type: integer
+        - in: path
+          name: orderId
+          required: true
+          type: string
+        - in: header
+          name: session
+          required: true
+          type: string
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/orderView'
+        400:
+          description: "**INVALID INPUT**"
+          schema:
+            $ref: '#/definitions/error400'
+        401:
+          description: "**UNAUTHORISED**"
+          schema:
+            $ref: '#/definitions/error401'
+ 
+    put:
+      tags: [Orders]
+      summary: Update an order (any member of the org)
+      parameters:
+        - in: path
+          name: orgId
+          required: true
+          type: integer
+        - in: path
+          name: orderId
+          required: true
+          type: string
+        - in: header
+          name: session
+          required: true
+          type: string
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/orderUpdate'
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/emptyObj'
+        400:
+          description: "**INVALID INPUT**"
+          schema:
+            $ref: '#/definitions/error400'
+        401:
+          description: "**UNAUTHORISED**"
+          schema:
+            $ref: '#/definitions/error401'
+ 
+    delete:
+      tags: [Orders]
+      summary: Cancel (delete) an order (any member of the org)
+      parameters:
+        - in: path
+          name: orgId
+          required: true
+          type: integer
+        - in: path
+          name: orderId
+          required: true
+          type: string
+        - in: header
+          name: session
+          required: true
+          type: string
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/orderCancel'
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/orderCancel'
+        400:
+          description: "**INVALID INPUT**"
+          schema:
+            $ref: '#/definitions/error400'
+        401:
+          description: "**UNAUTHORISED**"
+          schema:
+            $ref: '#/definitions/error401'
+ 
+  /v2/organisation/{orgId}/order/{orderId}/ubl:
+    get:
+      tags: [Orders]
+      summary: Get a signed URL for an order's UBL document (any member)
+      parameters:
+        - in: path
+          name: orgId
+          required: true
+          type: integer
+        - in: path
+          name: orderId
+          required: true
+          type: string
+        - in: header
+          name: session
+          required: true
+          type: string
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/signedUrl'
+        400:
+          description: "**INVALID INPUT**"
+          schema:
+            $ref: '#/definitions/error400'
+        401:
+          description: "**UNAUTHORISED**"
+          schema:
+            $ref: '#/definitions/error401'

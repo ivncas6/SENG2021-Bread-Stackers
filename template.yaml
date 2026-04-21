@@ -285,6 +285,247 @@ Resources:
         Sourcemap: true
         EntryPoints: 
           - src/handlersV1/userDetails.ts
+  
+  # V2 routes 
+  createOrganisationV2Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlersV2/createOrganisation.createOrganisationHandler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BreadStackersApi
+            Path: /v2/organisation
+            Method: POST
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints:
+          - src/handlersV2/createOrganisation.ts
+ 
+  updateOrganisationV2Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlersV2/updateOrganisation.updateOrganisationHandler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BreadStackersApi
+            Path: /v2/organisation/{orgId}
+            Method: PUT
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints:
+          - src/handlersV2/updateOrganisation.ts
+ 
+  deleteOrganisationV2Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlersV2/deleteOrganisation.deleteOrganisationHandler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BreadStackersApi
+            Path: /v2/organisation/{orgId}
+            Method: DELETE
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints:
+          - src/handlersV2/deleteOrganisation.ts
+
+  listOrgUsersV2Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlersV2/listOrgUsers.listOrgUsersHandler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BreadStackersApi
+            Path: /v2/organisation/{orgId}/members
+            Method: GET
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints:
+          - src/handlersV2/listOrgUsers.ts
+ 
+  addOrgUserV2Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlersV2/addOrgUser.addOrgUserHandler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BreadStackersApi
+            Path: /v2/organisation/{orgId}/members
+            Method: POST
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints:
+          - src/handlersV2/addOrgUser.ts
+ 
+  deleteOrgUserV2Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlersV2/deleteOrgUser.deleteOrgUserHandler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BreadStackersApi
+            Path: /v2/organisation/{orgId}/members/{userId}
+            Method: DELETE
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints:
+          - src/handlersV2/deleteOrgUser.ts
+  
+  createOrderV2OrgFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlersV2/createOrder.createOrderHandler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BreadStackersApi
+            Path: /v2/organisation/{orgId}/order
+            Method: POST
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints:
+          - src/handlersV2/createOrder.ts
+ 
+  listOrderV2Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlersV2/listOrder.listOrderHandler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BreadStackersApi
+            Path: /v2/organisation/{orgId}/order/list
+            Method: GET
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints:
+          - src/handlersV2/listOrder.ts
+ 
+  getOrderInfoV2Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlersV2/orderInfo.getOrderInfoHandler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BreadStackersApi
+            Path: /v2/organisation/{orgId}/order/{orderId}
+            Method: GET
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints:
+          - src/handlersV2/orderInfo.ts
+ 
+  updateOrderV2Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlersV2/updateOrder.updateOrderHandler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BreadStackersApi
+            Path: /v2/organisation/{orgId}/order/{orderId}
+            Method: PUT
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints:
+          - src/handlersV2/updateOrder.ts
+ 
+  cancelOrderV2Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlersV2/cancelOrder.cancelOrderHandler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BreadStackersApi
+            Path: /v2/organisation/{orgId}/order/{orderId}
+            Method: DELETE
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints:
+          - src/handlersV2/cancelOrder.ts
+ 
+  generateUBLV2Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlersV2/generateUBL.generateUBLHandler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BreadStackersApi
+            Path: /v2/organisation/{orgId}/order/{orderId}/ubl
+            Method: GET
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints:
+          - src/handlersV2/generateUBL.ts
     
 
 Outputs:
