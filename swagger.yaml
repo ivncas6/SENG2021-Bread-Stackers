@@ -39,6 +39,8 @@ tags:
     description: Organisation-scoped order management with address references (V2)
   - name: v2 - Addresses
     description: Reusable address management - create once, reference from orders and organisations
+  - name: v2 - AI
+    description: AI chat assistant for order and address management
 
 # Shared definitions 
 
@@ -376,6 +378,57 @@ definitions:
     type: object
     properties:
       addressId: { type: integer, example: 5 }
+
+  # AI features
+
+  coreMessage:
+    type: object
+    description: >
+      A single message in the conversation history.
+      role is "user" | "assistant" | "tool".
+      content is a string for user/assistant turns; tool turns use a structured array
+      (handled internally — clients only need to store and echo back what they receive).
+    properties:
+      role:
+        type: string
+        enum: [user, assistant, tool]
+        example: user
+      content:
+        type: string
+        example: "List my open orders"
+ 
+  aiChatRequest:
+    type: object
+    required: [message]
+    properties:
+      message:
+        type: string
+        description: The user's latest message.
+        example: "Show me all open orders"
+      messages:
+        type: array
+        description: >
+          Full conversation history from previous turns.
+          Omit on the first message; on subsequent turns send back the messages
+          array that was returned in the previous response.
+        items:
+          $ref: '#/definitions/coreMessage'
+ 
+  aiChatResponse:
+    type: object
+    properties:
+      reply:
+        type: string
+        description: The assistant's text response for this turn.
+        example: "You have 2 open orders: order-abc (AUD 110.00) and order-def (AUD 220.00)."
+      messages:
+        type: array
+        description: >
+          Updated conversation history including this turn.
+          Store this client-side and send it back as the messages field
+          on the next request to maintain multi-turn context.
+        items:
+          $ref: '#/definitions/coreMessage'
 
 # Paths ─
 
@@ -1166,6 +1219,61 @@ paths:
           description: "**UNAUTHORISED** – not a member or bad session"
           schema:
             $ref: '#/definitions/error401'
+ 
+  /v2/organisation/{orgId}/ai/chat:
+    post:
+      tags: ["v2 - AI"]
+      summary: Send a message to the AI order-management assistant
+      description: >
+        Stateless multi-turn chat endpoint. On the first message omit `messages`.
+        Each response includes an updated `messages` array — store it client-side
+        and send it back with the next request to preserve conversation context.
+ 
+ 
+        **Permitted actions (via tools the model may invoke internally)**
+ 
+        - List, view, create, update, and cancel orders
+        - Generate UBL documents
+        - Create, view, update, delete, and list delivery addresses
+ 
+        **Not permitted:** organisation CRUD or member management.
+ 
+        The model will ask for confirmation before executing any write operation.
+      parameters:
+        - in: path
+          name: orgId
+          required: true
+          type: integer
+          description: Organisation ID the assistant acts on behalf of.
+        - in: header
+          name: session
+          required: true
+          type: string
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/aiChatRequest'
+      responses:
+        200:
+          description: "**SUCCESS** — assistant reply and updated history"
+          schema:
+            $ref: '#/definitions/aiChatResponse'
+        400:
+          description: |
+            **INVALID INPUT**
+            - message field missing or empty
+            - Invalid orgId in path
+          schema:
+            $ref: '#/definitions/error400'
+        401:
+          description: "**UNAUTHORISED** — missing or invalid session"
+          schema:
+            $ref: '#/definitions/error401'
+        500:
+          description: "**INTERNAL ERROR** — AI provider or downstream service failure"
+          schema:
+            $ref: '#/definitions/error400'
 
   # V2 - Addresses
 
