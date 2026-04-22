@@ -33,6 +33,8 @@ tags:
     description: User profile management improvements (V1)
   - name: v1 - Orders
     description: Streamlined order creation without requiring user details in body (V1)
+  
+  # V2
   - name: v2 - Organisations
     description: Organisation management - create, update, delete and manage members
   - name: v2 - Orders
@@ -41,6 +43,20 @@ tags:
     description: Reusable address management - create once, reference from orders and organisations
   - name: v2 - AI
     description: AI chat assistant for order and address management
+  
+  # V3
+  - name: v3 - Catalogue
+    description: >
+      Seller item catalogue management. Sellers create reusable price-locked
+      catalogue items that buyers select from when placing orders.
+  - name: v3 - Seller Orders
+    description: >
+      Seller-side order management. View, accept, and reject orders placed
+      with your organisation. Orders start PENDING until the seller acts.
+  - name: v3 - Discovery
+    description: >
+      Organisation discovery. Lets buyers list all organisations to find
+      sellers and retrieve their orgId before browsing catalogues.
 
 # Shared definitions 
 
@@ -429,6 +445,147 @@ definitions:
           on the next request to maintain multi-turn context.
         items:
           $ref: '#/definitions/coreMessage'
+
+  # V3 and Catalogues
+
+  catalogueItemCreate:
+    type: object
+    required: [name, price]
+    properties:
+      name:        { type: string,  example: "Sourdough Loaf" }
+      description: { type: string,  example: "Freshly baked daily" }
+      price:       { type: number,  example: 5.50 }
+ 
+  catalogueItemUpdate:
+    type: object
+    description: All fields optional — only supplied fields are updated.
+    properties:
+      name:        { type: string,  example: "Baguette" }
+      description: { type: string,  example: "Crispy French bread" }
+      price:       { type: number,  example: 4.00 }
+      active:      { type: boolean, example: true,
+                     description: "Set to false to soft-delete the item" }
+ 
+  catalogueItemView:
+    type: object
+    properties:
+      catalogueItemId: { type: integer, example: 7 }
+      orgId:           { type: integer, example: 20 }
+      name:            { type: string,  example: "Sourdough Loaf" }
+      description:     { type: string,  example: "Freshly baked daily" }
+      price:           { type: number,  example: 5.50 }
+      active:          { type: boolean, example: true }
+ 
+  catalogueItemId:
+    type: object
+    properties:
+      catalogueItemId: { type: integer, example: 7 }
+ 
+  catalogueItemList:
+    type: object
+    properties:
+      items:
+        type: array
+        items:
+          $ref: '#/definitions/catalogueItemView'
+ 
+  catalogueOrderItem:
+    type: object
+    required: [catalogueItemId, quantity]
+    properties:
+      catalogueItemId:
+        type: integer
+        example: 7
+        description: ID of an active catalogue item belonging to the seller
+      quantity:
+        type: integer
+        example: 3
+        description: Must be a positive integer
+ 
+  orderCreateV3:
+    type: object
+    required: [sellerOrgId, deliveryAddressId, items]
+    description: >
+      V3 order creation. Buyers select items from a seller's catalogue by ID.
+      Prices are locked to catalogue values — buyers cannot set their own.
+      The order is placed as PENDING and awaits seller acceptance.
+    properties:
+      sellerOrgId:
+        type: integer
+        example: 20
+        description: orgId of the seller organisation to place the order with
+      deliveryAddressId:
+        type: integer
+        example: 5
+        description: ID of a pre-existing address created via POST /v2/address
+      reqDeliveryPeriod:
+        type: object
+        properties:
+          startDateTime: { type: number, example: 1773100800000 }
+          endDateTime:   { type: number, example: 1773619200000 }
+      items:
+        type: array
+        items:
+          $ref: '#/definitions/catalogueOrderItem'
+ 
+  receivedOrderView:
+    type: object
+    description: Order detail from the seller's perspective.
+    properties:
+      orderId:           { type: string,  example: "550e8400-e29b-41d4-a716-446655440000" }
+      status:            { type: string,  example: "PENDING",
+                           description: "PENDING | ACCEPTED | REJECTED" }
+      issuedDate:        { type: string,  example: "2026-03-16" }
+      issuedTime:        { type: string,  example: "16:10:05" }
+      currency:          { type: string,  example: "AUD" }
+      taxExclusive:      { type: number,  example: 100 }
+      taxInclusive:      { type: number,  example: 110 }
+      finalPrice:        { type: number,  example: 110 }
+      address:           { type: string,  example: "123 Main Street, Sydney" }
+      deliveryAddressId: { type: integer, example: 5 }
+      buyerOrgId:        { type: integer, example: 10,
+                           description: "orgId of the organisation that placed the order" }
+      deliveryDetails:
+        type: object
+        properties:
+          startDateTime: { type: number, example: 1773100800000 }
+          endDateTime:   { type: number, example: 1773619200000 }
+      items:
+        type: array
+        items:
+          $ref: '#/definitions/orderItem'
+ 
+  receivedOrderList:
+    type: object
+    properties:
+      orders:
+        type: array
+        items:
+          type: object
+          properties:
+            orderId:    { type: string,  example: "550e8400-e29b-41d4-a716-446655440000" }
+            status:     { type: string,  example: "PENDING" }
+            issuedDate: { type: string,  example: "2026-03-16" }
+            finalPrice: { type: number,  example: 110 }
+            currency:   { type: string,  example: "AUD" }
+            buyerOrgID: { type: integer, example: 10 }
+ 
+  orderReject:
+    type: object
+    required: [reason]
+    properties:
+      reason: { type: string, example: "Out of stock" }
+ 
+  organisationList:
+    type: object
+    properties:
+      organisations:
+        type: array
+        items:
+          type: object
+          properties:
+            orgId:   { type: integer, example: 20 }
+            orgName: { type: string,  example: "BreadCo Wholesale" }
 
 # Paths ─
 
@@ -1403,3 +1560,413 @@ paths:
           description: "**UNAUTHORISED**"
           schema:
             $ref: '#/definitions/error401'
+  
+   # V3 - Discovery
+ 
+  /v3/organisations:
+    get:
+      tags: ["v3 - Discovery"]
+      summary: List all organisations (for buyer discovery of sellers)
+      description: >
+        Returns every organisation in the platform so buyers can discover
+        potential sellers and retrieve their orgId before browsing catalogues.
+        Any authenticated user may call this endpoint.
+      parameters:
+        - in: header
+          name: session
+          required: true
+          type: string
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/organisationList'
+        401:
+          description: "**UNAUTHORISED**"
+          schema:
+            $ref: '#/definitions/error401'
+ 
+  # V3 - Catalogue
+ 
+  /v3/organisation/{orgId}/catalogue:
+    post:
+      tags: ["v3 - Catalogue"]
+      summary: Create a catalogue item (ADMIN or OWNER only)
+      description: >
+        Sellers add an item to their catalogue with a fixed price.
+        Buyers will later reference the catalogueItemId when placing orders —
+        they cannot override the price.
+      parameters:
+        - in: path
+          name: orgId
+          required: true
+          type: integer
+        - in: header
+          name: session
+          required: true
+          type: string
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/catalogueItemCreate'
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/catalogueItemId'
+        400:
+          description: |
+            **INVALID INPUT**
+            - Item name is required
+            - Item name is too long
+            - Price must be a non-negative number
+          schema:
+            $ref: '#/definitions/error400'
+        401:
+          description: "**UNAUTHORISED** — missing session or caller is not ADMIN/OWNER"
+          schema:
+            $ref: '#/definitions/error401'
+ 
+    get:
+      tags: ["v3 - Catalogue"]
+      summary: List all active catalogue items for an organisation
+      description: >
+        Returns active catalogue items owned by the given org.
+        Any authenticated user may browse any seller's catalogue.
+      parameters:
+        - in: path
+          name: orgId
+          required: true
+          type: integer
+        - in: header
+          name: session
+          required: true
+          type: string
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/catalogueItemList'
+        401:
+          description: "**UNAUTHORISED**"
+          schema:
+            $ref: '#/definitions/error401'
+ 
+  /v3/catalogue/{itemId}:
+    get:
+      tags: ["v3 - Catalogue"]
+      summary: Get a single catalogue item by ID
+      description: >
+        Returns a single catalogue item (active or inactive).
+        Any authenticated user may call this.
+      parameters:
+        - in: path
+          name: itemId
+          required: true
+          type: integer
+        - in: header
+          name: session
+          required: true
+          type: string
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/catalogueItemView'
+        400:
+          description: "**INVALID INPUT** — item not found"
+          schema:
+            $ref: '#/definitions/error400'
+        401:
+          description: "**UNAUTHORISED**"
+          schema:
+            $ref: '#/definitions/error401'
+ 
+  /v3/organisation/{orgId}/catalogue/{itemId}:
+    put:
+      tags: ["v3 - Catalogue"]
+      summary: Update a catalogue item (ADMIN or OWNER only)
+      description: >
+        Partially updates a catalogue item. Only fields present in the body
+        are changed; omitted fields keep their current values.
+        Set `active: false` to soft-delete (preferred over DELETE for items
+        referenced by existing orders).
+      parameters:
+        - in: path
+          name: orgId
+          required: true
+          type: integer
+        - in: path
+          name: itemId
+          required: true
+          type: integer
+        - in: header
+          name: session
+          required: true
+          type: string
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/catalogueItemUpdate'
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/catalogueItemId'
+        400:
+          description: |
+            **INVALID INPUT**
+            - Catalogue item not found in this organisation
+            - No fields provided for update
+            - Item name cannot be empty / too long
+            - Price must be a non-negative number
+          schema:
+            $ref: '#/definitions/error400'
+        401:
+          description: "**UNAUTHORISED** — not ADMIN/OWNER"
+          schema:
+            $ref: '#/definitions/error401'
+ 
+    delete:
+      tags: ["v3 - Catalogue"]
+      summary: Soft-delete a catalogue item (ADMIN or OWNER only)
+      description: >
+        Sets the item's `active` flag to `false` rather than hard-deleting it.
+        This preserves historical order data that references the item's
+        name and price.  Buyers can no longer select inactive items.
+      parameters:
+        - in: path
+          name: orgId
+          required: true
+          type: integer
+        - in: path
+          name: itemId
+          required: true
+          type: integer
+        - in: header
+          name: session
+          required: true
+          type: string
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/emptyObj'
+        400:
+          description: "**INVALID INPUT** — item not found in this organisation"
+          schema:
+            $ref: '#/definitions/error400'
+        401:
+          description: "**UNAUTHORISED** — not ADMIN/OWNER"
+          schema:
+            $ref: '#/definitions/error401'
+ 
+  # V3 - Buyer Order (from catalogue)
+ 
+  /v3/organisation/{orgId}/order:
+    post:
+      tags: ["v3 - Seller Orders"]
+      summary: Create an order from a seller's catalogue (any buyer org member)
+      description: >
+        Places an order by selecting items from the seller's catalogue.
+        Prices come from the catalogue — buyers cannot supply their own prices.
+ 
+ 
+        The `orgId` path parameter is the **buyer** organisation ID.
+        The `sellerOrgId` body parameter identifies the **seller**.
+ 
+ 
+        The new order starts with status **PENDING** and must be accepted or
+        rejected by the seller before it is fulfilled.
+      parameters:
+        - in: path
+          name: orgId
+          required: true
+          type: integer
+          description: The buyer's organisation ID
+        - in: header
+          name: session
+          required: true
+          type: string
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/orderCreateV3'
+      responses:
+        200:
+          description: "**SUCCESS** — order created with status PENDING"
+          schema:
+            $ref: '#/definitions/orderId'
+        400:
+          description: |
+            **INVALID INPUT**
+            - sellerOrgId must be a valid integer
+            - deliveryAddressId must be a valid integer
+            - At least one catalogue item is required
+            - Each item must reference a valid catalogueItemId
+            - Catalogue item not found / inactive / wrong seller
+            - Invalid delivery period
+          schema:
+            $ref: '#/definitions/error400'
+        401:
+          description: "**UNAUTHORISED** — missing session or not a buyer org member"
+          schema:
+            $ref: '#/definitions/error401'
+ 
+  # V3 - Seller Order Management
+ 
+  /v3/organisation/{orgId}/orders/received:
+    get:
+      tags: ["v3 - Seller Orders"]
+      summary: List orders received by the seller organisation (any member)
+      description: >
+        Returns orders where this organisation is the seller.
+        Old v0/v1/v2 orders (which had no real seller) will not appear.
+ 
+ 
+        Optional query parameter `status` filters by order status:
+        `PENDING`, `ACCEPTED`, or `REJECTED`.
+      parameters:
+        - in: path
+          name: orgId
+          required: true
+          type: integer
+        - in: header
+          name: session
+          required: true
+          type: string
+        - in: query
+          name: status
+          required: false
+          type: string
+          enum: [PENDING, ACCEPTED, REJECTED]
+          description: Filter orders by status
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/receivedOrderList'
+        401:
+          description: "**UNAUTHORISED**"
+          schema:
+            $ref: '#/definitions/error401'
+ 
+  /v3/organisation/{orgId}/orders/received/{orderId}:
+    get:
+      tags: ["v3 - Seller Orders"]
+      summary: Get full details of a received order (any member)
+      description: >
+        Returns complete order detail from the seller's perspective, including
+        items, delivery address, buyer org ID, and current status.
+      parameters:
+        - in: path
+          name: orgId
+          required: true
+          type: integer
+        - in: path
+          name: orderId
+          required: true
+          type: string
+        - in: header
+          name: session
+          required: true
+          type: string
+      responses:
+        200:
+          description: "**SUCCESS**"
+          schema:
+            $ref: '#/definitions/receivedOrderView'
+        400:
+          description: "**INVALID INPUT** — order not found"
+          schema:
+            $ref: '#/definitions/error400'
+        401:
+          description: "**UNAUTHORISED** — not a member or order belongs to different seller"
+          schema:
+            $ref: '#/definitions/error401'
+ 
+  /v3/organisation/{orgId}/order/{orderId}/accept:
+    put:
+      tags: ["v3 - Seller Orders"]
+      summary: Accept a PENDING order (ADMIN or OWNER only)
+      description: >
+        Transitions the order from **PENDING** to **ACCEPTED**.
+        No request body is required.
+        Only ADMIN or OWNER of the seller organisation may accept.
+      parameters:
+        - in: path
+          name: orgId
+          required: true
+          type: integer
+        - in: path
+          name: orderId
+          required: true
+          type: string
+        - in: header
+          name: session
+          required: true
+          type: string
+      responses:
+        200:
+          description: "**SUCCESS** — order status is now ACCEPTED"
+          schema:
+            $ref: '#/definitions/emptyObj'
+        400:
+          description: |
+            **INVALID INPUT**
+            - Order not found
+            - Cannot accept an order with status '…' (must be PENDING)
+          schema:
+            $ref: '#/definitions/error400'
+        401:
+          description: "**UNAUTHORISED** — not ADMIN/OWNER or order belongs to different seller"
+          schema:
+            $ref: '#/definitions/error401'
+ 
+  /v3/organisation/{orgId}/order/{orderId}/reject:
+    put:
+      tags: ["v3 - Seller Orders"]
+      summary: Reject a PENDING order (ADMIN or OWNER only)
+      description: >
+        Transitions the order from **PENDING** to **REJECTED**.
+        A rejection reason must be supplied in the request body.
+        Only ADMIN or OWNER of the seller organisation may reject.
+      parameters:
+        - in: path
+          name: orgId
+          required: true
+          type: integer
+        - in: path
+          name: orderId
+          required: true
+          type: string
+        - in: header
+          name: session
+          required: true
+          type: string
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/orderReject'
+      responses:
+        200:
+          description: "**SUCCESS** — order status is now REJECTED"
+          schema:
+            $ref: '#/definitions/orderReject'
+        400:
+          description: |
+            **INVALID INPUT**
+            - A rejection reason is required in the request body
+            - Order not found
+            - Cannot reject an order with status '…' (must be PENDING)
+          schema:
+            $ref: '#/definitions/error400'
+        401:
+          description: "**UNAUTHORISED** — not ADMIN/OWNER or order belongs to different seller"
+          schema:
+            $ref: '#/definitions/error401'
+ 

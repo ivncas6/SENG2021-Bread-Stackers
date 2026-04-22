@@ -666,6 +666,227 @@ Resources:
         Sourcemap: true
         EntryPoints:
           - src/handlersV2/aiChat.ts
+  
+  listOrganisationsV3Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlersV3/listOrganisations.listOrganisationsHandler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BreadStackersApi
+            Path: /v3/organisations
+            Method: GET
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints:
+          - src/handlersV3/listOrganisations.ts
+  
+  # catalogue
+  createCatalogueItemV3Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlersV3/createCatalogueItem.createCatalogueItemHandler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BreadStackersApi
+            Path: /v3/organisation/{orgId}/catalogue
+            Method: POST
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints:
+          - src/handlersV3/createCatalogueItem.ts
+ 
+  listCatalogueItemsV3Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlersV3/listCatalogueItems.listCatalogueItemsHandler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BreadStackersApi
+            Path: /v3/organisation/{orgId}/catalogue
+            Method: GET
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints:
+          - src/handlersV3/listCatalogueItems.ts
+ 
+  getCatalogueItemV3Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlersV3/getCatalogueItem.getCatalogueItemHandler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BreadStackersApi
+            Path: /v3/catalogue/{itemId}
+            Method: GET
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints:
+          - src/handlersV3/getCatalogueItem.ts
+ 
+  updateCatalogueItemV3Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlersV3/updateCatalogueItem.updateCatalogueItemHandler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BreadStackersApi
+            Path: /v3/organisation/{orgId}/catalogue/{itemId}
+            Method: PUT
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints:
+          - src/handlersV3/updateCatalogueItem.ts
+ 
+  deleteCatalogueItemV3Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlersV3/deleteCatalogueItem.deleteCatalogueItemHandler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BreadStackersApi
+            Path: /v3/organisation/{orgId}/catalogue/{itemId}
+            Method: DELETE
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints:
+          - src/handlersV3/deleteCatalogueItem.ts
+  
+  createOrderV3Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlersV3/createOrder.createOrderHandler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BreadStackersApi
+            Path: /v3/organisation/{orgId}/order
+            Method: POST
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints:
+          - src/handlersV3/createOrder.ts
+
+  listReceivedOrdersV3Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlersV3/listReceivedOrders.listReceivedOrdersHandler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BreadStackersApi
+            Path: /v3/organisation/{orgId}/orders/received
+            Method: GET
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints:
+          - src/handlersV3/listReceivedOrders.ts
+ 
+  getReceivedOrderInfoV3Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlersV3/getReceivedOrderInfo.getReceivedOrderInfoHandler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BreadStackersApi
+            Path: /v3/organisation/{orgId}/orders/received/{orderId}
+            Method: GET
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints:
+          - src/handlersV3/getReceivedOrderInfo.ts
+ 
+  acceptOrderV3Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlersV3/acceptOrder.acceptOrderHandler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BreadStackersApi
+            Path: /v3/organisation/{orgId}/order/{orderId}/accept
+            Method: PUT
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints:
+          - src/handlersV3/acceptOrder.ts
+ 
+  rejectOrderV3Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlersV3/rejectOrder.rejectOrderHandler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BreadStackersApi
+            Path: /v3/organisation/{orgId}/order/{orderId}/reject
+            Method: PUT
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints:
+          - src/handlersV3/rejectOrder.ts
 
 
 Outputs:
