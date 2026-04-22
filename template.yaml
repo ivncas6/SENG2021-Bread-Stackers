@@ -646,6 +646,26 @@ Resources:
         Sourcemap: true
         EntryPoints:
           - src/handlersV2/deleteAddress.ts
+          
+  aiChatV2Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlersV2/aiChat.aiChatHandler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BreadStackersApi
+            Path: /v2/organisation/{orgId}/ai/chat
+            Method: POST
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: "es2020"
+        Sourcemap: true
+        EntryPoints:
+          - src/handlersV2/aiChat.ts
 
 
 Outputs:
