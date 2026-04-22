@@ -329,7 +329,8 @@ export async function runAgentTurn(
 
 /**
  * streamtext: returns the result object - iterate `.textStream` for token-by-token output.
- * not suitable for standard Lambda; use with Vercel Edge / Express SSE instead.
+ * not suitable for standard Lambda; 
+ * if you are implementing frontend: use with Vercel Edge / Express SSE instead.
  *
  * Example:
  *   const stream = streamAgentTurn(messages, ctx);
