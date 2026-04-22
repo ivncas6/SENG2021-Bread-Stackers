@@ -1,19 +1,13 @@
 /**
- * src/ai/aiService.ts
- *
- * Vercel AI SDK service layer (targets ai@4 / @ai-sdk/openai@1).
- *
- * Pin with:  npm install ai@4 @ai-sdk/openai@1 zod
- *
- * Design choices:
- *  - Tools call business-logic functions directly (same process, no HTTP hop).
+ * Note:
+ *  - tools call business-logic functions directly (same process, no HTTP hop).
  *  - `session` and `orgId` are captured in a closure so they are never part of
  *    the schema the model sees.
- *  - Tools return { error } objects instead of throwing so the model can relay
+ *  - tools return { error } objects instead of throwing so the model can relay
  *    a friendly message without crashing the turn.
- *  - stopWhen: stepCountIs(5) lets the model chain tool calls in one user turn
+ *  - maxSteps: 5 lets the model chain tool calls in one user turn
  *    (e.g. createAddress → createOrder).
- *  - Higher-permission operations (org CRUD, member management) are deliberately
+ *  - higher-permission operations (org CRUD, member management) are
  *    absent from the tool set.
  */
 
@@ -25,7 +19,7 @@ import { z } from 'zod';
 import * as orderV2 from '../orderV2';
 import * as addr    from '../address';
 
-// ─── System prompt ────────────────────────────────────────────────────────────
+// system prompt in MD
 
 const SYSTEM_PROMPT = `\
 You are an AI assistant built into a B2B order-management platform called BreadStackers.
@@ -49,17 +43,16 @@ Help users manage their orders and delivery addresses within their organisation.
 4. Ask for missing required information rather than guessing.
 5. Keep replies concise; use bullet points only when listing multiple items.`;
 
-// ─── Tool context ─────────────────────────────────────────────────────────────
+// tool context 
 
 export interface ToolContext {
   session: string;
   orgId:   number;
 }
 
-// ─── Parameter types ──────────────────────────────────────────────────────────
+// parameter types 
 
-// Declaring parameter shapes explicitly avoids the 'implicitly has any' TS error
-// that can arise from Zod inference inside the tool() overloads.
+// declaring parameter shapes avoids 'implicitly has any' TS error
 
 type DeliveryPeriod = { startDateTime: number; endDateTime: number };
 
@@ -92,7 +85,7 @@ type UpdateAddressParams = {
   country?: string | undefined;
 };
 
-// ─── Tool factory ─────────────────────────────────────────────────────────────
+// tool factory 
 
 /**
  * Returns all tool definitions bound to the current request's session + orgId.
@@ -100,7 +93,7 @@ type UpdateAddressParams = {
  */
 export function createTools(ctx: ToolContext) {
 
-  // ── Orders ────────────────────────────────────────────────────────────────
+  // orders 
 
   const listOrders = tool({
     description:
@@ -132,17 +125,17 @@ export function createTools(ctx: ToolContext) {
       '(use createAddress or listAddresses first), currency, delivery window, ' +
       'and at least one line item.',
     parameters: z.object({
-      currency:          z.string().describe('ISO 4217 code e.g. "AUD"'),
+      currency: z.string().describe('ISO 4217 code e.g. "AUD"'),
       deliveryAddressId: z.number().int().positive().describe('Existing address ID'),
       reqDeliveryPeriod: z.object({
-        startDateTime: z.number().describe('Unix ms timestamp — delivery start'),
-        endDateTime:   z.number().describe('Unix ms timestamp — delivery end'),
+        startDateTime: z.number().describe('Unix ms timestamp - delivery start'),
+        endDateTime: z.number().describe('Unix ms timestamp - delivery end'),
       }),
       items: z.array(z.object({
-        name:        z.string().min(1),
+        name: z.string().min(1),
         description: z.string().default(''),
-        unitPrice:   z.number().nonnegative(),
-        quantity:    z.number().int().positive(),
+        unitPrice: z.number().nonnegative(),
+        quantity: z.number().int().positive(),
       })).min(1),
     }),
     execute: async ({
@@ -160,13 +153,13 @@ export function createTools(ctx: ToolContext) {
   const updateOrder = tool({
     description:
       'Update an existing orders delivery address, delivery window, or status. ' +
-      'All three required — pass existing values for anything you are not changing.',
+      'All three required - pass existing values for anything you are not changing.',
     parameters: z.object({
-      orderId:           z.string().uuid().describe('UUID of the order to update'),
+      orderId: z.string().uuid().describe('UUID of the order to update'),
       deliveryAddressId: z.number().int().positive(),
       reqDeliveryPeriod: z.object({
         startDateTime: z.number(),
-        endDateTime:   z.number(),
+        endDateTime: z.number(),
       }),
       status: z.string().describe('e.g. "UPDATED"'),
     }),
@@ -184,11 +177,11 @@ export function createTools(ctx: ToolContext) {
 
   const cancelOrder = tool({
     description:
-      'Permanently delete (cancel) an order — irreversible. ' +
+      'Permanently delete (cancel) an order - irreversible. ' +
       'Always confirm with the user and collect a reason first.',
     parameters: z.object({
       orderId: z.string().uuid(),
-      reason:  z.string().min(1),
+      reason: z.string().min(1),
     }),
     execute: async ({ orderId, reason }: { orderId: string; reason: string }) => {
       try   { return await orderV2.cancelOrder(ctx.orgId, orderId, reason, ctx.session); }
@@ -210,7 +203,7 @@ export function createTools(ctx: ToolContext) {
     },
   });
 
-  // ── Addresses ─────────────────────────────────────────────────────────────
+  // addresses 
 
   const listAddresses = tool({
     description:
@@ -228,10 +221,10 @@ export function createTools(ctx: ToolContext) {
       'Create a new reusable address record. ' +
       'Returns the addressId to reference when creating/updating orders.',
     parameters: z.object({
-      street:   z.string().min(1).max(200),
-      city:     z.string().optional(),
+      street: z.string().min(1).max(200),
+      city: z.string().optional(),
       postcode: z.string().optional(),
-      country:  z.string().default('AUS'),
+      country: z.string().default('AUS'),
     }),
     execute: async ({ street, city, postcode, country }: CreateAddressParams) => {
       try   { return await addr.createAddress(ctx.session, street, city, postcode, country); }
@@ -254,14 +247,14 @@ export function createTools(ctx: ToolContext) {
     description: 'Update one or more fields on an existing address. Only supplied fields change.',
     parameters: z.object({
       addressId: z.number().int().positive(),
-      street:    z.string().max(200).optional(),
-      city:      z.string().optional(),
-      postcode:  z.string().optional(),
-      country:   z.string().optional(),
+      street: z.string().max(200).optional(),
+      city: z.string().optional(),
+      postcode: z.string().optional(),
+      country: z.string().optional(),
     }),
     execute: async ({ addressId, street, city, postcode, country }: UpdateAddressParams) => {
       try {
-        // Strip out any properties that are explicitly undefined
+        // strip out any properties that are explicitly undefined
         const updates = Object.fromEntries(
           // disable so that it can use '_'
           // eslint-disable-next-line
@@ -295,12 +288,12 @@ export function createTools(ctx: ToolContext) {
   };
 }
 
-// ─── Public API ───────────────────────────────────────────────────────────────
+// public API 
 
 export interface AgentResponse {
-  /** Model's text reply for this turn */
+  // model's text reply for this turn
   reply: string;
-  /** Full updated conversation history — persist client-side, send back next turn */
+  // full updated conversation history - persist client-side, send back next turn
   messages: CoreMessage[];
 }
 
@@ -336,7 +329,7 @@ export async function runAgentTurn(
 
 /**
  * Streaming variant using streamText.
- * Returns the result object — iterate `.textStream` for token-by-token output.
+ * Returns the result object - iterate `.textStream` for token-by-token output.
  * Not suitable for standard Lambda; use with Vercel Edge / Express SSE instead.
  *
  * Example:
@@ -353,7 +346,7 @@ export function streamAgentTurn(messages: CoreMessage[], ctx: ToolContext) {
   });
 }
 
-// ─── Internal helpers ─────────────────────────────────────────────────────────
+// internal helpers 
 
 function toMsg(e: unknown): string {
   return e instanceof Error ? e.message : 'An unexpected error occurred';
