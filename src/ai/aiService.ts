@@ -101,7 +101,7 @@ export function createTools(ctx: ToolContext) {
       'Returns each orders ID, status, issue date, final price, and currency.',
     parameters: z.object({}),
     execute: async () => {
-      try   { return await orderV2.listOrders(ctx.orgId, ctx.session); }
+      try { return await orderV2.listOrders(ctx.orgId, ctx.session); }
       catch (e) { return { error: toMsg(e) }; }
     },
   });
