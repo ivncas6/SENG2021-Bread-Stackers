@@ -13,14 +13,14 @@
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import {
   createOrderFromCatalogue, listReceivedOrders, getReceivedOrderInfo,
-  acceptOrder, rejectOrder, getReceivedOrderUBL, listOrganisations,
+  acceptOrder, rejectOrder, /*getReceivedOrderUBL,*/ listOrganisations,
 } from '../orderV3';
 import { createOrderHandler } from '../handlersV3/createOrder';
-import { listReceivedOrdersHandler } from '../handlersV3/listReceivedOrders';
+/*import { listReceivedOrdersHandler } from '../handlersV3/listReceivedOrders';
 import { getReceivedOrderInfoHandler } from '../handlersV3/getReceivedOrderInfo';
 import { acceptOrderHandler } from '../handlersV3/acceptOrder';
 import { rejectOrderHandler } from '../handlersV3/rejectOrder';
-import { listOrganisationsHandler } from '../handlersV3/listOrganisations';
+import { listOrganisationsHandler } from '../handlersV3/listOrganisations';*/
 import * as userHelper from '../userHelper';
 import * as orgPermissions from '../orgPermissions';
 import * as dataStore from '../dataStore';
@@ -98,8 +98,10 @@ function setupHappyPath() {
 
 /** Mocks the Supabase fluent chain for a query that ends in .select().eq() terminal. */
 function mockSupabaseSelect(data: unknown[], error: unknown = null) {
+  // eslint-disable-next-line
   const mockBuilder: any = {
     // return a real Promise so async/await behaves predictably 
+    // eslint-disable-next-line
     then: (resolve: any, reject: any) => Promise.resolve({ data, error }).then(resolve, reject),
     eq: jest.fn().mockImplementation(() => mockBuilder),
     order: jest.fn().mockImplementation(() => mockBuilder),
@@ -109,6 +111,7 @@ function mockSupabaseSelect(data: unknown[], error: unknown = null) {
   
   mockedSupabase.from.mockReturnValue({
     select: selMock
+  // eslint-disable-next-line
   } as any);
 }
 
