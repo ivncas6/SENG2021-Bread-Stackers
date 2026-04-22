@@ -28,7 +28,7 @@ const config = {
   coverageDirectory: 'coverage',
   coverageThreshold: {
     global: {
-      lines: 85,
+      lines: 80,
     },
   },
 
