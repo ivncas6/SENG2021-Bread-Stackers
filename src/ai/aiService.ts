@@ -332,7 +332,7 @@ export async function runAgentTurn(
  * not suitable for standard Lambda; 
  * if you are implementing frontend: use with Vercel Edge / Express SSE instead.
  *
- * Example:
+ * example:
  *   const stream = streamAgentTurn(messages, ctx);
  *   for await (const delta of stream.textStream) res.write(delta);
  */
