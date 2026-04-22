@@ -1,6 +1,4 @@
 /**
- * orderV3.test.ts
- *
  * Tests for the v3 seller-aware order flow:
  *   - createOrderFromCatalogue (buyer)
  *   - listReceivedOrders / getReceivedOrderInfo (seller)
@@ -11,28 +9,29 @@
  * setupHappyPath() in beforeEach, override specific mocks per test.
  */
 
+
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import {
   createOrderFromCatalogue, listReceivedOrders, getReceivedOrderInfo,
   acceptOrder, rejectOrder, getReceivedOrderUBL, listOrganisations,
 } from '../orderV3';
-import { createOrderHandler }          from '../handlersV3/createOrder';
-import { listReceivedOrdersHandler }   from '../handlersV3/listReceivedOrders';
+import { createOrderHandler } from '../handlersV3/createOrder';
+import { listReceivedOrdersHandler } from '../handlersV3/listReceivedOrders';
 import { getReceivedOrderInfoHandler } from '../handlersV3/getReceivedOrderInfo';
-import { acceptOrderHandler }          from '../handlersV3/acceptOrder';
-import { rejectOrderHandler }          from '../handlersV3/rejectOrder';
-import { listOrganisationsHandler }    from '../handlersV3/listOrganisations';
-import * as userHelper     from '../userHelper';
+import { acceptOrderHandler } from '../handlersV3/acceptOrder';
+import { rejectOrderHandler } from '../handlersV3/rejectOrder';
+import { listOrganisationsHandler } from '../handlersV3/listOrganisations';
+import * as userHelper from '../userHelper';
 import * as orgPermissions from '../orgPermissions';
-import * as dataStore      from '../dataStore';
-import * as generateUBL    from '../generateUBL';
-import { supabase }        from '../supabase';
+import * as dataStore from '../dataStore';
+import * as generateUBL from '../generateUBL';
+import { supabase } from '../supabase';
 import { UnauthorisedError, InvalidOrderId,
   InvalidRequestPeriod, InvalidInput } from '../throwError';
 import { Order } from '../interfaces';
 import { SupabaseMock } from '../interfaces';
 
-// Mocks
+// mocks
 
 jest.mock('../userHelper');
 jest.mock('../orgPermissions');
@@ -40,10 +39,10 @@ jest.mock('../dataStore');
 jest.mock('../generateUBL');
 jest.mock('../supabase');
 
-const mockedUserHelper = userHelper     as jest.Mocked<typeof userHelper>;
+const mockedUserHelper = userHelper as jest.Mocked<typeof userHelper>;
 const mockedPerms = orgPermissions as jest.Mocked<typeof orgPermissions>;
-const mockedDataStore = dataStore      as jest.Mocked<typeof dataStore>;
-const mockedUBL = generateUBL   as jest.Mocked<typeof generateUBL>;
+const mockedDataStore = dataStore as jest.Mocked<typeof dataStore>;
+const mockedUBL = generateUBL as jest.Mocked<typeof generateUBL>;
 const mockedSupabase = supabase as unknown as SupabaseMock;
 
 // Test fixtures
@@ -99,9 +98,18 @@ function setupHappyPath() {
 
 /** Mocks the Supabase fluent chain for a query that ends in .select().eq() terminal. */
 function mockSupabaseSelect(data: unknown[], error: unknown = null) {
-  const eqMock = jest.fn().mockResolvedValue({ data, error });
-  const selMock = jest.fn().mockReturnValue({ eq: eqMock });
-  mockedSupabase.from.mockReturnValue({ select: selMock } as never);
+  const mockBuilder: any = {
+    // return a real Promise so async/await behaves predictably 
+    then: (resolve: any, reject: any) => Promise.resolve({ data, error }).then(resolve, reject),
+    eq: jest.fn().mockImplementation(() => mockBuilder),
+    order: jest.fn().mockImplementation(() => mockBuilder),
+  };
+
+  const selMock = jest.fn().mockReturnValue(mockBuilder);
+  
+  mockedSupabase.from.mockReturnValue({
+    select: selMock
+  } as any);
 }
 
 /** Mocks the `.in()` call used by createOrderFromCatalogue for catalogue validation. */
@@ -138,15 +146,15 @@ function mockOrderInsertSuccess() {
 beforeEach(() => {
   jest.clearAllMocks();
   setupHappyPath();
-  jest.spyOn(console, 'error').mockImplementation(() => {});
+  // jest.spyOn(console, 'error').mockImplementation(() => {});
 });
 
 function makeEvent(overrides: Partial<APIGatewayProxyEvent>): APIGatewayProxyEvent {
   return {
-    headers:       { session: SESSION },
+    headers: { session: SESSION },
     pathParameters: { orgId: String(SELLER_ORG_ID), orderId: ORDER_ID },
     queryStringParameters: null,
-    body:          null,
+    body: null,
     ...overrides,
   } as unknown as APIGatewayProxyEvent;
 }
@@ -448,9 +456,9 @@ describe('listOrganisations (business logic)', () => {
   });
 });
 
-// Lambda: createOrderHandler (V3) 
+// lambda: createOrderHandler (V3) 
 
-describe('Lambda: createOrderHandler (V3)', () => {
+describe('lambda: createOrderHandler (V3)', () => {
   test('200 on success', async () => {
     mockCatalogueIn(MOCK_CATALOGUE_ROWS);
     mockOrderInsertSuccess();
@@ -461,7 +469,7 @@ describe('Lambda: createOrderHandler (V3)', () => {
         sellerOrgId: SELLER_ORG_ID,
         deliveryAddressId: ADDRESS_ID,
         reqDeliveryPeriod: DELIVERY_PERIOD,
-        items:      CATALOGUE_ITEMS,
+        items: CATALOGUE_ITEMS,
       }),
     });
     const res = await createOrderHandler(event);
@@ -480,7 +488,7 @@ describe('Lambda: createOrderHandler (V3)', () => {
       body: JSON.stringify({
         deliveryAddressId: ADDRESS_ID,
         reqDeliveryPeriod: DELIVERY_PERIOD,
-        items:      CATALOGUE_ITEMS,
+        items: CATALOGUE_ITEMS,
       }),
     });
     const res = await createOrderHandler(event);
@@ -514,13 +522,16 @@ describe('Lambda: createOrderHandler (V3)', () => {
   });
 });
 
-// Lambda: listReceivedOrdersHandler 
+// lambda: listReceivedOrdersHandler 
 
-describe('Lambda: listReceivedOrdersHandler', () => {
+describe('lambda: listReceivedOrdersHandler', () => {
   test('200 returns received orders', async () => {
     mockSupabaseSelect([MOCK_ORDER]);
     const res = await listReceivedOrdersHandler(
-      makeEvent({ pathParameters: { orgId: String(SELLER_ORG_ID) } })
+      makeEvent({ 
+        pathParameters: { orgId: String(SELLER_ORG_ID) },
+        queryStringParameters: {}, 
+      })
     );
     expect(res.statusCode).toStrictEqual(200);
     expect(JSON.parse(res.body).orders).toHaveLength(1);
@@ -555,9 +566,9 @@ describe('Lambda: listReceivedOrdersHandler', () => {
   });
 });
 
-// Lambda: getReceivedOrderInfoHandler 
+// lambda: getReceivedOrderInfoHandler 
 
-describe('Lambda: getReceivedOrderInfoHandler', () => {
+describe('lambda: getReceivedOrderInfoHandler', () => {
   test('200 with full order details including buyerOrgId', async () => {
     const res = await getReceivedOrderInfoHandler(makeEvent({}));
     expect(res.statusCode).toStrictEqual(200);
@@ -587,9 +598,9 @@ describe('Lambda: getReceivedOrderInfoHandler', () => {
   });
 });
 
-// Lambda: acceptOrderHandler 
+// lambda: acceptOrderHandler 
 
-describe('Lambda: acceptOrderHandler', () => {
+describe('lambda: acceptOrderHandler', () => {
   function mockAcceptSuccess() {
     const eqMock = jest.fn().mockResolvedValue({ error: null });
     const updMock = jest.fn().mockReturnValue({ eq: eqMock });
@@ -630,9 +641,9 @@ describe('Lambda: acceptOrderHandler', () => {
   });
 });
 
-// Lambda: rejectOrderHandler 
+// lambda: rejectOrderHandler 
 
-describe('Lambda: rejectOrderHandler', () => {
+describe('lambda: rejectOrderHandler', () => {
   function mockRejectSuccess() {
     const eqMock = jest.fn().mockResolvedValue({ error: null });
     const updMock = jest.fn().mockReturnValue({ eq: eqMock });
@@ -680,9 +691,9 @@ describe('Lambda: rejectOrderHandler', () => {
   });
 });
 
-// Lambda: listOrganisationsHandler 
+// lambda: listOrganisationsHandler 
 
-describe('Lambda: listOrganisationsHandler', () => {
+describe('lambda: listOrganisationsHandler', () => {
   test('200 returns organisation list', async () => {
     const orgs = [{ orgId: 1, orgName: 'BreadCo' }];
     const selMock = jest.fn().mockResolvedValue({ data: orgs, error: null });
@@ -716,3 +727,4 @@ describe('getReceivedOrderUBL (business logic)', () => {
       .rejects.toThrow(UnauthorisedError);
   });
 });
+*/

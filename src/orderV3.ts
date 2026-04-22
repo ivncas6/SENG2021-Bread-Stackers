@@ -8,7 +8,7 @@
  *  - The sellerOrgID column is properly set (in v0/v1/v2 it was hardcoded to
  *    1 and not even written to the DB).
  *  - Orders start with status 'PENDING' instead of 'OPEN'.
- *    Status lifecycle:  PENDING → ACCEPTED | REJECTED
+ *    Status lifecycle: PENDING → ACCEPTED | REJECTED
  *    (buyers may still cancel a PENDING order via the v2 cancel endpoint)
  *  - Sellers can list orders placed with them, get full order detail, and
  *    accept or reject individual orders.
@@ -38,7 +38,7 @@ import { Order, ReqDeliveryPeriod, OrderLineWithItem,
 /** A single item selected from the seller's catalogue when placing an order. */
 export interface CatalogueOrderItem {
   catalogueItemId: number;
-  quantity:        number;
+  quantity: number;
 }
 
 // Private helpers
@@ -49,24 +49,26 @@ export interface CatalogueOrderItem {
  * sellerOrgID and a non-OPEN initial status without modifying shared helpers.
  */
 async function insertOrderV3(
-  order:             Order,
+  order: Order,
   deliveryAddressId: number,
   reqDeliveryPeriod: ReqDeliveryPeriod,
-  items:             { name: string; description: string; unitPrice: number; quantity: number }[]
+  items: { name: string; description: string; unitPrice: number; quantity: number }[]
 ): Promise<void> {
   const { error: orderError } = await supabase
     .from('orders')
     .insert([{
-      orderId:      order.orderId,
-      currency:     order.currency,
-      finalPrice:   order.finalPrice,
+      orderId: order.orderId,
+      currency: order.currency,
+      finalPrice: order.finalPrice,
       taxExclusive: order.taxExclusive,
       taxInclusive: order.taxInclusive,
-      buyerOrgID:   order.buyerOrgID,
-      sellerOrgID:  order.sellerOrgID,  // v3: real seller, not hardcoded 1
-      status:       order.status,        // v3: 'PENDING'
-      issuedDate:   order.issuedDate,
-      issuedTime:   order.issuedTime,
+      buyerOrgID: order.buyerOrgID,
+      // real seller
+      sellerOrgID: order.sellerOrgID,
+      // 'PENDING'
+      status: order.status,
+      issuedDate: order.issuedDate,
+      issuedTime: order.issuedTime,
     }]);
 
   if (orderError) {
@@ -76,18 +78,18 @@ async function insertOrderV3(
   await supabase
     .from('deliveries')
     .insert([{
-      orderID:           order.orderId,
+      orderID: order.orderId,
       deliveryAddressID: deliveryAddressId,
-      startDate:         reqDeliveryPeriod.startDateTime.toString(),
-      endDate:           reqDeliveryPeriod.endDateTime.toString(),
+      startDate: reqDeliveryPeriod.startDateTime.toString(),
+      endDate: reqDeliveryPeriod.endDateTime.toString(),
     }]);
 
   for (const item of items) {
     const { data: itemData } = await supabase
       .from('items')
       .insert([{
-        name:        item.name,
-        price:       item.unitPrice,
+        name: item.name,
+        price: item.unitPrice,
         description: item.description,
       }])
       .select()
@@ -97,10 +99,10 @@ async function insertOrderV3(
       await supabase
         .from('order_lines')
         .insert([{
-          orderID:  order.orderId,
-          itemID:   itemData.itemId,
+          orderID: order.orderId,
+          itemID: itemData.itemId,
           quantity: item.quantity,
-          status:   'PENDING',
+          status: 'PENDING',
         }]);
     }
   }
@@ -127,22 +129,22 @@ async function assertOrderBelongsToSeller(orderId: string, sellerOrgId: number):
  * Creates an order from a seller's catalogue.
  *
  * The buyer picks items from the seller's catalogue by ID and specifies
- * quantities.  Prices come from the catalogue — buyers cannot inject
+ * quantities.  Prices come from the catalogue - buyers cannot inject
  * their own prices.  The order is placed as PENDING and the seller must
  * accept or reject it.
  */
 export async function createOrderFromCatalogue(
-  buyerOrgId:        number,
-  session:           string,
-  sellerOrgId:       number,
+  buyerOrgId: number,
+  session: string,
+  sellerOrgId: number,
   deliveryAddressId: number,
   reqDeliveryPeriod: ReqDeliveryPeriod,
-  catalogueItems:    CatalogueOrderItem[]
+  catalogueItems: CatalogueOrderItem[]
 ): Promise<createOrderReturn> {
   const userId = await getUserIdFromSession(session);
   await requireOrgMember(userId, buyerOrgId);
 
-  // Basic structural validation
+  // basic structural validation
   if (!Array.isArray(catalogueItems) || catalogueItems.length === 0) {
     throw new InvalidInput('At least one catalogue item is required');
   }
@@ -161,7 +163,7 @@ export async function createOrderFromCatalogue(
     throw new InvalidRequestPeriod('The requested delivery period is invalid.');
   }
 
-  // Fetch and validate catalogue items — all must be active and owned by sellerOrgId
+  // fetch and validate catalogue items - all must be active and owned by sellerOrgId
   const itemIds = catalogueItems.map(ci => ci.catalogueItemId);
   const { data: catalogueData, error: catError } = await supabase
     .from('catalogue_items')
@@ -171,7 +173,7 @@ export async function createOrderFromCatalogue(
   if (catError) throw new InvalidSupabase(catError.message);
 
   type CatRow = { catalogueItemId: number; name: string; description: string | null;
-                  price: number; active: boolean; orgId: number };
+    price: number; active: boolean; orgId: number };
 
   const itemMap = new Map<number, { name: string; description: string; price: number }>();
   for (const ci of catalogueItems) {
@@ -189,13 +191,13 @@ export async function createOrderFromCatalogue(
       );
     }
     itemMap.set(ci.catalogueItemId, {
-      name:        found.name,
+      name: found.name,
       description: found.description ?? '',
-      price:       Number(found.price),
+      price: Number(found.price),
     });
   }
 
-  // Calculate totals — prices come from the catalogue, not the buyer
+  // Calculate totals - prices come from the catalogue, not the buyer
   let taxExclusive = 0;
   const reqItems = catalogueItems.map(ci => {
     const item = itemMap.get(ci.catalogueItemId)!;
@@ -205,20 +207,22 @@ export async function createOrderFromCatalogue(
   });
 
   const taxInclusive = taxExclusive * 1.1;
-  const orderId  = uuidv4();
+  const orderId = uuidv4();
   const currTime = new Date();
 
   const order: Order = {
     orderId,
-    issuedDate:   currTime.toISOString().slice(0, 10),
-    issuedTime:   currTime.toLocaleTimeString('en-AU'),
-    currency:     'AUD',
-    status:       'PENDING',    // awaiting seller acceptance
-    buyerOrgID:   buyerOrgId,
-    sellerOrgID:  sellerOrgId,  // real seller org
+    issuedDate: currTime.toISOString().slice(0, 10),
+    issuedTime: currTime.toLocaleTimeString('en-AU'),
+    currency: 'AUD',
+    // awaiting seller acceptance
+    status: 'PENDING',
+    buyerOrgID: buyerOrgId,
+    // real seller org
+    sellerOrgID: sellerOrgId,
     taxExclusive,
     taxInclusive,
-    finalPrice:   taxInclusive,
+    finalPrice: taxInclusive,
   };
 
   await insertOrderV3(order, deliveryAddressId, reqDeliveryPeriod, reqItems);
@@ -232,8 +236,8 @@ export async function createOrderFromCatalogue(
  */
 export async function listReceivedOrders(
   sellerOrgId: number,
-  session:     string,
-  status?:     string
+  session: string,
+  status?: string
 ): Promise<{ orders: unknown[] }> {
   const userId = await getUserIdFromSession(session);
   await requireOrgMember(userId, sellerOrgId);
@@ -258,8 +262,8 @@ export async function listReceivedOrders(
  */
 export async function getReceivedOrderInfo(
   sellerOrgId: number,
-  session:     string,
-  orderId:     string
+  session: string,
+  orderId: string
 ) {
   const userId = await getUserIdFromSession(session);
   await requireOrgMember(userId, sellerOrgId);
@@ -267,29 +271,29 @@ export async function getReceivedOrderInfo(
   const order = await assertOrderBelongsToSeller(orderId, sellerOrgId);
 
   const delivery = order.deliveries?.[0];
-  const address  = delivery?.addresses;
+  const address = delivery?.addresses;
 
   return {
     orderId,
-    status:           order.status,
-    issuedDate:       order.issuedDate,
-    issuedTime:       order.issuedTime,
-    currency:         order.currency,
-    taxExclusive:     Number(order.taxExclusive || 0),
-    taxInclusive:     Number(order.taxInclusive || 0),
-    finalPrice:       Number(order.finalPrice || 0),
-    address:          address?.street || '',
+    status: order.status,
+    issuedDate: order.issuedDate,
+    issuedTime: order.issuedTime,
+    currency: order.currency,
+    taxExclusive: Number(order.taxExclusive || 0),
+    taxInclusive: Number(order.taxInclusive || 0),
+    finalPrice: Number(order.finalPrice || 0),
+    address: address?.street || '',
     deliveryAddressId: delivery?.deliveryAddressID ?? null,
-    buyerOrgId:       order.buyerOrgID,
+    buyerOrgId: order.buyerOrgID,
     deliveryDetails: {
       startDateTime: Number(delivery?.startDate || 0),
-      endDateTime:   Number(delivery?.endDate || 0),
+      endDateTime: Number(delivery?.endDate || 0),
     },
     items: (order.order_lines || []).map((line: OrderLineWithItem) => ({
-      name:        line.items?.name || 'Unknown',
+      name: line.items?.name || 'Unknown',
       description: line.items?.description || '',
-      unitPrice:   Number(line.items?.price || 0),
-      quantity:    line.quantity,
+      unitPrice: Number(line.items?.price || 0),
+      quantity: line.quantity,
     })),
   };
 }
@@ -301,8 +305,8 @@ export async function getReceivedOrderInfo(
  */
 export async function acceptOrder(
   sellerOrgId: number,
-  orderId:     string,
-  session:     string
+  orderId: string,
+  session: string
 ): Promise<EmptyObject> {
   const userId = await getUserIdFromSession(session);
   await requireOrgAdminOrOwner(userId, sellerOrgId);
@@ -325,14 +329,14 @@ export async function acceptOrder(
 /**
  * Rejects a PENDING order (seller action).
  * Status transitions: PENDING → REJECTED.
- * A reason is required — it may be stored/returned for buyer communication.
+ * A reason is required - it may be stored/returned for buyer communication.
  * Only ADMIN or OWNER of the seller org may reject.
  */
 export async function rejectOrder(
   sellerOrgId: number,
-  orderId:     string,
-  reason:      string,
-  session:     string
+  orderId: string,
+  reason: string,
+  session: string
 ): Promise<{ reason: string }> {
   const userId = await getUserIdFromSession(session);
   await requireOrgAdminOrOwner(userId, sellerOrgId);
@@ -362,8 +366,8 @@ export async function rejectOrder(
  */
 export async function getReceivedOrderUBL(
   sellerOrgId: number,
-  session:     string,
-  orderId:     string
+  session: string,
+  orderId: string
 ): Promise<string> {
   const userId = await getUserIdFromSession(session);
   await requireOrgMember(userId, sellerOrgId);
@@ -372,7 +376,7 @@ export async function getReceivedOrderUBL(
 }
 
 /**
- * Lists all organisations — lets buyers discover sellers and their org IDs
+ * Lists all organisations - lets buyers discover sellers and their org IDs
  * before browsing catalogues.  Any authenticated user may call this.
  */
 export async function listOrganisations(

@@ -15,7 +15,7 @@ export const listReceivedOrdersHandler = async (event: APIGatewayProxyEvent) => 
     const orgId = parseInt(event.pathParameters?.orgId ?? '');
     if (isNaN(orgId)) return jsonResponse(400, { error: 'Invalid orgId in path' });
 
-    // Optional ?status= query parameter
+    // optional ?status= query parameter
     const status = event.queryStringParameters?.status;
 
     const result = await listReceivedOrders(orgId, session, status);
