@@ -1,7 +1,57 @@
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+
+export const config = {
+  runtime: 'nodejs',
+};
+
 const allowedPathPrefix = '/v0/';
 
+function buildEnvCandidateFiles(): string[] {
+  const cwd = process.cwd();
+  const candidateDirectories = [
+    cwd,
+    path.resolve(cwd, '..'),
+    path.resolve(cwd, '../..'),
+    path.join(cwd, 'frontend'),
+    path.join(path.resolve(cwd, '..'), 'frontend'),
+  ];
+
+  return Array.from(new Set(candidateDirectories)).map((directory) =>
+    path.join(directory, '.env.local'),
+  );
+}
+
+function readLocalEnvValue(name: string): string | undefined {
+  const candidateFiles = buildEnvCandidateFiles();
+
+  for (const filePath of candidateFiles) {
+    if (!fs.existsSync(filePath)) {
+      continue;
+    }
+
+    const fileContents = fs.readFileSync(filePath, 'utf8');
+    const matchingLine = fileContents
+      .split('\n')
+      .find((line) => line.trim().startsWith(`${name}=`));
+
+    if (!matchingLine) {
+      continue;
+    }
+
+    const rawValue = matchingLine.split('=').slice(1).join('=').trim();
+    return rawValue.replace(/^['"]|['"]$/g, '');
+  }
+
+  return undefined;
+}
+
+function getEnvValue(name: string): string | undefined {
+  return process.env[name] || readLocalEnvValue(name);
+}
+
 function buildAwsUrl(requestUrl: URL): string {
-  const rawBaseUrl = process.env.AWS_API_BASE_URL;
+  const rawBaseUrl = getEnvValue('AWS_API_BASE_URL');
   const rawPath = requestUrl.searchParams.get('path');
 
   if (!rawBaseUrl) {
@@ -17,7 +67,7 @@ function buildAwsUrl(requestUrl: URL): string {
 }
 
 function createForwardHeaders(request: Request): Headers {
-  const apiKey = process.env.AWS_API_KEY;
+  const apiKey = getEnvValue('AWS_API_KEY');
 
   if (!apiKey) {
     throw new Error('Missing AWS_API_KEY environment variable.');

@@ -3,186 +3,289 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bread Stackers Frontend Prototype</title>
+  <title>Bread Stackers</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
-  <div class="page-shell">
-    <aside class="sidebar">
-      <div>
-        <p class="eyebrow">Sprint 3</p>
-        <h1>Bread Stackers</h1>
-        <p class="subtitle">Frontend proof of concept for the order service.</p>
-      </div>
+  <div class="app-shell">
+    <header class="site-header">
+      <button class="brand" type="button" data-nav-target="landing">
+        <span class="brand-mark">BS</span>
+        <span class="brand-text">Bread Stackers</span>
+      </button>
 
-      <section class="panel compact">
-        <h2>Backend</h2>
-        <p class="muted">Connected automatically through the deployed app configuration.</p>
-      </section>
+      <nav id="publicNav" class="site-nav">
+        <button class="nav-link" type="button" data-nav-target="login">Login</button>
+        <button class="nav-button" type="button" data-nav-target="register">Register</button>
+      </nav>
 
-      <section class="panel compact">
-        <h2>Session</h2>
-        <p id="sessionStatus" class="muted">No active session</p>
-        <button id="clearSessionButton" class="ghost" type="button">Clear Session</button>
-      </section>
-    </aside>
+      <nav id="privateNav" class="site-nav hidden" aria-label="Authenticated navigation">
+        <button class="nav-link is-active" type="button" data-nav-target="dashboard">Orders</button>
+        <button class="nav-link" type="button" id="createOrderNavButton" data-nav-target="createOrder">Create Order</button>
+        <span class="nav-divider" aria-hidden="true"></span>
+        <span class="welcome-copy">Welcome, <span id="welcomeName">there</span></span>
+        <button class="nav-button nav-button-light" type="button" id="logoutButton">Logout</button>
+      </nav>
+    </header>
 
-    <main class="content">
-      <section class="hero">
-        <div>
-          <p class="eyebrow">Prototype Scope</p>
-          <h2>Register, authenticate, create orders, and manage existing orders.</h2>
+    <main class="app-main">
+      <section id="landingView" class="view is-active">
+        <div class="hero">
+          <div class="hero-copy">
+            <p class="hero-kicker">Business Ordering Portal</p>
+            <h1>Simple order management for supplier customers.</h1>
+            <p class="hero-text">
+              Create your business account, submit supplier orders, and keep track of every
+              request from one clean dashboard.
+            </p>
+            <div class="hero-actions">
+              <button class="hero-primary" type="button" data-nav-target="register">Get Started</button>
+              <button class="hero-secondary" type="button" data-nav-target="login">Sign In</button>
+            </div>
+          </div>
         </div>
-        <div class="hero-card">
-          <p>Designed to demonstrate frontend-to-service integration for the pitch, not a complete production web app.</p>
-        </div>
       </section>
 
-      <section class="grid two-up">
-        <article class="panel">
-          <h2>Register</h2>
-          <form id="registerForm">
-            <label for="registerFirstName">First Name</label>
-            <input id="registerFirstName" name="firstName" type="text" required>
+      <section id="loginView" class="view auth-view hidden">
+        <div class="auth-card">
+          <div class="auth-mark">BS</div>
+          <h2>Welcome Back</h2>
+          <p class="auth-subtitle">Sign in to your Bread Stackers account</p>
 
-            <label for="registerLastName">Last Name</label>
-            <input id="registerLastName" name="lastName" type="text" required>
-
-            <label for="registerEmail">Email</label>
-            <input id="registerEmail" name="email" type="email" required>
-
-            <label for="registerPhone">Telephone</label>
-            <input id="registerPhone" name="telephone" type="tel" required>
-
-            <label for="registerPassword">Password</label>
-            <input id="registerPassword" name="password" type="password" required>
-
-            <button type="submit">Create Account</button>
-          </form>
-        </article>
-
-        <article class="panel">
-          <h2>Login</h2>
-          <form id="loginForm">
+          <form id="loginForm" class="auth-form">
             <label for="loginEmail">Email</label>
-            <input id="loginEmail" name="email" type="email" required>
+            <input id="loginEmail" name="email" type="email" placeholder="you@example.com" required>
 
             <label for="loginPassword">Password</label>
-            <input id="loginPassword" name="password" type="password" required>
+            <input id="loginPassword" name="password" type="password" placeholder="Enter your password" required>
 
-            <button type="submit">Login</button>
+            <button class="form-submit" type="submit">Sign In</button>
           </form>
-        </article>
+
+          <p class="auth-footer">
+            Don&apos;t have an account?
+            <button class="inline-link" type="button" data-nav-target="register">Register</button>
+          </p>
+        </div>
       </section>
 
-      <section class="grid two-up">
-        <article class="panel">
-          <h2>Create Order</h2>
-          <form id="createOrderForm">
-            <label for="currency">Currency</label>
-            <input id="currency" name="currency" type="text" value="AUD" required>
+      <section id="registerView" class="view auth-view hidden">
+        <div class="auth-card auth-card-wide">
+          <div class="auth-mark">BS</div>
+          <h2>Create Account</h2>
+          <p class="auth-subtitle">Join Bread Stackers and start managing orders</p>
 
-            <label for="deliveryAddress">Delivery Address</label>
-            <textarea id="deliveryAddress" name="deliveryAddress" rows="3" required></textarea>
+          <form id="registerForm" class="auth-form">
+            <div class="form-row">
+              <div>
+                <label for="registerFirstName">First Name</label>
+                <input id="registerFirstName" name="firstName" type="text" placeholder="John" required>
+              </div>
+              <div>
+                <label for="registerLastName">Last Name</label>
+                <input id="registerLastName" name="lastName" type="text" placeholder="Doe" required>
+              </div>
+            </div>
 
-            <label for="userFirstName">Buyer First Name</label>
-            <input id="userFirstName" name="userFirstName" type="text" required>
+            <label for="registerEmail">Email</label>
+            <input id="registerEmail" name="email" type="email" placeholder="you@example.com" required>
 
-            <label for="userLastName">Buyer Last Name</label>
-            <input id="userLastName" name="userLastName" type="text" required>
+            <label for="registerPhone">Telephone</label>
+            <input id="registerPhone" name="telephone" type="tel" placeholder="+61 400 000 000" required>
 
-            <label for="userEmail">Buyer Email</label>
-            <input id="userEmail" name="userEmail" type="email" required>
+            <label for="registerPassword">Password</label>
+            <input id="registerPassword" name="password" type="password" placeholder="Create a password" required>
+            <p class="field-hint">Use at least 6 characters with a number.</p>
 
-            <label for="userTelephone">Buyer Telephone</label>
-            <input id="userTelephone" name="userTelephone" type="tel" required>
-
-            <label for="startDateTime">Delivery Start</label>
-            <input id="startDateTime" name="startDateTime" type="datetime-local" required>
-
-            <label for="endDateTime">Delivery End</label>
-            <input id="endDateTime" name="endDateTime" type="datetime-local" required>
-
-            <label for="itemName">Item Name</label>
-            <input id="itemName" name="itemName" type="text" required>
-
-            <label for="itemDescription">Item Description</label>
-            <input id="itemDescription" name="itemDescription" type="text" required>
-
-            <label for="itemUnitPrice">Unit Price</label>
-            <input id="itemUnitPrice" name="itemUnitPrice" type="number" min="0" step="0.01" required>
-
-            <label for="itemQuantity">Quantity</label>
-            <input id="itemQuantity" name="itemQuantity" type="number" min="1" step="1" required>
-
-            <button type="submit">Submit Order</button>
+            <button class="form-submit" type="submit">Create Account</button>
           </form>
-        </article>
 
-        <article class="panel">
-          <h2>Orders</h2>
-          <div class="stack">
-            <button id="listOrdersButton" type="button">Refresh Orders</button>
-            <div id="ordersList" class="list-state muted">No orders loaded yet.</div>
+          <p class="auth-footer">
+            Already have an account?
+            <button class="inline-link" type="button" data-nav-target="login">Sign in</button>
+          </p>
+        </div>
+      </section>
+
+      <section id="dashboardView" class="view hidden">
+        <div class="dashboard-header">
+          <div>
+            <h2>Orders</h2>
+            <p class="dashboard-subtitle">Manage and track all your orders</p>
           </div>
-        </article>
+
+          <button
+            id="dashboardCreateOrderButton"
+            class="create-order-button"
+            type="button"
+            data-nav-target="createOrder"
+          >
+            <span aria-hidden="true">+</span>
+            Create Order
+          </button>
+        </div>
+
+        <div class="surface">
+          <div class="table-header">
+            <span>Order ID</span>
+            <span>Status</span>
+            <span>Issue Date</span>
+            <span>Final Price</span>
+            <span class="actions-column">Actions</span>
+          </div>
+
+          <div id="ordersEmptyState" class="empty-state hidden">
+            <h3>No orders yet</h3>
+            <p>Your orders will appear here after you create your first purchase order.</p>
+          </div>
+
+          <div id="ordersLoadingState" class="empty-state hidden">
+            <h3>Loading orders</h3>
+            <p>Fetching the latest order data for your business account.</p>
+          </div>
+
+          <div id="ordersList" class="orders-rows"></div>
+        </div>
+
+        <section id="orderDetailPanel" class="detail-panel hidden">
+          <div class="detail-panel-header">
+            <div>
+              <p class="detail-kicker">Order Detail</p>
+              <h3 id="detailOrderHeading">Select an order</h3>
+            </div>
+            <button id="closeOrderDetailButton" class="detail-close" type="button">Close</button>
+          </div>
+
+          <pre id="orderInfoOutput" class="detail-output">Choose an order from the dashboard to inspect it.</pre>
+        </section>
       </section>
 
-      <section class="grid two-up">
-        <article class="panel">
-          <h2>Order Details</h2>
-          <form id="orderInfoForm">
-            <label for="orderIdLookup">Order ID</label>
-            <input id="orderIdLookup" name="orderId" type="text" required>
-            <button type="submit">Load Order</button>
-          </form>
-          <pre id="orderInfoOutput" class="output">No order selected.</pre>
-        </article>
+      <section id="createOrderView" class="view hidden">
+        <button id="createOrderBackButton" class="back-link" type="button" data-nav-target="dashboard">
+          <span aria-hidden="true">←</span>
+          Back to Orders
+        </button>
 
-        <article class="panel">
-          <h2>Update or Cancel</h2>
-          <form id="updateOrderForm">
-            <label for="updateOrderId">Order ID</label>
-            <input id="updateOrderId" name="orderId" type="text" required>
+        <div class="create-order-intro">
+          <h2>Create New Order</h2>
+          <p class="dashboard-subtitle">Fill in the details below to create a new order</p>
+        </div>
 
-            <label for="updateDeliveryAddress">New Delivery Address</label>
-            <textarea id="updateDeliveryAddress" name="deliveryAddress" rows="3" required></textarea>
+        <form id="createOrderForm" class="create-order-layout">
+          <div class="create-order-main">
+            <section class="surface create-order-card">
+              <div class="create-order-card-header">
+                <h3>Buyer Details</h3>
+                <p>We&apos;ll use your account details as the buyer contact for this order.</p>
+              </div>
 
-            <label for="updateStartDateTime">New Delivery Start</label>
-            <input id="updateStartDateTime" name="startDateTime" type="datetime-local" required>
+              <div class="form-row">
+                <div>
+                  <label for="buyerFirstName">First Name</label>
+                  <input id="buyerFirstName" name="buyerFirstName" type="text" placeholder="John" required>
+                </div>
+                <div>
+                  <label for="buyerLastName">Last Name</label>
+                  <input id="buyerLastName" name="buyerLastName" type="text" placeholder="Doe" required>
+                </div>
+              </div>
 
-            <label for="updateEndDateTime">New Delivery End</label>
-            <input id="updateEndDateTime" name="endDateTime" type="datetime-local" required>
+              <div class="form-row">
+                <div>
+                  <label for="buyerEmail">Email</label>
+                  <input id="buyerEmail" name="buyerEmail" type="email" placeholder="john@example.com" required>
+                </div>
+                <div>
+                  <label for="buyerTelephone">Telephone</label>
+                  <input id="buyerTelephone" name="buyerTelephone" type="tel" placeholder="+61 400 000 000">
+                </div>
+              </div>
+            </section>
 
-            <label for="updateStatus">Status</label>
-            <input id="updateStatus" name="status" type="text" value="UPDATED" required>
+            <section class="surface create-order-card">
+              <div class="create-order-card-header">
+                <h3>Delivery Details</h3>
+                <p>Choose the destination and requested delivery window for this order.</p>
+              </div>
 
-            <button type="submit">Update Order</button>
-          </form>
+              <label for="deliveryAddress">Delivery Address</label>
+              <textarea
+                id="deliveryAddress"
+                name="deliveryAddress"
+                rows="4"
+                placeholder="123 Main Street, Suburb, State, Postcode"
+                required
+              ></textarea>
 
-          <hr>
+              <div class="form-row">
+                <div>
+                  <label for="deliveryStart">Delivery Start</label>
+                  <input id="deliveryStart" name="deliveryStart" type="datetime-local" required>
+                </div>
+                <div>
+                  <label for="deliveryEnd">Delivery End</label>
+                  <input id="deliveryEnd" name="deliveryEnd" type="datetime-local" required>
+                </div>
+              </div>
+            </section>
 
-          <form id="cancelOrderForm">
-            <label for="cancelOrderId">Order ID</label>
-            <input id="cancelOrderId" name="orderId" type="text" required>
+            <section class="surface create-order-card">
+              <div class="create-order-card-header create-order-card-header-split">
+                <div>
+                  <h3>Items</h3>
+                  <p>Add the products or line items included in this order.</p>
+                </div>
+                <button id="addOrderItemButton" class="secondary-button" type="button">Add Item</button>
+              </div>
 
-            <label for="cancelReason">Cancellation Reason</label>
-            <input id="cancelReason" name="reason" type="text" required>
+              <div id="createOrderItems" class="order-items-list"></div>
+            </section>
+          </div>
 
-            <button class="danger" type="submit">Cancel Order</button>
-          </form>
-        </article>
-      </section>
+          <aside class="surface order-summary-card">
+            <div class="create-order-card-header">
+              <h3>Order Summary</h3>
+              <p>Review totals before submitting the order.</p>
+            </div>
 
-      <section class="panel">
-        <h2>API Console</h2>
-        <p class="muted">All request results are shown here to help with demos and debugging.</p>
-        <pre id="consoleOutput" class="output">Frontend ready.</pre>
+            <label for="createOrderCurrency">Currency</label>
+            <select id="createOrderCurrency" name="currency">
+              <option value="AUD">AUD - Australian Dollar</option>
+              <option value="USD">USD - US Dollar</option>
+              <option value="EUR">EUR - Euro</option>
+            </select>
+
+            <div id="createOrderSummaryLines" class="summary-lines"></div>
+
+            <div class="summary-breakdown">
+              <div class="summary-row">
+                <span>Subtotal</span>
+                <strong id="summarySubtotal">AUD 0.00</strong>
+              </div>
+              <div class="summary-row">
+                <span>GST (10%)</span>
+                <strong id="summaryTax">AUD 0.00</strong>
+              </div>
+            </div>
+
+            <div class="summary-total">
+              <span>Total</span>
+              <strong id="summaryTotal">AUD 0.00</strong>
+            </div>
+
+            <button id="submitCreateOrderButton" class="form-submit" type="submit">Create Order</button>
+            <button id="createOrderCancelButton" class="secondary-button secondary-button-block" type="button" data-nav-target="dashboard">
+              Cancel
+            </button>
+          </aside>
+        </form>
       </section>
     </main>
+
+    <div id="feedbackBanner" class="feedback-banner hidden" role="status" aria-live="polite"></div>
   </div>
 
   <script src="./app.js"></script>
