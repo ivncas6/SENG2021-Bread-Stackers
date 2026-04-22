@@ -1,3 +1,69 @@
+// lambda: createOrderHandler (V3) 
+
+describe('lambda: createOrderHandler (V3)', () => {
+  test('200 on success', async () => {
+    mockCatalogueIn(MOCK_CATALOGUE_ROWS);
+    mockOrderInsertSuccess();
+
+    const event = makeEvent({
+      pathParameters: { orgId: String(BUYER_ORG_ID) },
+      body: JSON.stringify({
+        sellerOrgId: SELLER_ORG_ID,
+        deliveryAddressId: ADDRESS_ID,
+        reqDeliveryPeriod: DELIVERY_PERIOD,
+        items: CATALOGUE_ITEMS,
+      }),
+    });
+    const res = await createOrderHandler(event);
+    expect(res.statusCode).toStrictEqual(200);
+    expect(JSON.parse(res.body)).toHaveProperty('orderId');
+  });
+
+  test('401 when session missing', async () => {
+    const res = await createOrderHandler(makeEvent({ headers: {} }));
+    expect(res.statusCode).toStrictEqual(401);
+  });
+
+  test('400 when sellerOrgId is missing or invalid', async () => {
+    const event = makeEvent({
+      pathParameters: { orgId: String(BUYER_ORG_ID) },
+      body: JSON.stringify({
+        deliveryAddressId: ADDRESS_ID,
+        reqDeliveryPeriod: DELIVERY_PERIOD,
+        items: CATALOGUE_ITEMS,
+      }),
+    });
+    const res = await createOrderHandler(event);
+    expect(res.statusCode).toStrictEqual(400);
+  });
+
+  test('400 when items array is empty', async () => {
+    mockCatalogueIn(MOCK_CATALOGUE_ROWS);
+    const event = makeEvent({
+      pathParameters: { orgId: String(BUYER_ORG_ID) },
+      body: JSON.stringify({
+        sellerOrgId: SELLER_ORG_ID, deliveryAddressId: ADDRESS_ID,
+        reqDeliveryPeriod: DELIVERY_PERIOD, items: [],
+      }),
+    });
+    const res = await createOrderHandler(event);
+    expect(res.statusCode).toStrictEqual(400);
+  });
+
+  test('401 when caller is not a buyer org member', async () => {
+    mockedPerms.requireOrgMember.mockRejectedValue(new UnauthorisedError('not a member'));
+    const event = makeEvent({
+      pathParameters: { orgId: String(BUYER_ORG_ID) },
+      body: JSON.stringify({
+        sellerOrgId: SELLER_ORG_ID, deliveryAddressId: ADDRESS_ID,
+        reqDeliveryPeriod: DELIVERY_PERIOD, items: CATALOGUE_ITEMS,
+      }),
+    });
+    const res = await createOrderHandler(event);
+    expect(res.statusCode).toStrictEqual(401);
+  });
+});
+
 // lambda: listReceivedOrdersHandler 
 
 describe('lambda: listReceivedOrdersHandler', () => {
@@ -203,4 +269,3 @@ describe('getReceivedOrderUBL (business logic)', () => {
       .rejects.toThrow(UnauthorisedError);
   });
 });
-*/
