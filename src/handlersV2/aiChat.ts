@@ -1,9 +1,8 @@
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import type { CoreMessage } from 'ai';
-
-import { runAgentTurn }                      from '../ai/aiService';
+import { runAgentTurn } from '../ai/aiService';
 import { handleErrorResponse, jsonResponse } from '../handlerHelpers';
-import { UnauthorisedError }                 from '../throwError';
+import { UnauthorisedError } from '../throwError';
 
 export const aiChatHandler = async (event: APIGatewayProxyEvent) => {
   try {

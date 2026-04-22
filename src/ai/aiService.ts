@@ -47,7 +47,7 @@ Help users manage their orders and delivery addresses within their organisation.
 
 export interface ToolContext {
   session: string;
-  orgId:   number;
+  orgId: number;
 }
 
 // parameter types 
@@ -57,17 +57,17 @@ export interface ToolContext {
 type DeliveryPeriod = { startDateTime: number; endDateTime: number };
 
 type CreateOrderParams = {
-  currency:          string;
+  currency: string;
   deliveryAddressId: number;
   reqDeliveryPeriod: DeliveryPeriod;
   items: { name: string; description: string; unitPrice: number; quantity: number }[];
 };
 
 type UpdateOrderParams = {
-  orderId:           string;
+  orderId: string;
   deliveryAddressId: number;
   reqDeliveryPeriod: DeliveryPeriod;
-  status:            string;
+  status: string;
 };
 
 type CreateAddressParams = {
@@ -317,20 +317,19 @@ export async function runAgentTurn(
   });
 
   const assistantMessage: CoreMessage = {
-    role:    'assistant',
+    role: 'assistant',
     content: result.text,
   };
 
   return {
-    reply:    result.text,
+    reply: result.text,
     messages: [...messages, assistantMessage],
   };
 }
 
 /**
- * Streaming variant using streamText.
- * Returns the result object - iterate `.textStream` for token-by-token output.
- * Not suitable for standard Lambda; use with Vercel Edge / Express SSE instead.
+ * streamtext: returns the result object - iterate `.textStream` for token-by-token output.
+ * not suitable for standard Lambda; use with Vercel Edge / Express SSE instead.
  *
  * Example:
  *   const stream = streamAgentTurn(messages, ctx);
@@ -338,10 +337,10 @@ export async function runAgentTurn(
  */
 export function streamAgentTurn(messages: CoreMessage[], ctx: ToolContext) {
   return streamText({
-    model:    openai('gpt-4o-mini'),
-    system:   SYSTEM_PROMPT,
+    model: openai('gpt-4o-mini'),
+    system: SYSTEM_PROMPT,
     messages,
-    tools:    createTools(ctx),
+    tools: createTools(ctx),
     maxSteps: 5,
   });
 }
