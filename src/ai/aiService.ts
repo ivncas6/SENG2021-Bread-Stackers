@@ -58,7 +58,7 @@ export interface ToolContext {
 
 // ─── Parameter types ──────────────────────────────────────────────────────────
 
-// Declaring parameter shapes explicitly avoids the "implicitly has any" TS error
+// Declaring parameter shapes explicitly avoids the 'implicitly has any' TS error
 // that can arise from Zod inference inside the tool() overloads.
 
 type DeliveryPeriod = { startDateTime: number; endDateTime: number };
@@ -104,8 +104,8 @@ export function createTools(ctx: ToolContext) {
 
   const listOrders = tool({
     description:
-      "List all orders for the organisation. " +
-      "Returns each order's ID, status, issue date, final price, and currency.",
+      'List all orders for the organisation. ' +
+      'Returns each orders ID, status, issue date, final price, and currency.',
     parameters: z.object({}),
     execute: async () => {
       try   { return await orderV2.listOrders(ctx.orgId, ctx.session); }
@@ -115,10 +115,10 @@ export function createTools(ctx: ToolContext) {
 
   const getOrderInfo = tool({
     description:
-      "Fetch full details of one order: items, delivery address, pricing, " +
-      "delivery window, and buyer contact details.",
+      'Fetch full details of one order: items, delivery address, pricing, ' +
+      'delivery window, and buyer contact details.',
     parameters: z.object({
-      orderId: z.string().uuid().describe("UUID of the order"),
+      orderId: z.string().uuid().describe('UUID of the order'),
     }),
     execute: async ({ orderId }: { orderId: string }) => {
       try   { return await orderV2.getOrderInfo(ctx.orgId, ctx.session, orderId); }
@@ -128,19 +128,19 @@ export function createTools(ctx: ToolContext) {
 
   const createOrder = tool({
     description:
-      "Create a new order. Requires a pre-existing deliveryAddressId " +
-      "(use createAddress or listAddresses first), currency, delivery window, " +
-      "and at least one line item.",
+      'Create a new order. Requires a pre-existing deliveryAddressId ' +
+      '(use createAddress or listAddresses first), currency, delivery window, ' +
+      'and at least one line item.',
     parameters: z.object({
       currency:          z.string().describe('ISO 4217 code e.g. "AUD"'),
-      deliveryAddressId: z.number().int().positive().describe("Existing address ID"),
+      deliveryAddressId: z.number().int().positive().describe('Existing address ID'),
       reqDeliveryPeriod: z.object({
-        startDateTime: z.number().describe("Unix ms timestamp — delivery start"),
-        endDateTime:   z.number().describe("Unix ms timestamp — delivery end"),
+        startDateTime: z.number().describe('Unix ms timestamp — delivery start'),
+        endDateTime:   z.number().describe('Unix ms timestamp — delivery end'),
       }),
       items: z.array(z.object({
         name:        z.string().min(1),
-        description: z.string().default(""),
+        description: z.string().default(''),
         unitPrice:   z.number().nonnegative(),
         quantity:    z.number().int().positive(),
       })).min(1),
@@ -159,10 +159,10 @@ export function createTools(ctx: ToolContext) {
 
   const updateOrder = tool({
     description:
-      "Update an existing order's delivery address, delivery window, or status. " +
-      "All three required — pass existing values for anything you are not changing.",
+      'Update an existing orders delivery address, delivery window, or status. ' +
+      'All three required — pass existing values for anything you are not changing.',
     parameters: z.object({
-      orderId:           z.string().uuid().describe("UUID of the order to update"),
+      orderId:           z.string().uuid().describe('UUID of the order to update'),
       deliveryAddressId: z.number().int().positive(),
       reqDeliveryPeriod: z.object({
         startDateTime: z.number(),
@@ -184,8 +184,8 @@ export function createTools(ctx: ToolContext) {
 
   const cancelOrder = tool({
     description:
-      "Permanently delete (cancel) an order — irreversible. " +
-      "Always confirm with the user and collect a reason first.",
+      'Permanently delete (cancel) an order — irreversible. ' +
+      'Always confirm with the user and collect a reason first.',
     parameters: z.object({
       orderId: z.string().uuid(),
       reason:  z.string().min(1),
@@ -198,7 +198,7 @@ export function createTools(ctx: ToolContext) {
 
   const generateUBL = tool({
     description:
-      "Generate a time-limited signed download URL for an order's UBL 2.1 XML document.",
+      'Generate a time-limited signed download URL for an orders UBL 2.1 XML document.',
     parameters: z.object({
       orderId: z.string().uuid(),
     }),
@@ -214,8 +214,8 @@ export function createTools(ctx: ToolContext) {
 
   const listAddresses = tool({
     description:
-      "List all addresses associated with the organisation: " +
-      "its own registered address plus every past delivery address.",
+      'List all addresses associated with the organisation: ' +
+      'its own registered address plus every past delivery address.',
     parameters: z.object({}),
     execute: async () => {
       try   { return await addr.listAddresses(ctx.session, ctx.orgId); }
@@ -225,13 +225,13 @@ export function createTools(ctx: ToolContext) {
 
   const createAddress = tool({
     description:
-      "Create a new reusable address record. " +
-      "Returns the addressId to reference when creating/updating orders.",
+      'Create a new reusable address record. ' +
+      'Returns the addressId to reference when creating/updating orders.',
     parameters: z.object({
       street:   z.string().min(1).max(200),
       city:     z.string().optional(),
       postcode: z.string().optional(),
-      country:  z.string().default("AUS"),
+      country:  z.string().default('AUS'),
     }),
     execute: async ({ street, city, postcode, country }: CreateAddressParams) => {
       try   { return await addr.createAddress(ctx.session, street, city, postcode, country); }
@@ -240,7 +240,7 @@ export function createTools(ctx: ToolContext) {
   });
 
   const getAddress = tool({
-    description: "Retrieve the full details of a single address by its ID.",
+    description: 'Retrieve the full details of a single address by its ID.',
     parameters: z.object({
       addressId: z.number().int().positive(),
     }),
@@ -250,8 +250,8 @@ export function createTools(ctx: ToolContext) {
     },
   });
 
- const updateAddress = tool({
-    description: "Update one or more fields on an existing address. Only supplied fields change.",
+  const updateAddress = tool({
+    description: 'Update one or more fields on an existing address. Only supplied fields change.',
     parameters: z.object({
       addressId: z.number().int().positive(),
       street:    z.string().max(200).optional(),
@@ -263,6 +263,8 @@ export function createTools(ctx: ToolContext) {
       try {
         // Strip out any properties that are explicitly undefined
         const updates = Object.fromEntries(
+          // disable so that it can use '_'
+          // eslint-disable-next-line
           Object.entries({ street, city, postcode, country }).filter(([_, v]) => v !== undefined)
         );
 
@@ -277,7 +279,7 @@ export function createTools(ctx: ToolContext) {
 
   const deleteAddress = tool({
     description:
-      "Delete an address. Fails if the address is still referenced by an order or organisation.",
+      'Delete an address. Fails if the address is still referenced by an order or organisation.',
     parameters: z.object({
       addressId: z.number().int().positive(),
     }),
