@@ -30,7 +30,8 @@ import {
   InvalidSupabase,
   UnauthorisedError,
 } from './throwError';
-import { Order, ReqDeliveryPeriod, OrderLineWithItem, EmptyObject, createOrderReturn } from './interfaces';
+import { Order, ReqDeliveryPeriod, OrderLineWithItem, 
+  EmptyObject, createOrderReturn } from './interfaces';
 
 // Types
 
@@ -174,7 +175,8 @@ export async function createOrderFromCatalogue(
 
   const itemMap = new Map<number, { name: string; description: string; price: number }>();
   for (const ci of catalogueItems) {
-    const found = (catalogueData as CatRow[] ?? []).find(r => r.catalogueItemId === ci.catalogueItemId);
+    const found = (catalogueData as CatRow[] ?? [])
+      .find(r => r.catalogueItemId === ci.catalogueItemId);
     if (!found) {
       throw new InvalidInput(`Catalogue item ${ci.catalogueItemId} not found`);
     }
@@ -199,7 +201,7 @@ export async function createOrderFromCatalogue(
     const item = itemMap.get(ci.catalogueItemId)!;
     taxExclusive += item.price * ci.quantity;
     return { name: item.name, description: item.description,
-             unitPrice: item.price, quantity: ci.quantity };
+      unitPrice: item.price, quantity: ci.quantity };
   });
 
   const taxInclusive = taxExclusive * 1.1;
