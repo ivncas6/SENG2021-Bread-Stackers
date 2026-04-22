@@ -1,6 +1,10 @@
 import { streamAgentTurn } from './aiService';
 import { corsHeaders } from '../handlerHelpers'
 
+// warning, this doesn't return messages you should call 
+// something like this after it finishes streaming:
+// await fetch('/api/ai-chat', ...)
+
 // handle preflight (important if frontend is on different origin)
 export async function OPTIONS() {
   return new Response(null, {
