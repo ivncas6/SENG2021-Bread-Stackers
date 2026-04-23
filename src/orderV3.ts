@@ -30,7 +30,7 @@ import {
   InvalidSupabase,
   UnauthorisedError,
 } from './throwError';
-import { Order, ReqDeliveryPeriod, OrderLineWithItem, 
+import { Order, ReqDeliveryPeriod, OrderLineWithItem,
   EmptyObject, createOrderReturn } from './interfaces';
 
 // Types
@@ -47,6 +47,9 @@ export interface CatalogueOrderItem {
  * Inserts an order, delivery, and order_lines into Supabase.
  * Separated from createOrderSupaPushV2 so v3 can write a proper
  * sellerOrgID and a non-OPEN initial status without modifying shared helpers.
+ *
+ * Delivery and per-item inserts run concurrently via Promise.all to reduce
+ * round-trip latency when an order has multiple line items.
  */
 async function insertOrderV3(
   order: Order,
@@ -63,9 +66,7 @@ async function insertOrderV3(
       taxExclusive: order.taxExclusive,
       taxInclusive: order.taxInclusive,
       buyerOrgID: order.buyerOrgID,
-      // real seller
       sellerOrgID: order.sellerOrgID,
-      // 'PENDING'
       status: order.status,
       issuedDate: order.issuedDate,
       issuedTime: order.issuedTime,
@@ -75,37 +76,31 @@ async function insertOrderV3(
     throw new InvalidSupabase(`Order creation failed: ${orderError.message}`);
   }
 
-  await supabase
-    .from('deliveries')
-    .insert([{
+  // Delivery insert and each item's insert are independent — run them in parallel.
+  await Promise.all([
+    supabase.from('deliveries').insert([{
       orderID: order.orderId,
       deliveryAddressID: deliveryAddressId,
       startDate: reqDeliveryPeriod.startDateTime.toString(),
       endDate: reqDeliveryPeriod.endDateTime.toString(),
-    }]);
+    }]),
+    ...items.map(async (item) => {
+      const { data: itemData } = await supabase
+        .from('items')
+        .insert([{ name: item.name, price: item.unitPrice, description: item.description }])
+        .select()
+        .single();
 
-  for (const item of items) {
-    const { data: itemData } = await supabase
-      .from('items')
-      .insert([{
-        name: item.name,
-        price: item.unitPrice,
-        description: item.description,
-      }])
-      .select()
-      .single();
-
-    if (itemData) {
-      await supabase
-        .from('order_lines')
-        .insert([{
+      if (itemData) {
+        await supabase.from('order_lines').insert([{
           orderID: order.orderId,
           itemID: itemData.itemId,
           quantity: item.quantity,
           status: 'PENDING',
         }]);
-    }
-  }
+      }
+    }),
+  ]);
 }
 
 /**
@@ -144,7 +139,6 @@ export async function createOrderFromCatalogue(
   const userId = await getUserIdFromSession(session);
   await requireOrgMember(userId, buyerOrgId);
 
-  // basic structural validation
   if (!Array.isArray(catalogueItems) || catalogueItems.length === 0) {
     throw new InvalidInput('At least one catalogue item is required');
   }
@@ -163,7 +157,6 @@ export async function createOrderFromCatalogue(
     throw new InvalidRequestPeriod('The requested delivery period is invalid.');
   }
 
-  // fetch and validate catalogue items - all must be active and owned by sellerOrgId
   const itemIds = catalogueItems.map(ci => ci.catalogueItemId);
   const { data: catalogueData, error: catError } = await supabase
     .from('catalogue_items')
@@ -197,7 +190,6 @@ export async function createOrderFromCatalogue(
     });
   }
 
-  // Calculate totals - prices come from the catalogue, not the buyer
   let taxExclusive = 0;
   const reqItems = catalogueItems.map(ci => {
     const item = itemMap.get(ci.catalogueItemId)!;
@@ -215,10 +207,8 @@ export async function createOrderFromCatalogue(
     issuedDate: currTime.toISOString().slice(0, 10),
     issuedTime: currTime.toLocaleTimeString('en-AU'),
     currency: 'AUD',
-    // awaiting seller acceptance
     status: 'PENDING',
     buyerOrgID: buyerOrgId,
-    // real seller org
     sellerOrgID: sellerOrgId,
     taxExclusive,
     taxInclusive,
