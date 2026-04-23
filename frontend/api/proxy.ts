@@ -5,7 +5,7 @@ export const config = {
   runtime: 'nodejs',
 };
 
-const allowedPathPrefix = '/v0/';
+const allowedPathPrefixes = ['/v0/', '/v2/', '/v3/'] as const;
 
 function buildEnvCandidateFiles(): string[] {
   const cwd = process.cwd();
@@ -58,7 +58,11 @@ function buildAwsUrl(requestUrl: URL): string {
     throw new Error('Missing AWS_API_BASE_URL environment variable.');
   }
 
-  if (!rawPath || !rawPath.startsWith(allowedPathPrefix)) {
+  const hasAllowedPrefix = rawPath
+    ? allowedPathPrefixes.some((prefix) => rawPath.startsWith(prefix))
+    : false;
+
+  if (!rawPath || !hasAllowedPrefix) {
     throw new Error('Invalid proxy path.');
   }
 
