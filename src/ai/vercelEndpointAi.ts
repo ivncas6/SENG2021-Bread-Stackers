@@ -1,5 +1,5 @@
 import { streamAgentTurn } from './aiService';
-import { corsHeaders } from '../handlerHelpers'
+import { corsHeaders } from '../handlerHelpers';
 
 // warning, this doesn't return messages you should call 
 // something like this after it finishes streaming:
