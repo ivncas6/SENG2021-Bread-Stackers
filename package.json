@@ -16,6 +16,7 @@
     "author": "",
     "license": "ISC",
     "scripts": {
+        "build:frontend": "esbuild frontend/app.ts --bundle --platform=browser --format=iife --outfile=frontend/app.js",
         "test": "jest",
         "lint": "eslint '**/*.{ts,js}'",
         "lint-fix": "eslint --fix '**/*.{ts,js}'",
